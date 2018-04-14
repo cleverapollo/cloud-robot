@@ -30,4 +30,5 @@ def deploy():
     with cd(env.root):
         run('git fetch origin')
         run('git reset --hard origin/%(branch)s' % env)
-        
+        run('pip install -U -r requirements.txt')
+
