@@ -1,57 +1,63 @@
-import os
-os.environ.setdefault('CLOUDCIX_SETTINGS_MODULE', "settings")
-from cloudcix import api
-from cloudcix.utils import get_admin_session
-TOKEN = get_admin_session().get_token()
+# python
+import subprocess
+import sys
 import time
-import logging
-import logging.handlers
+
+# libs
+from inotify_simple import INotify, flags
+
+# local
+import state
+import utils
 
 
-last = time.time()
+def watch_directory() -> INotify:
+    """
+    Watches the robot directory for changes.
+    If a change is deteced, spawn a new Robot instance and kill this one
+    :returns: An Inotify instance that can be used to tell if the directory has changed
+    """
+    inotify = INotify()
+    # Create flags for the usual things a deployment will change
+    watch_flags = flags.CREATE | flags.DELETE | flags.MODIFY
+    inotify.add_watch('.', watch_flags)
+    return inotify
 
-fmt = logging.Formatter(fmt="%(asctime)s - %(name)s: %(levelname)s: %(message)s", datefmt="%d/%m/%y @ %H:%M:%S")
-robot_logger = logging.getLogger('robot')
-robot_logger.setLevel(logging.INFO)
-# Get a file handler
-handler = logging.handlers.RotatingFileHandler('/var/log/robot/robot.log', maxBytes=4096, backupCount=7)
-handler.setFormatter(fmt)
-robot_logger.addHandler(handler)
 
-
-def vrfState(state):
-    response = api.iaas.vrf.list(token=TOKEN, params={'state': state})
-    if response.status_code == 200 and response.json()['_metadata']['totalRecords'] > 0:
-        content=response.json()['content']
-        return (content[0]['idVRF'])
-    else:
-        return(None)
-
-def vmState(state):
-    response = api.iaas.vm.list(token=TOKEN, params={'state': state})
-    if response.status_code == 200 and response.json()['_metadata']['totalRecords'] > 0:
-        content=response.json()['content']
-        return (content['idVM'])
-    else:
-        return(None)
-
-while True:
-    idVRF = vrfState(1)
-    # idVRF = vrfState(1)
-    if idVRF != None:
-        robot_logger.info('Building idVRF %i' % idVRF)
-        # vrfBuilder(idVRF)
-        pass
-    else:
-        robot_logger.info('No VRF in "Requested" state.')
-    idVM = vmState(1)
-    if idVM != None:
-        robot_logger.info('Building idVM %i' % idVM)
-        # vmBuild(idVM)
-        pass
-    else:
-        robot_logger.info('No VM in "Requested" state. ')
-
-    while last > time.time() - 20:
-        time.sleep(1)
+def mainloop(watcher: INotify):
+    """
+    The main loop of the Robot program
+    """
     last = time.time()
+    while True:
+        # First check to see if there have been any events
+        if watcher.read(timeout=1000):
+            robot_logger.info('Update detected. Spawning New Robot.')
+            subprocess.Popen(['python3', 'robot.py'])
+            # Wait a couple of seconds for the new robot to take over
+            time.sleep(2)
+            # Exit this process gracefully
+            sys.exit(0)
+        # Now handle the loop events
+        id_vrf = state.vrf(1)
+        if id_vrf != None:
+            robot_logger.info('Building VRF with ID %i.' % id_vrf)
+            # TODO: Build the VRF
+        else:
+            robot_logger.info('No VRFs in "Requested" state.')
+        id_vm = state.vm(1)
+        if id_vm != None:
+            robot_logger.info('Building VM with ID %i' % id_vm)
+            # TODO: Build the VM
+        else:
+            robot_logger.info('No VMs in "Requested" state.')
+
+        while last > time.time() - 2:
+            time.sleep(1)
+        last = time.time()
+
+if __name__ == '__main__':
+    # When the script is run as the main
+    robot_logger = utils.get_logger_for_name('robot')
+    robot_logger.info('Robot starting. Current Commit >> %s' % utils.get_current_git_sha())
+    mainloop(watch_directory())

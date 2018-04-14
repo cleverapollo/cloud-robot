@@ -1,0 +1,21 @@
+image: gitlab.cloudcix.com:5005/cloudcix/application_framework/image
+
+stages:
+    - lint
+    - deploy
+
+lint:
+    stage: lint
+    script: 
+        - flake8
+
+deploy_staging:
+    image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
+    before_script:
+        - cp ~/.ssh/application_framework/stage_key ~/.ssh/id_rsa
+        - cp ~/.ssh/application_framework/stage_key.pub ~/.ssh/id_rsa.pub
+    environment: staging
+    stage: deploy
+    script:
+        - fab staging deploy
+    only: ["master"]
