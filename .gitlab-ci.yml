@@ -20,5 +20,3 @@ deploy_staging:
     script:
         - fab staging deploy
     only: ["master"]
-    when:
-        - manual

@@ -25,7 +25,7 @@ def get_logger_for_name(name: str, level=logging.INFO) -> logging.Logger:
     # Get a file handler
     handler = logging.handlers.RotatingFileHandler(
         '/var/log/robot/robot.log',
-        maxBytes=4096,
+        maxBytes=4096 * 1024,
         backupCount=7
     )
     handler.setFormatter(fmt)
