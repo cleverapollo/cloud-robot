@@ -1,11 +1,12 @@
-image: gitlab.cloudcix.com:5005/cloudcix/application_framework/image
-
 stages:
     - lint
     - deploy
 
 lint:
+    image: python:latest
     stage: lint
+    before_script:
+        - pip3 install flake8
     script: 
         - flake8 --exclude fabfile.py
 
