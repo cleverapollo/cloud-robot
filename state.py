@@ -20,11 +20,13 @@ def vrf(state: int):
     :returns: A VRF instance or None
     """
     response = api.iaas.vrf.list(token=TOKEN, params={'state': state})
-    if response.status_code == 200 and response.json()['_metadata']['totalRecords'] > 0:
+    if response.status_code == 200 and response.json()[
+            '_metadata']['totalRecords'] > 0:
         content = response.json()['content']
         return content[0]['idVRF']
     else:
         return None
+
 
 def vm(state: int):
     """
@@ -34,7 +36,8 @@ def vm(state: int):
     :returns: A VM instance or None
     """
     response = api.iaas.vm.list(token=TOKEN, params={'state': state})
-    if response.status_code == 200 and response.json()['_metadata']['totalRecords'] > 0:
+    if response.status_code == 200 and response.json()[
+            '_metadata']['totalRecords'] > 0:
         content = response.json()['content']
         return content['idVM']
     else:

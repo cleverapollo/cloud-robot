@@ -15,7 +15,8 @@ def watch_directory() -> INotify:
     """
     Watches the robot directory for changes.
     If a change is deteced, spawn a new Robot instance and kill this one
-    :returns: An Inotify instance that can be used to tell if the directory has changed
+    :returns: An Inotify instance that can be used to tell if the directory
+              has changed
     """
     inotify = INotify()
     # Create flags for the usual things a deployment will change
@@ -40,13 +41,13 @@ def mainloop(watcher: INotify):
             sys.exit(0)
         # Now handle the loop events
         id_vrf = state.vrf(1)
-        if id_vrf != None:
+        if id_vrf is not None:
             robot_logger.info('Building VRF with ID %i.' % id_vrf)
             # TODO: Build the VRF
         else:
             robot_logger.info('No VRFs in "Requested" state.')
         id_vm = state.vm(1)
-        if id_vm != None:
+        if id_vm is not None:
             robot_logger.info('Building VM with ID %i' % id_vm)
             # TODO: Build the VM
         else:
@@ -55,6 +56,7 @@ def mainloop(watcher: INotify):
         while last > time.time() - 2:
             time.sleep(1)
         last = time.time()
+
 
 if __name__ == '__main__':
     # When the script is run as the main
