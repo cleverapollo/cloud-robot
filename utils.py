@@ -13,7 +13,8 @@ def get_logger_for_name(name: str, level=logging.INFO) -> logging.Logger:
 
     :param name: The name to be given to the logger instance
     :param level: The level of the logger. Defaults to `logging.INFO`
-    :returns: A logger than can be used to log out to `/var/log/robot/robot.log`
+    :returns: A logger than can be used to log out to
+              `/var/log/robot/robot.log`
     """
     fmt = logging.Formatter(
         fmt="%(asctime)s - %(name)s: %(levelname)s: %(message)s",

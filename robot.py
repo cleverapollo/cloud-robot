@@ -61,5 +61,6 @@ def mainloop(watcher: INotify):
 if __name__ == '__main__':
     # When the script is run as the main
     robot_logger = utils.get_logger_for_name('robot')
-    robot_logger.info('Robot starting. Current Commit >> %s' % utils.get_current_git_sha())
+    robot_logger.info(
+        'Robot starting. Current Commit >> %s' % utils.get_current_git_sha())
     mainloop(watch_directory())
