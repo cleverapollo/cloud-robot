@@ -3,10 +3,11 @@
   remote_user: administrator
   tasks:
     - name: Deploy Robot to Alpha Region for staging
-      shell:
-        - cd /home/administrator
-        - git fetch origin
-        - git reset --hard origin/master
-        - pip install -U -r requirements.txt
-
-
+      git:
+        dest: /home/administrator/Robot
+        update: yes
+        version: master
+    - name: Update requirements
+      shell: pip install -U -r requirements.txt
+      args:
+        chdir: /home/administrator/robot
