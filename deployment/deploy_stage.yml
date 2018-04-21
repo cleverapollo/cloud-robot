@@ -1,5 +1,5 @@
 ---
-- hosts: 2a02:2078:3::3
+- hosts: staging
   remote_user: administrator
   tasks:
     - name: Deploy Robot to Alpha Region for staging
