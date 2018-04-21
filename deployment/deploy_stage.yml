@@ -9,6 +9,6 @@
         update: yes
         version: master
     - name: Update requirements
-      shell: pip install -U -r requirements.txt
+      shell: pip3 install -U -r requirements.txt
       args:
         chdir: /home/administrator/robot
