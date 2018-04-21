@@ -28,3 +28,4 @@ def vm(state: int):
     if VMs:
         VM = VMs[0]
     return VM
+

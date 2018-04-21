@@ -1,0 +1,15 @@
+---
+- hosts: staging
+  remote_user: administrator
+  tasks:
+    - name: Deploy Robot to Alpha Region for staging
+      git:
+        repo: 'git@gitlab.cloudcix.com:CloudCIX/Robot.git'
+        dest: /home/administrator/robot
+        update: yes
+        clone: no
+        version: master
+    - name: Update requirements
+      shell: pip3 install -U -r requirements.txt
+      args:
+        chdir: /home/administrator/robot
