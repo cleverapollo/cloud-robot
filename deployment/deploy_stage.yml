@@ -4,6 +4,7 @@
   tasks:
     - name: Deploy Robot to Alpha Region for staging
       git:
+        repo: git@gitlab.cloudcix.com:CloudCIX/Robot.git
         dest: /home/administrator/Robot
         update: yes
         version: master
