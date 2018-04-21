@@ -7,7 +7,7 @@ from cloudcix import api
 from cloudcix.utils import get_admin_session
 
 # local
-
+import utils
 # Important stuff
 TOKEN = get_admin_session().get_token()
 
@@ -25,6 +25,9 @@ def vrf(state: int):
         content = response.json()['content']
         return content[0]['idVRF']
     else:
+        utils.get_logger_for_name('state:vrf').error('({}): {}'.format(
+            response.status_code,
+            str(response.json())))
         return None
 
 
@@ -41,4 +44,7 @@ def vm(state: int):
         content = response.json()['content']
         return content['idVM']
     else:
+        utils.get_logger_for_name('state:vm').error('({}): {}'.format(
+            response.status_code,
+            str(response.json())))
         return None
