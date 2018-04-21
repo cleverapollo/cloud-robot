@@ -1,2 +1,6 @@
 cloudcix
 inotify_simple
+pywinrm
+xmltodict
+paramiko
+crypt

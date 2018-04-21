@@ -1,15 +1,5 @@
-# python
-import os
-
-# libs
-os.environ.setdefault('CLOUDCIX_SETTINGS_MODULE', "settings")
-from cloudcix import api
-from cloudcix.utils import get_admin_session
-
 # local
-
-# Important stuff
-TOKEN = get_admin_session().get_token()
+from ro import *
 
 
 def vrf(state: int):
@@ -19,13 +9,11 @@ def vrf(state: int):
     :param state: The state for which to find a VRF
     :returns: A VRF instance or None
     """
-    response = api.iaas.vrf.list(token=TOKEN, params={'state': state})
-    if response.status_code == 200 and response.json()[
-            '_metadata']['totalRecords'] > 0:
-        content = response.json()['content']
-        return content[0]['idVRF']
-    else:
-        return None
+    vrf = None
+    vrfs = service_entity_list('iaas', 'vrf', params={'state': state})
+    if vrfs:
+        vrf = vrfs[0]
+    return vrf
 
 
 def vm(state: int):
@@ -35,10 +23,8 @@ def vm(state: int):
     :param state: The state for which to find a VM
     :returns: A VM instance or None
     """
-    response = api.iaas.vm.list(token=TOKEN, params={'state': state})
-    if response.status_code == 200 and response.json()[
-            '_metadata']['totalRecords'] > 0:
-        content = response.json()['content']
-        return content['idVM']
-    else:
-        return None
+    VM = None
+    VMs = service_entity_list('iaas', 'vm', params={'state': state})
+    if VMs:
+        VM = VMs[0]
+    return VM
