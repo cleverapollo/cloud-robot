@@ -53,7 +53,7 @@ def mainloop(watcher: INotify):
         else:
             robot_logger.info('No VMs in "Requested" state.')
 
-        while last > time.time() - 2:
+        while last > time.time() - 20:
             time.sleep(1)
         last = time.time()
 
