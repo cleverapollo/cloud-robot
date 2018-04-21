@@ -1,0 +1,12 @@
+---
+- hosts: 2a02:2078:3::3
+  remote_user: administrator
+  tasks:
+    - name: Deploy Robot to Alpha Region for staging
+      shell:
+        - cd /home/administrator
+        - git fetch origin
+        - git reset --hard origin/master
+        - pip install -U -r requirements.txt
+
+
