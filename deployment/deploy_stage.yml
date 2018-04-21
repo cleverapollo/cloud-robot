@@ -7,6 +7,7 @@
         repo: 'git@gitlab.cloudcix.com:CloudCIX/Robot.git'
         dest: /home/administrator/Robot
         update: yes
+        clone: no
         version: master
     - name: Update requirements
       shell: pip3 install -U -r requirements.txt
