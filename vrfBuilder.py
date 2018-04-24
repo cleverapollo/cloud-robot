@@ -1,8 +1,12 @@
 import time
+from utils import get_logger_for_name
 from jnpr.junos import Device
 from jnpr.junos.utils.config import Config
 from jnpr.junos.exception import *
 from ro import *
+
+
+robot_logger = get_logger_for_name('vrfBuilder')
 
 
 def vrfBuild(VRF, passwd):
@@ -49,7 +53,7 @@ def vrfBuild(VRF, passwd):
         setconf += 'set interfaces ge-0/0/1 unit ' + str(vLAN[0]) + \
                    ' description '
         setconf += str(idProject) + '-' + str(vLAN[0]) + ' vlan-id ' \
-                   + str(vLAN[0])
+            + str(vLAN[0])
         setconf += ' family inet address ' + str(vLAN[1]) + '\n'
 
     # Create private zones
@@ -73,11 +77,11 @@ def vrfBuild(VRF, passwd):
         setconf += 'set security nat source rule-set ' + str(idProject) + \
                    '-outbound rule '
         setconf += str(vLAN[0]) + '-outbound match source-address ' + \
-                   str(vLAN[1]) + '\n'
+            str(vLAN[1]) + '\n'
         setconf += 'set security nat source rule-set ' + str(idProject) + \
                    '-outbound rule '
         setconf += str(vLAN[0]) + '-outbound then source-nat pool ' + \
-                   str(idProject) + '-public\n'
+            str(idProject) + '-public\n'
     setconf += 'set security nat source rule-set ' + str(idProject) + \
                '-outbound to zone PUBLIC\n'
 
@@ -191,12 +195,12 @@ def vrfBuild(VRF, passwd):
 def deploy_setconf(setconf, ip, password):
     success = False
     # Open Router
-    dev = Device(host=ip, user="rocky", password=password, port=22)
+    dev = Device(host=ip, user="robot", password=password, port=22)
     cu = Config(dev)
     try:
         dev.open()
     except Exception as err:
-        robot_logger.error("Unable to open host {}, {}".format(ip,err))
+        robot_logger.error("Unable to open host {}, {}".format(ip, err))
         return success
     # Lock Router
     robot_logger.info("Locking the Router with ip: {0} configuration."

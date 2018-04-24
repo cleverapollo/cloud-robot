@@ -1,13 +1,13 @@
-#python
-import os
+# python
 import paramiko
 from crypt import crypt, mksalt, METHOD_SHA512
 
-#local
+# local
 from ro import robot_logger
 
 # kickstart files path
 path = "/mnt/images/kickstarts/"
+
 
 def answerFile(vm):
     """
@@ -16,7 +16,8 @@ def answerFile(vm):
     :return: ks_text: string
     """
     ks_text = ''
-    comment = "# {0} Kickstart for VM {1} \n".format(vm['image'], vm['name'])
+    comment = "# {0} Kickstart for VM {1} \n".format(vm['idImage'],
+                                                     vm['vmname'])
     ks_text += comment
     # System authorization information
     ks_text += "auth --useshadow --enablemd5\n"
@@ -58,7 +59,7 @@ def answerFile(vm):
     ks_text += "auth --useshadow --enablemd5\n"
     # Network
     ks_text += "network --bootproto=static --ip=" + str(vm['ip']) + \
-               " --netmask=" + str(vm['netmask']) + " --gateway=" + \
+               " --netmask=" + str(vm['netmask_ip']) + " --gateway=" + \
                str(vm['gateway']) + " --nameserver=" + str(vm['dns']) + "\n"
     # Do not configure the X Window System
     ks_text += "iskipx\n"

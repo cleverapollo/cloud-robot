@@ -6,9 +6,12 @@
 
 # python
 import os
+import string
+import random
 from datetime import datetime
+from pprint import pprint
 
-#libs
+# libs
 from cloudcix import api
 from cloudcix.utils import get_admin_session
 
@@ -17,7 +20,7 @@ import utils
 
 os.environ.setdefault("CLOUDCIX_SETTINGS_MODULE", 'settings')
 TOKEN = get_admin_session().get_token()
-robot_logger = utils.get_logger_for_name('robot')
+robot_logger = utils.get_logger_for_name('ro')
 
 
 def service_entity_create(service, entity, params):
@@ -37,16 +40,22 @@ def service_entity_create(service, entity, params):
     if response.status_code == 201:
         entity_create = response.json()['content']
     else:
-        robot_logger.error("\033[91m An error occurred while creating %s "
-                           "object in %s service with params: %s \033[00m"
-                     % (entity.upper(), service.upper(), str(params)))
-        robot_logger.error(response.status_code)
-        return 0
+        robot_logger.error("An error occurred while creating %s "
+                           "object in %s service with params: %s, "
+                           "response code=%d"
+                           % (entity.upper(), service.upper(),
+                              str(params), response.status_code))
     return entity_create
 
 
-# Gets the list of given entity and params from given service
 def service_entity_list(service, entity, params):
+    """
+    Gets the list of given entity and params from given service
+    :param service: string
+    :param entity: string
+    :param params: dict
+    :return: list
+    """
     entity_list = list()
     service_to_call = getattr(api, service)
     # service_to_call = api.iaas  (e.g service = 'iaas')
@@ -56,21 +65,27 @@ def service_entity_list(service, entity, params):
     if response.status_code == 200:
         entity_list.extend(response.json()['content'])
     else:
-        robot_logger.error("\033[91m An error occurred while fetching %s "
-                           "list from %s service with params %s\033[00m"
-                     % (entity.upper(), service.upper(), str(params)))
-        robot_logger.error(response.status_code)
-        return 0
+        robot_logger.error("An error occurred while fetching %s "
+                           "list from %s service with params %s, "
+                           "response code=%d"
+                           % (entity.upper(), service.upper(),
+                              str(params), response.status_code))
     if response.json()['_metadata']['totalRecords'] > 0:
-        robot_logger.info("\033[92m %d %ss were found! \033[00m"
-              % (len(entity_list), entity.upper()))
+        robot_logger.info("%d %ss were found!"
+                          % (len(entity_list), entity.upper()))
     else:
         robot_logger.info("No requested %ss were found!" % entity.upper())
     return entity_list
 
 
-# Updates given entity and params from given service
 def service_entity_update(service, entity, params):
+    """
+    Updates given entity and params from given service
+    :param service: string
+    :param entity: string
+    :param params: dict
+    :return: 1 or 0
+    """
     service_to_call = getattr(api, service)
     # service_to_call = api.iaas  (e.g service = 'iaas')
     entity_to_call = getattr(service_to_call(), entity)
@@ -81,16 +96,23 @@ def service_entity_update(service, entity, params):
     # Checking just updation no return of data so 204 No content
     if response.status_code == 204:
         robot_logger.info(" Updated successfully %s with id:%d in %s"
-                    %(entity, params['pk'], service))
+                          % (entity, params['pk'], service))
         return 1
     else:
         robot_logger.error("An error occurred while updating %s in "
-              "%s service \n %s" % (entity, service, response.content))
+                           "%s service \n %s" % (entity, service,
+                                                 response.content))
         return 0
 
 
-# Reads given entity and params from given service
 def service_entity_read(service, entity, params):
+    """
+    Reads given entity and params from given service
+    :param service: string
+    :param entity: string
+    :param params: dict
+    :return: dict
+    """
     entity_read = dict()
     service_to_call = getattr(api, service)
     # service_to_call = api.iaas  (e.g service = 'iaas')
@@ -100,14 +122,18 @@ def service_entity_read(service, entity, params):
     if response.status_code == 200:
         entity_read = response.json()['content']
     else:
-        robot_logger.error("\033[91m An error occurred while reading %s in "
-              "%s service \033[00m" % (entity, service))
+        robot_logger.error("An error occurred while reading %s in %s service"
+                           % (entity, service))
     return entity_read
 
 
-# Gets the idrac ip address and password of the asset
-#   given its location as argument
 def get_idrac_details(location):
+    """
+    Gets the idrac ip address and password of the asset
+    given its location as argument
+    :param location: string eg "CIX1AGU12"
+    :return: ip: ipaddress(string) and password: string
+    """
     location = location.replace(" ", "")  # Remove white spaces
     # Find the ipaddress
     if location[:5] == "CIX1A":
@@ -145,11 +171,22 @@ def get_idrac_details(location):
         password = response.json()['content']['hexadecimal']
     else:
         robot_logger.error("Error generating host password for location: %s"
-                     %location)
+                           % location)
     return ip, password
 
 
 def ip_validations(address_range='', ip_address=""):
+    """
+    This method is used to validate either address_range given in string,
+    and separated by commas, if two or more addresses ranges to be validated
+    in one request.
+    also validates ipaddress given in string,
+    and separated by commas, if two or more ipaddresses to be validated in
+    one request.
+    :param address_range: string
+    :param ip_address:string
+    :return:dict
+    """
     params = dict()
     if address_range:
         params['address_range'] = address_range
@@ -160,21 +197,36 @@ def ip_validations(address_range='', ip_address=""):
         try:
             if response.json()['response_code'] == 400:
                 return False
-        except Exception:
+        except Exception as error:
+            robot_logger.info(error)
             return response.json()
     except Exception as err:
         robot_logger.error("Error occurred while requesting ip_validator "
-                           "of iaas %s" %err)
+                           "of iaas %s" % err)
+    return 0
 
-#-------------------------------------------------------------------------
-# winrm supporting function, dont make anychanges
+
 def fix_run_ps(self, script):
+    """
+    winrm supporting function, dont make anychanges
+    :param self:
+    :param script:
+    :return:
+    """
     from base64 import b64encode
     encoded_ps = b64encode(script.encode('utf_16_le')).decode('ascii')
     rs = self.run_cmd('powershell -encodedcommand {0}'.format(encoded_ps))
     if len(rs.std_err):
         rs.std_err = self._clean_error_msg(rs.std_err.decode('utf-8'))
     return rs
-#------------------------------------------------------------------------
 
 
+def password_generator(size=8, chars=string.ascii_letters + string.digits):
+    """
+    Returns a string of random characters, useful in generating temporary
+    passwords for automated password resets.
+
+    size: default=8; override to provide smaller/larger passwords
+    chars: default=A-Za-z0-9; override to provide more/less diversity
+    """
+    return ''.join(random.choice(chars) for i in range(size))

@@ -1,4 +1,4 @@
-#python
+# python
 import xmltodict
 import winrm
 from collections import OrderedDict
@@ -30,8 +30,7 @@ def unattendXML(vm):
     DNSs = vm['dns']
     UserAccouts = [{'Name': str(vm['u_name']), 'Value': vm['u_passwd']}]
 
-    data = {'unattend':
-              OrderedDict([
+    data = {'unattend': OrderedDict([
                 ('@xmlns', 'urn:schemas-microsoft-com:unattend'),
                 ('settings', [
                   OrderedDict([
@@ -50,7 +49,7 @@ def unattendXML(vm):
                         ('TimeZone', str(TimeZone))]),
                       OrderedDict([
                         ('@name', 'Microsoft-Windows-TerminalServices-'
-                                        'LocalSessionManager'),
+                                  'LocalSessionManager'),
                         ('@processorArchitecture', 'amd64'),
                         ('@publicKeyToken', '31bf3856ad364e35'),
                         ('@language', 'neutral'),
@@ -110,12 +109,12 @@ def unattendXML(vm):
                                     ('DhcpEnabled', 'false'),
                                     ('RouterDiscoveryEnabled', 'false')])),
                                 ('UnicastIpAddresses', OrderedDict([
-                                    ('IpAddress',OrderedDict([
+                                    ('IpAddress', OrderedDict([
                                         ('@wcm:action', 'add'),
                                         ('@wcm:keyValue', '1'),
                                         ('#text', str(IP))]))])),
-                                        ('Identifier', 'Ethernet'),
-                                        ('Routes', OrderedDict([
+                                ('Identifier', 'Ethernet'),
+                                ('Routes', OrderedDict([
                                             ('Route', OrderedDict([
                                                 ('@wcm:action', 'add'),
                                                 ('Identifier', '0'),
@@ -138,10 +137,10 @@ def unattendXML(vm):
                                 ('@wcm:action', 'add'),
                                 ('DNSServerSearchOrder', OrderedDict([
                                     ('IpAddress', list())])),
-                                    ('Identifier', 'Ethernet'),
-                                    ('DisableDynamicUpdate', 'false'),
-                                    ('EnableAdapterDomainNameRegistration',
-                                     'true')]))]))])])]),
+                                ('Identifier', 'Ethernet'),
+                                ('DisableDynamicUpdate', 'false'),
+                                ('EnableAdapterDomainNameRegistration',
+                                 'true')]))]))])])]),
                   OrderedDict([
                     ('@pass', 'oobeSystem'),
                     ('component', [
@@ -160,12 +159,12 @@ def unattendXML(vm):
                             ('HideWirelessSetupInOOBE', 'true'),
                             ('NetworkLocation', 'Work'),
                             ('ProtectYourPC', '1')])),
-                            ('UserAccounts', OrderedDict([
+                        ('UserAccounts', OrderedDict([
                                 ('AdministratorPassword', OrderedDict([
                                     ('Value', AdministratorPassword),
                                     ('PlainText', 'true')])), ])),
-                            ('TimeZone', str(TimeZone)),
-                            ('FirstLogonCommands', OrderedDict([
+                        ('TimeZone', str(TimeZone)),
+                        ('FirstLogonCommands', OrderedDict([
                                 ('SynchronousCommand', [
                                   OrderedDict([
                                     ('@wcm:action', 'add'),
@@ -224,13 +223,13 @@ def unattendXML(vm):
             if dict(item)['@pass'] == 'oobeSystem':
                 for it in dict(item)['component']:
                     if dict(it)['@name'] == 'Microsoft-Windows-Shell-Setup':
-                        dict(it)['UserAccounts'][
-                            'LocalAccouts'] = OrderedDict([
-                            ('LocalAccount', OrderedDict([
+                        dict(it)['UserAccounts']['LocalAccouts'] = \
+                            OrderedDict([
+                              ('LocalAccount', OrderedDict([
                                 ('@wcm:action', 'add'),
                                 ('Password', OrderedDict([
-                                    ('Value', str(UserAccouts[0]['Value'])),
-                                    ('PlainText', 'true')])),
+                                  ('Value', str(UserAccouts[0]['Value'])),
+                                  ('PlainText', 'true')])),
                                 ('Description', 'User Account'),
                                 ('DisplayName', str(UserAccouts[0]['Name'])),
                                 ('Group', 'Administrators'),
@@ -251,12 +250,12 @@ def vmBuild(vm, password):
     xml_file = False
     xml = unattendXML(vm)
     try:
-        with open(path+str(vm['vmname'])+ '.xml', 'w') as file:
+        with open(path+str(vm['vmname']) + '.xml', 'w') as file:
             file.write(xml)
         xml_file = True
     except Exception as err:
         robot_logger.error("Falied to create a answerfile for %d VM"
-                           %vm['vmname'], err)
+                           % vm['vmname'], err)
     if xml_file:
         try:
             session = winrm.Session(vm['hostname'],
