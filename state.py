@@ -6,6 +6,7 @@ import utils
 # Important stuff
 TOKEN_WRAPPER = utils.Token()
 
+
 def vrf(state: int):
     """
     Finds the first VRF in the API with the given state
