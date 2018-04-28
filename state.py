@@ -1,16 +1,10 @@
 # python
-import os
-
 # libs
-os.environ.setdefault('CLOUDCIX_SETTINGS_MODULE', "settings")
 from cloudcix import api
-from cloudcix.utils import get_admin_session
-
 # local
 import utils
 # Important stuff
-TOKEN = get_admin_session().get_token()
-
+TOKEN_WRAPPER = utils.Token()
 
 def vrf(state: int):
     """
@@ -19,7 +13,10 @@ def vrf(state: int):
     :param state: The state for which to find a VRF
     :returns: A VRF instance or None
     """
-    response = api.iaas.vrf.list(token=TOKEN, params={'state': state})
+    response = api.iaas.vrf.list(
+        token=TOKEN_WRAPPER.token,
+        params={'state': state}
+    )
     if response.status_code == 200:
         data = response.json()
         if data['_metadata']['totalRecords'] > 0:
@@ -38,7 +35,10 @@ def vm(state: int):
     :param state: The state for which to find a VM
     :returns: A VM instance or None
     """
-    response = api.iaas.vm.list(token=TOKEN, params={'state': state})
+    response = api.iaas.vm.list(
+        token=TOKEN_WRAPPER.token,
+        params={'state': state}
+    )
     if response.status_code == 200:
         data = response.json()
         if data['_metadata']['totalRecords'] > 0:

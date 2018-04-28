@@ -1,4 +1,6 @@
 # python
+import os
+os.environ.setdefault('CLOUDCIX_SETTINGS_MODULE', "settings")
 import subprocess
 import sys
 import time
@@ -60,6 +62,7 @@ def mainloop(watcher: INotify):
 
 if __name__ == '__main__':
     # When the script is run as the main
+    # Now set up the robot
     robot_logger = utils.get_logger_for_name('robot')
     robot_logger.info(
         'Robot starting. Current Commit >> %s' % utils.get_current_git_sha())
