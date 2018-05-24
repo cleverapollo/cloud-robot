@@ -14,8 +14,9 @@ import utils
 from utils import get_logger_for_name
 from ro import service_entity_list, service_entity_read, \
     service_entity_update, password_generator
-from vrfBuilder import vrfBuild
+from vrfBuilders import vrfBuild
 from vmBuilders import vmBuilder
+from netBuilders import netBuild
 
 robot_logger = get_logger_for_name('robot')
 
@@ -34,7 +35,7 @@ def watch_directory() -> INotify:
     return inotify
 
 
-def call_vrf_builder(VRF, password):
+def call_vrf_builder(vrf, password):
     """
     VRF Dispatcher, takes one VRF, arranges in required format for VRFBuilder
     (VRF Driver) then calls VRFBuilder which will Deploy the VRF in Router
@@ -44,33 +45,52 @@ def call_vrf_builder(VRF, password):
     :param password: str
     :return: None
     """
+
+    VRF = vrf
+    # changing state to Building (2)
+    VRF['state'] = 2
+    params = {'data': VRF, 'pk': VRF['idVRF']}
+    service_entity_update('iaas', 'vrf', params)
+
+    vrfLans = service_entity_list('iaas', 'subnet', {'vrf': VRF['idVRF']})
+    regionIPs = service_entity_list('iaas', 'ipaddress', {})
+
     vrfJson = dict()
     vrfJson['idProject'] = VRF['idProject']
-    vrfJson['publicIP'] = [service_entity_read('iaas', 'ipaddress',
-                                               {'pk': VRF['idIPVrf']}
-                                               )['address']]
-    vrfLans = service_entity_list('iaas', 'subnet', {'vrf': VRF['idVRF']})
+    vrfJson['outBoundIP'] = VRF['IPVrf']
+
+    vrfJson['NATs'] = list()
     vrfJson['vLANs'] = list()
-    vrfIPs = list()
     for vrfLan in vrfLans:
-        vrfJson['vLANs'].append([vrfLan['vLAN'], vrfLan['addressRange']])
-        vrfIPs.extend(service_entity_list('iaas', 'ipaddress',
-                                          {'subnet': vrfLan['idSubnet']}))
-    vrfJson['privateNATips'] = list()
-    vrfJson['proxyIPs'] = list()
-    for vrfIP in vrfIPs:
-        if vrfIP['idIPAddressFIP']:
-            vrfJson['privateNATips'].append(str(vrfIP['address']) + '/32')
-            fip = service_entity_read('iaas', 'ipaddress',
-                                      {'pk': vrfIP['idIPAddressFIP']})
-            vrfJson['proxyIPs'].append(str(fip['address']) + '/32')
-    router = service_entity_read('iaas', 'router', {'pk': VRF['idRouter']})
-    vrfJson['oobIP'] = str(router['ipOOB'])
+        vrfJson['vLANs'].append({'vLAN': vrfLan['vLAN'],
+                                 'subnet': vrfLan['addressRange']})
+        # --------------------------------------------------------------
+        # NET BUILD CHECK
+        if not call_net_builder(vrfLan['vLAN']):
+            # changing state to Unresourced (3)
+            VRF['state'] = 3
+            params = {'data': VRF, 'pk': VRF['idVRF']}
+            service_entity_update('iaas', 'vrf', params)
+        #---------------------------------------------------------------
+
+        for ip in regionIPs:
+            if ip['idSubnet'] == vrfLan['idSubnet'] and \
+                            ip['idIPAddressFIP'] is not None:
+                pip = service_entity_read('iaas', 'ipaddress',
+                                          {'pk': ip['idIPAddressFIP']})
+                vrfJson['NATs'].append({'fIP': str(ip['address']) + '/32',
+                                        'pIP': str(pip['address']) + '/32'})
+
     vrfJson['VPNs'] = service_entity_list('iaas', 'vpn_tunnel',
                                           {'vrf': VRF['idVRF']})
+
+    router = service_entity_read('iaas', 'router', {'pk': VRF['idRouter']})
+    vrfJson['oobIP'] = str(router['ipOOB'])
+
     ################## data/ip validations ##########################
     # TODO
     #################################################################
+
     if vrfBuild(vrfJson, password):
         robot_logger.info("VRF %d Successfully Built in Router %d"
                           % (VRF['idVRF'], VRF['idRouter']))
@@ -89,72 +109,20 @@ def call_vrf_builder(VRF, password):
     return
 
 
-def vmAssetAssign(vm):
+def call_net_builder(vlan):
     """
-    Finds best suited asset for a VM and assigns that asset's id to VM
-    as idAsset
-    :param vm: dictionary object
-    :return:status: None or True; idAsset: None or int
+    NET dispatcher, takes the value of vlan and compares with the max and min
+    limits of the QFX fabric.
+    :param vlan: int
+    :return: boolean
     """
-    status = None
-    asset = dict()
-    # list all assets(which are hosts) to Build/Delete VMs
-    hosts = service_entity_list('asset', 'asset', {'extra__host': True})
-    # list all VMs which are already assinged with idAsset.
-    assetedVms = service_entity_list('iaas', 'vm',
-                                     {'state__in':
-                                         [2, 3, 4, 5, 6, 7, 8, 10, 11]})
-    if hosts:
-        # the type of host ie HyperV or KVM
-        image = service_entity_read('iaas', 'image', {'pk': vm['idImage']})
-        if image:
-            hypervisor = image['idHypervisor']
-        else:
-            robot_logger.error("VM has no image specified, %d "
-                               "this VM will not be created"
-                               % vm['idVM'])
-            return status
-        for host in hosts:
-            if host['extra']['type'] == hypervisor:
-                if len(assetedVms) > 0:
-                    for assetedVm in assetedVms:
-                        if assetedVm['idAsset'] == host['id']:
-                            host['extra']['hdd'] -= assetedVm['hdd']
-                            host['extra']['flash'] -= assetedVm['flash']
-
-                if (((host['extra']['hdd'] - 20) >= vm['hdd'] or
-                   (host['extra']['flash'] - 20) >= vm['flash']) and
-                   (host['extra']['ram']) > vm['ram']):
-                    vm['idAsset'] = host['id']
-                    vm['state'] = 2
-                    params = {'data': vm, 'pk': vm['idVM']}
-                    if service_entity_update('iaas', 'vm', params):
-                        status = True
-                        # Get the asset details
-                        asset['idAsset'] = vm['idAsset']
-                        for mac in host['extra']['macAddresses']:
-                            if mac['ip'] != '' and mac['status'] == 'up':
-                                asset['host_ip'] = mac['ip']
-                                # asset['host_name'] = TODO
-                        robot_logger.info("%d VM is allocated in %d Asset"
-                                          % (vm['idVM'], vm['idAsset']))
-                    else:
-                        robot_logger.error("Failed to Update VM %d with %d "
-                                           "idAsset" % (vm['idVM'],
-                                                        host['id']))
-                    break
-    else:
-        robot_logger.info("No host has capacity to accommodate \
-                               a VM, please add an Asset for hosting!")
-    return status, asset
+    return netBuild(vlan)
 
 
-def call_vm_builder(VM, password):
+def call_vm_builder(vm, password):
     """
     VM Dispatcher, takes one VM,
-    First calls for vmAssetAssign() to get idAsset(host, where vm will be
-    created) for this vm.
-    On success of above call, arranges data in required format for VMBuilder
+    Arranges data in required format for VMBuilder
     (VM Driver) then calls VMBuilder(different VMBuilder for different
     flavour) which will create the VM in Host
     If success then changes VM state to Built(4) otherwise on fail changes
@@ -163,65 +131,80 @@ def call_vm_builder(VM, password):
     :param password: string
     :return: None
     """
-    # calling vmAssetAssign()
-    status, asset = vmAssetAssign(VM)
-    if status:
-        robot_logger.info("Calling VMBuilder for %d" % VM['idVM'])
-        # Arranging vm data in required format for vmBuilders
-        vmJson = dict()
-        # naming of vmname = 123_2345 idProject_idVM
-        vmJson['vmname'] = str(VM['idProject']) + '_' + str(VM['idVM'])
-        vmJson['hdd'] = VM['hdd']
-        vmJson['flash'] = VM['flash']
-        vmJson['cpu'] = VM['cpu']
-        vmJson['ram'] = VM['ram']
-        vmJson['idImage'] = VM['idImage']
-        image = service_entity_read('iaas', 'image', {'pk': VM['idImage']})
-        vmJson['image'] = str(image['name'])
-        vmJson['u_name'] = VM['name']
-        # Random passwords generated
-        vmJson['u_passwd'] = password_generator()
-        vmJson['r_passwd'] = password_generator()
-        vmJson['dns'] = VM['dns'].split(',')
-        # get the ipadddress and subnet details
-        vm_ips = service_entity_list('iaas', 'ipaddress', {'vm': VM['idVM']})
-        if len(vm_ips) > 0:
-            for vm_ip in vm_ips:
-                if netaddr.IPAddress(str(vm_ip['address'])).is_private():
-                    vmJson['ip'] = str(vm_ip['address'])
-                    # get the subnet of this ip
-                    ip_subnet = service_entity_read(
-                        'iaas', 'subnet', {'idSubnet': vm_ip['idSubnet']})
-                    addRange =  str(ip_subnet['addressRange'])
-                    vmJson['gateway'] = addRange.split('/')[0]
-                    vmJson['netmask'] = addRange.split('/')[1]
-                    vmJson['netmask_ip'] = str(netaddr.IPNetwork(
-                        addRange).netmask)
-                    vmJson['vlan'] = ip_subnet['vlan']
-        vmJson['lang'] = 'en_US'  # need to add in db (for kvm and hyperv)
-        vmJson['keyboard'] = 'us'  # need to add in db (for kvm only)
-        vmJson['tz'] = 'America/New_York'  # need to add in db(kvm and hyperv)
-        vmJson['host_ip'] = asset['host_ip']
-        vmJson['host_name'] = asset['host_name']
-        ################## data/ip validations ##########################
-        # TODO
-        #################################################################
-        if vmBuilder(vmJson, password):
-            robot_logger.info("VM %d Successfully Built in Asset %d"
-                              % (VM['idVM'], VM['idAsset']))
-            # changing state to Built (4)
-            VM['state'] = 4
-            params = {'data': VM, 'pk': VM['idVM']}
-            service_entity_update('iaas', 'vm', params)
-        else:
-            robot_logger.error("VM %d Failed to Built in Asset %d, "
-                               "so VM is unresourced"
-                               % (VM['idVM'], VM['idAsset']))
-            # changing state to Unresourced (3)
-            VM['state'] = 3
-            params = {'data': VM, 'pk': VM['idVM']}
-            service_entity_update('iaas', 'vm', params)
+    VM = vm
+    # changing state to Building (2)
+    VM['state'] = 2
+    params = {'data': VM, 'pk': VM['idVM']}
+    service_entity_update('iaas', 'vm', params)
+
+    vmJson = dict()
+    # naming of vmname = 123_2345 (idProject_idVM)
+    vmJson['vmname'] = str(VM['idProject']) + '_' + str(VM['idVM'])
+    vmJson['hdd'] = VM['hdd']
+    vmJson['flash'] = VM['flash']
+    vmJson['cpu'] = VM['cpu']
+    vmJson['ram'] = VM['ram']
+    vmJson['idImage'] = VM['idImage']
+    image = service_entity_read('iaas', 'image', {'pk': VM['idImage']})
+    vmJson['image'] = str(image['name'])
+    vmJson['u_name'] = VM['name']
+    # Random passwords generated
+    vmJson['u_passwd'] = password_generator()
+    vmJson['r_passwd'] = password_generator()
+    vmJson['dns'] = VM['dns'].split(',')
+    # get the ipadddress and subnet details
+    vm_ips = service_entity_list('iaas', 'ipaddress', {'vm': VM['idVM']})
+    if len(vm_ips) > 0:
+        for vm_ip in vm_ips:
+            if netaddr.IPAddress(str(vm_ip['address'])).is_private():
+                vmJson['ip'] = str(vm_ip['address'])
+                # get the subnet of this ip
+                ip_subnet = service_entity_read(
+                    'iaas', 'subnet', {'idSubnet': vm_ip['idSubnet']})
+                addRange =  str(ip_subnet['addressRange'])
+                vmJson['gateway'] = addRange.split('/')[0]
+                vmJson['netmask'] = addRange.split('/')[1]
+                vmJson['netmask_ip'] = str(netaddr.IPNetwork(
+                    addRange).netmask)
+                vmJson['vlan'] = ip_subnet['vlan']
+    vmJson['lang'] = 'en_US'  # need to add in db (for kvm and hyperv)
+    vmJson['keyboard'] = 'us'  # need to add in db (for kvm only)
+    vmJson['tz'] = 'America/New_York'  # need to add in db(kvm and hyperv)
+    # Get the server details
+    server_macs = service_entity_list('iaas', 'mac_address',
+                                      {'idServer': VM['idServer']})
+    for mac in server_macs:
+        if mac['status'] is True and netaddr.IPAddress(str(mac['ip'])):
+            vmJson['host_ip'] = mac['ip']
+            vmJson['host_name'] = mac['dnsName']
+            break
+    ################## data/ip validations ##########################
+    # TODO
+    #################################################################
+
+    #----------------------------------------------------------------
+    # CHECK IF VRF IS BUILT OR NOT
+    # Get the vrf via idProject which is common for both VM and VRF
+    vm_vrf = service_entity_list('iaas', 'vrf', {'project': VM['idProject']})
+    if not vm_vrf[0]['state'] == 4:
+        # changing state to Unresourced (3)
+        VM['state'] = 3
+        params = {'data': VM, 'pk': VM['idVM']}
+        service_entity_update('iaas', 'vm', params)
+    #----------------------------------------------------------------
+
+    # Despatching VMBuilder driver
+    if vmBuilder(vmJson, password):
+        robot_logger.info("VM %d Successfully Built in Asset %d"
+                          % (VM['idVM'], VM['idAsset']))
+        # changing state to Built (4)
+        VM['state'] = 4
+        params = {'data': VM, 'pk': VM['idVM']}
+        service_entity_update('iaas', 'vm', params)
     else:
+        robot_logger.error("VM %d Failed to Built in Asset %d, "
+                           "so VM is unresourced"
+                           % (VM['idVM'], VM['idAsset']))
         # changing state to Unresourced (3)
         VM['state'] = 3
         params = {'data': VM, 'pk': VM['idVM']}

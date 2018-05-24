@@ -62,6 +62,7 @@ def service_entity_list(service, entity, params):
     entity_to_call = getattr(service_to_call(), entity)
     # entity_to_call = api.iaas.image (e.g entity = 'image')
     response = entity_to_call.list(token=TOKEN, params=params)
+    print(response)
     if response.status_code == 200:
         entity_list.extend(response.json()['content'])
     else:
@@ -230,3 +231,4 @@ def password_generator(size=8, chars=string.ascii_letters + string.digits):
     chars: default=A-Za-z0-9; override to provide more/less diversity
     """
     return ''.join(random.choice(chars) for i in range(size))
+
