@@ -175,8 +175,7 @@ def unattendXML(vm):
                                        'true')
                                       ]))
                                 ]))
-                          ])
-                    ])
+                          ])])
                    ]),
                OrderedDict(
                    [('@pass', 'oobeSystem'),
@@ -239,8 +238,7 @@ def unattendXML(vm):
                                        ('CommandLine',
                                         'Usoclient StartDownload StartInsatll'
                                         )
-                                       ])
-                                 ])
+                                       ])])
                                 ]))
                           ]),
                       OrderedDict(
@@ -258,10 +256,8 @@ def unattendXML(vm):
                            ('UILanguage', str(UILanguage)),
                            ('UILanguageFallback', str(UILanguageFallback)),
                            ('UserLocale', str(UserLocale))
-                           ])
-                     ])
-                    ])
-              ])
+                           ])])
+                    ])])
              ])
     }
 
@@ -281,16 +277,24 @@ def unattendXML(vm):
                 for it in dict(item)['component']:
                     if dict(it)['@name'] == 'Microsoft-Windows-Shell-Setup':
                         dict(it)['UserAccounts']['LocalAccouts'] = \
-                            OrderedDict([
-                              ('LocalAccount', OrderedDict([
-                                ('@wcm:action', 'add'),
-                                ('Password', OrderedDict([
-                                  ('Value', str(UserAccouts[0]['Value'])),
-                                  ('PlainText', 'true')])),
-                                ('Description', 'User Account'),
-                                ('DisplayName', str(UserAccouts[0]['Name'])),
-                                ('Group', 'Administrators'),
-                                ('Name', str(UserAccouts[0]['Name']))]))])
+                            OrderedDict(
+                                [('LocalAccount',
+                                  OrderedDict(
+                                      [('@wcm:action', 'add'),
+                                       ('Password',
+                                        OrderedDict(
+                                            [('Value',
+                                              str(UserAccouts[0]['Value'])),
+                                             ('PlainText', 'true')
+                                             ])),
+                                       ('Description', 'User Account'),
+                                       ('DisplayName',
+                                        str(UserAccouts[0]['Name'])),
+                                       ('Group', 'Administrators'),
+                                       ('Name',
+                                        str(UserAccouts[0]['Name']))
+                                       ]))
+                                 ])
 
     return xmltodict.unparse(data, pretty=True)
 
@@ -307,7 +311,7 @@ def vmBuild(vm, password):
     xml_file = False
     xml = unattendXML(vm)
     try:
-        with open(path+str(vm['vmname']) + '.xml', 'w') as file:
+        with open(path + str(vm['vmname']) + '.xml', 'w') as file:
             file.write(xml)
         xml_file = True
     except Exception as err:
