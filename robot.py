@@ -14,9 +14,9 @@ import utils
 from utils import get_logger_for_name
 from ro import service_entity_list, service_entity_read, \
     service_entity_update, password_generator
-from vrfBuilders import vrfBuild
+from vrfBuilders import vrfBuilder
 from vmBuilders import vmBuilder
-from netBuilders import netBuild
+from netBuilders import netBuilder
 
 robot_logger = get_logger_for_name('robot')
 
@@ -71,11 +71,11 @@ def call_vrf_builder(vrf, password):
             VRF['state'] = 3
             params = {'data': VRF, 'pk': VRF['idVRF']}
             service_entity_update('iaas', 'vrf', params)
-        #---------------------------------------------------------------
+        # ---------------------------------------------------------------
 
         for ip in regionIPs:
             if ip['idSubnet'] == vrfLan['idSubnet'] and \
-                            ip['idIPAddressFIP'] is not None:
+                    ip['idIPAddressFIP'] is not None:
                 pip = service_entity_read('iaas', 'ipaddress',
                                           {'pk': ip['idIPAddressFIP']})
                 vrfJson['NATs'].append({'fIP': str(ip['address']) + '/32',
@@ -87,11 +87,11 @@ def call_vrf_builder(vrf, password):
     router = service_entity_read('iaas', 'router', {'pk': VRF['idRouter']})
     vrfJson['oobIP'] = str(router['ipOOB'])
 
-    ################## data/ip validations ##########################
+    # ################# data/ip validations ##########################
     # TODO
-    #################################################################
+    # ################################################################
 
-    if vrfBuild(vrfJson, password):
+    if vrfBuilder(vrfJson, password):
         robot_logger.info("VRF %d Successfully Built in Router %d"
                           % (VRF['idVRF'], VRF['idRouter']))
         # changing state to Built (4)
@@ -116,7 +116,7 @@ def call_net_builder(vlan):
     :param vlan: int
     :return: boolean
     """
-    return netBuild(vlan)
+    return netBuilder(vlan)
 
 
 def call_vm_builder(vm, password):
@@ -161,7 +161,7 @@ def call_vm_builder(vm, password):
                 # get the subnet of this ip
                 ip_subnet = service_entity_read(
                     'iaas', 'subnet', {'idSubnet': vm_ip['idSubnet']})
-                addRange =  str(ip_subnet['addressRange'])
+                addRange = str(ip_subnet['addressRange'])
                 vmJson['gateway'] = addRange.split('/')[0]
                 vmJson['netmask'] = addRange.split('/')[1]
                 vmJson['netmask_ip'] = str(netaddr.IPNetwork(
@@ -178,11 +178,11 @@ def call_vm_builder(vm, password):
             vmJson['host_ip'] = mac['ip']
             vmJson['host_name'] = mac['dnsName']
             break
-    ################## data/ip validations ##########################
+    # ################# data/ip validations ##########################
     # TODO
-    #################################################################
+    # ################################################################
 
-    #----------------------------------------------------------------
+    # ----------------------------------------------------------------
     # CHECK IF VRF IS BUILT OR NOT
     # Get the vrf via idProject which is common for both VM and VRF
     vm_vrf = service_entity_list('iaas', 'vrf', {'project': VM['idProject']})
@@ -191,7 +191,7 @@ def call_vm_builder(vm, password):
         VM['state'] = 3
         params = {'data': VM, 'pk': VM['idVM']}
         service_entity_update('iaas', 'vm', params)
-    #----------------------------------------------------------------
+    # ----------------------------------------------------------------
 
     # Despatching VMBuilder driver
     if vmBuilder(vmJson, password):

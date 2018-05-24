@@ -17,5 +17,3 @@ def vmBuilder(vm, password):
         return vmBuild(vm, password)
     else:
         return False
-
-

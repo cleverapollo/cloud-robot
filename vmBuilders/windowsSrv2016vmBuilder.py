@@ -30,183 +30,240 @@ def unattendXML(vm):
     DNSs = vm['dns']
     UserAccouts = [{'Name': str(vm['u_name']), 'Value': vm['u_passwd']}]
 
-    data = {'unattend': OrderedDict([
-                ('@xmlns', 'urn:schemas-microsoft-com:unattend'),
-                ('settings', [
-                  OrderedDict([
-                    ('@pass', 'specialize'),
-                    ('component', [
-                      OrderedDict([
-                        ('@name', 'Microsoft-Windows-Shell-Setup'),
-                        ('@processorArchitecture', 'amd64'),
-                        ('@publicKeyToken', '31bf3856ad364e35'),
-                        ('@language', 'neutral'),
-                        ('@versionScope', 'nonSxS'),
-                        ('@xmlns:wcm', 'http://schemas.microsoft.com/'
-                                       'WMIConfig/2002/State'),
-                        ('@xmlns:xsi', 'http://www.w3.org/2001/'
-                                       'XMLSchema-instance'),
-                        ('TimeZone', str(TimeZone))]),
-                      OrderedDict([
-                        ('@name', 'Microsoft-Windows-TerminalServices-'
-                                  'LocalSessionManager'),
-                        ('@processorArchitecture', 'amd64'),
-                        ('@publicKeyToken', '31bf3856ad364e35'),
-                        ('@language', 'neutral'),
-                        ('@versionScope', 'nonSxS'),
-                        ('@xmlns:wcm', 'http://schemas.microsoft.com/'
-                                       'WMIConfig/2002/State'),
-                        ('@xmlns:xsi', 'http://www.w3.org/2001/'
-                                       'XMLSchema-instance'),
-                        ('fDenyTSConnections', 'false')]),
-                      OrderedDict([
-                        ('@name', 'Microsoft-Windows-TerminalServices'
-                                  '-RDP-WinStationExtensions'),
-                        ('@processorArchitecture', 'amd64'),
-                        ('@publicKeyToken', '31bf3856ad364e35'),
-                        ('@language', 'neutral'),
-                        ('@versionScope', 'nonSxS'),
-                        ('@xmlns:wcm', 'http://schemas.microsoft.com/'
-                                       'WMIConfig/2002/State'),
-                        ('@xmlns:xsi', 'http://www.w3.org/2001/'
-                                       'XMLSchema-instance'),
-                        ('UserAuthentication', '0'),
-                        ('SecurityLayer', '1')]),
-                      OrderedDict([
-                        ('@name', 'Networking-MPSSVC-Svc'),
-                        ('@processorArchitecture', 'amd64'),
-                        ('@publicKeyToken', '31bf3856ad364e35'),
-                        ('@language', 'neutral'),
-                        ('@versionScope', 'nonSxS'),
-                        ('@xmlns:wcm', 'http://schemas.microsoft.com/'
-                                       'WMIConfig/2002/State'),
-                        ('@xmlns:xsi', 'http://www.w3.org/2001/'
-                                       'XMLSchema-instance'),
-                        ('FirewallGroups', OrderedDict([
-                            ('FirewallGroup', OrderedDict([
-                                ('@wcm:action', 'add'),
-                                ('@wcm:keyValue', 'EnableRemoteDesktop'),
-                                ('Active', 'true'),
-                                ('Group', 'Remote Desktop'),
-                                ('Profile', 'all')]))]))]),
-                      OrderedDict([
-                        ('@name', 'Microsoft-Windows-TCPIP'),
-                        ('@processorArchitecture', 'amd64'),
-                        ('@publicKeyToken', '31bf3856ad364e35'),
-                        ('@language', 'neutral'),
-                        ('@versionScope', 'nonSxS'),
-                        ('@xmlns:wcm', 'http://schemas.microsoft.com/'
-                                       'WMIConfig/2002/State'),
-                        ('@xmlns:xsi', 'http://www.w3.org/2001/'
-                                       'XMLSchema-instance'),
-                        ('Interfaces', OrderedDict([
-                            ('Interface', OrderedDict([
-                                ('@wcm:action', 'add'),
-                                ('Ipv4Settings', OrderedDict([
-                                    ('DhcpEnabled', 'false'),
-                                    ('RouterDiscoveryEnabled', 'false')])),
-                                ('Ipv6Settings', OrderedDict([
-                                    ('DhcpEnabled', 'false'),
-                                    ('RouterDiscoveryEnabled', 'false')])),
-                                ('UnicastIpAddresses', OrderedDict([
-                                    ('IpAddress', OrderedDict([
-                                        ('@wcm:action', 'add'),
-                                        ('@wcm:keyValue', '1'),
-                                        ('#text', str(IP))]))])),
-                                ('Identifier', 'Ethernet'),
-                                ('Routes', OrderedDict([
-                                            ('Route', OrderedDict([
-                                                ('@wcm:action', 'add'),
-                                                ('Identifier', '0'),
-                                                ('NextHopAddress',
-                                                 str(gateway)),
-                                                ('Prefix', '0.0.0.0/0')
-                                            ]))]))]))]))]),
-                      OrderedDict([
-                        ('@name', 'Microsoft-Windows-DNS-Client'),
-                        ('@processorArchitecture', 'amd64'),
-                        ('@publicKeyToken', '31bf3856ad364e35'),
-                        ('@language', 'neutral'),
-                        ('@versionScope', 'nonSxS'),
-                        ('@xmlns:wcm', 'http://schemas.microsoft.com/'
-                                       'WMIConfig/2002/State'),
-                        ('@xmlns:xsi', 'http://www.w3.org/2001/'
-                                       'XMLSchema-instance'),
-                        ('Interfaces', OrderedDict([
-                            ('Interface', OrderedDict([
-                                ('@wcm:action', 'add'),
-                                ('DNSServerSearchOrder', OrderedDict([
-                                    ('IpAddress', list())])),
-                                ('Identifier', 'Ethernet'),
-                                ('DisableDynamicUpdate', 'false'),
-                                ('EnableAdapterDomainNameRegistration',
-                                 'true')]))]))])])]),
-                  OrderedDict([
-                    ('@pass', 'oobeSystem'),
-                    ('component', [
-                      OrderedDict([
-                        ('@name', 'Microsoft-Windows-Shell-Setup'),
-                        ('@processorArchitecture', 'amd64'),
-                        ('@publicKeyToken', '31bf3856ad364e35'),
-                        ('@language', 'neutral'),
-                        ('@versionScope', 'nonSxS'),
-                        ('@xmlns:wcm', 'http://schemas.microsoft.com/'
-                                       'WMIConfig/2002/State'),
-                        ('@xmlns:xsi', 'http://www.w3.org/2001/'
-                                       'XMLSchema-instance'),
-                        ('OOBE', OrderedDict([
-                            ('HideEULAPage', 'true'),
-                            ('HideWirelessSetupInOOBE', 'true'),
-                            ('NetworkLocation', 'Work'),
-                            ('ProtectYourPC', '1')])),
-                        ('UserAccounts', OrderedDict([
-                                ('AdministratorPassword', OrderedDict([
-                                    ('Value', AdministratorPassword),
-                                    ('PlainText', 'true')])), ])),
-                        ('TimeZone', str(TimeZone)),
-                        ('FirstLogonCommands', OrderedDict([
-                                ('SynchronousCommand', [
-                                  OrderedDict([
-                                    ('@wcm:action', 'add'),
-                                    ('Order', '2'),
-                                    ('RequiresUserInput', 'false'),
-                                    ('Description', 'AVMA'),
-                                    ('CommandLine',
-                                     'cscript //B %windir%/system32/'
-                                     'slmgr.vbs /ipk '
-                                     'C3RCX-M6NRP-6CXC9-TW2F2-4RHYD')]),
-                                  OrderedDict([
-                                    ('@wcm:action', 'add'),
-                                    ('Order', '1'),
-                                    ('RequiresUserInput', 'false'),
-                                    ('Description', 'Enable Remote Desktop '
-                                                    'Firewall'),
-                                    ('CommandLine', 'Netsh advfirewall '
-                                                    'firewall set rule '
-                                                    'group="remote desktop" '
-                                                    'new enable=yes')]),
-                                  OrderedDict([
-                                    ('@wcm:action', 'add'),
-                                    ('Order', '3'),
-                                    ('Description', 'Windows Updates'),
-                                    ('RequiresUserInput', 'false'),
-                                    ('CommandLine', 'Usoclient StartDownload '
-                                                    'StartInsatll')])])]))]),
-                      OrderedDict([
-                        ('@name', 'Microsoft-Windows-International-Core'),
-                        ('@processorArchitecture', 'amd64'),
-                        ('@publicKeyToken', '31bf3856ad364e35'),
-                        ('@language', 'neutral'),
-                        ('@versionScope', 'nonSxS'),
-                        ('@xmlns:wcm', 'http://schemas.microsoft.com/'
-                                       'WMIConfig/2002/State'),
-                        ('@xmlns:xsi', 'http://www.w3.org/2001/'
-                                       'XMLSchema-instance'),
-                        ('InputLocale', str(InputLocale)),
-                        ('SystemLocale', str(SystemLocale)),
-                        ('UILanguage', str(UILanguage)),
-                        ('UILanguageFallback', str(UILanguageFallback)),
-                        ('UserLocale', str(UserLocale))])])])])])}
+    data = {
+        'unattend': OrderedDict(
+            [('@xmlns', 'urn:schemas-microsoft-com:unattend'),
+             ('settings',
+              [OrderedDict(
+                  [('@pass', 'specialize'),
+                   ('component',
+                    [OrderedDict(
+                        [('@name', 'Microsoft-Windows-Shell-Setup'),
+                         ('@processorArchitecture', 'amd64'),
+                         ('@publicKeyToken', '31bf3856ad364e35'),
+                         ('@language', 'neutral'),
+                         ('@versionScope', 'nonSxS'),
+                         ('@xmlns:wcm', 'http://schemas.microsoft.com/'
+                                        'WMIConfig/2002/State'),
+                         ('@xmlns:xsi', 'http://www.w3.org/2001/'
+                                        'XMLSchema-instance'),
+                         ('TimeZone', str(TimeZone))
+                         ]),
+                     OrderedDict(
+                         [('@name', 'Microsoft-Windows-TerminalServices-'
+                                    'LocalSessionManager'),
+                          ('@processorArchitecture', 'amd64'),
+                          ('@publicKeyToken', '31bf3856ad364e35'),
+                          ('@language', 'neutral'),
+                          ('@versionScope', 'nonSxS'),
+                          ('@xmlns:wcm', 'http://schemas.microsoft.com/'
+                                         'WMIConfig/2002/State'),
+                          ('@xmlns:xsi', 'http://www.w3.org/2001/'
+                                         'XMLSchema-instance'),
+                          ('fDenyTSConnections', 'false')
+                          ]),
+                     OrderedDict(
+                         [('@name', 'Microsoft-Windows-TerminalServices'
+                                    '-RDP-WinStationExtensions'),
+                          ('@processorArchitecture', 'amd64'),
+                          ('@publicKeyToken', '31bf3856ad364e35'),
+                          ('@language', 'neutral'),
+                          ('@versionScope', 'nonSxS'),
+                          ('@xmlns:wcm', 'http://schemas.microsoft.com/'
+                                         'WMIConfig/2002/State'),
+                          ('@xmlns:xsi', 'http://www.w3.org/2001/'
+                                         'XMLSchema-instance'),
+                          ('UserAuthentication', '0'),
+                          ('SecurityLayer', '1')
+                          ]),
+                     OrderedDict(
+                         [('@name', 'Networking-MPSSVC-Svc'),
+                          ('@processorArchitecture', 'amd64'),
+                          ('@publicKeyToken', '31bf3856ad364e35'),
+                          ('@language', 'neutral'),
+                          ('@versionScope', 'nonSxS'),
+                          ('@xmlns:wcm', 'http://schemas.microsoft.com/'
+                                         'WMIConfig/2002/State'),
+                          ('@xmlns:xsi', 'http://www.w3.org/2001/'
+                                         'XMLSchema-instance'),
+                          ('FirewallGroups',
+                           OrderedDict(
+                               [('FirewallGroup',
+                                 OrderedDict(
+                                     [('@wcm:action', 'add'),
+                                      ('@wcm:keyValue',
+                                       'EnableRemoteDesktop'),
+                                      ('Active', 'true'),
+                                      ('Group', 'Remote Desktop'),
+                                      ('Profile', 'all')
+                                      ]))
+                                ]))
+                          ]),
+                     OrderedDict(
+                         [('@name', 'Microsoft-Windows-TCPIP'),
+                          ('@processorArchitecture', 'amd64'),
+                          ('@publicKeyToken', '31bf3856ad364e35'),
+                          ('@language', 'neutral'),
+                          ('@versionScope', 'nonSxS'),
+                          ('@xmlns:wcm', 'http://schemas.microsoft.com/'
+                                         'WMIConfig/2002/State'),
+                          ('@xmlns:xsi', 'http://www.w3.org/2001/'
+                                         'XMLSchema-instance'),
+                          ('Interfaces',
+                           OrderedDict(
+                               [('Interface',
+                                 OrderedDict(
+                                     [('@wcm:action', 'add'),
+                                      ('Ipv4Settings',
+                                       OrderedDict(
+                                           [('DhcpEnabled', 'false'),
+                                            ('RouterDiscoveryEnabled',
+                                             'false')
+                                            ])),
+                                      ('Ipv6Settings',
+                                       OrderedDict(
+                                           [('DhcpEnabled', 'false'),
+                                            ('RouterDiscoveryEnabled',
+                                             'false')
+                                            ])),
+                                      ('UnicastIpAddresses',
+                                       OrderedDict(
+                                           [('IpAddress',
+                                             OrderedDict(
+                                                 [('@wcm:action', 'add'),
+                                                  ('@wcm:keyValue', '1'),
+                                                  ('#text', str(IP))
+                                                  ]))
+                                            ])),
+                                      ('Identifier', 'Ethernet'),
+                                      ('Routes',
+                                       OrderedDict(
+                                           [('Route',
+                                             OrderedDict(
+                                                 [('@wcm:action', 'add'),
+                                                  ('Identifier', '0'),
+                                                  ('NextHopAddress',
+                                                   str(gateway)),
+                                                  ('Prefix', '0.0.0.0/0')
+                                                  ]))
+                                            ]))
+                                      ]))
+                                ]))
+                          ]),
+                     OrderedDict(
+                         [('@name', 'Microsoft-Windows-DNS-Client'),
+                          ('@processorArchitecture', 'amd64'),
+                          ('@publicKeyToken', '31bf3856ad364e35'),
+                          ('@language', 'neutral'),
+                          ('@versionScope', 'nonSxS'),
+                          ('@xmlns:wcm', 'http://schemas.microsoft.com/'
+                                         'WMIConfig/2002/State'),
+                          ('@xmlns:xsi', 'http://www.w3.org/2001/'
+                                         'XMLSchema-instance'),
+                          ('Interfaces',
+                           OrderedDict(
+                               [('Interface',
+                                 OrderedDict(
+                                     [('@wcm:action', 'add'),
+                                      ('DNSServerSearchOrder',
+                                       OrderedDict(
+                                           [('IpAddress', list())
+                                            ])),
+                                      ('Identifier', 'Ethernet'),
+                                      ('DisableDynamicUpdate', 'false'),
+                                      ('EnableAdapterDomainNameRegistration',
+                                       'true')
+                                      ]))
+                                ]))
+                          ])
+                    ])
+                   ]),
+               OrderedDict(
+                   [('@pass', 'oobeSystem'),
+                    ('component',
+                     [OrderedDict(
+                         [('@name', 'Microsoft-Windows-Shell-Setup'),
+                          ('@processorArchitecture', 'amd64'),
+                          ('@publicKeyToken', '31bf3856ad364e35'),
+                          ('@language', 'neutral'),
+                          ('@versionScope', 'nonSxS'),
+                          ('@xmlns:wcm', 'http://schemas.microsoft.com/'
+                                         'WMIConfig/2002/State'),
+                          ('@xmlns:xsi', 'http://www.w3.org/2001/'
+                                         'XMLSchema-instance'),
+                          ('OOBE',
+                           OrderedDict(
+                               [('HideEULAPage', 'true'),
+                                ('HideWirelessSetupInOOBE', 'true'),
+                                ('NetworkLocation', 'Work'),
+                                ('ProtectYourPC', '1')
+                                ])),
+                          ('UserAccounts',
+                           OrderedDict(
+                               [('AdministratorPassword',
+                                 OrderedDict(
+                                     [('Value', AdministratorPassword),
+                                      ('PlainText', 'true')
+                                      ])),
+                                ])),
+                          ('TimeZone', str(TimeZone)),
+                          ('FirstLogonCommands',
+                           OrderedDict(
+                               [('SynchronousCommand',
+                                 [OrderedDict(
+                                     [('@wcm:action', 'add'),
+                                      ('Order', '2'),
+                                      ('RequiresUserInput', 'false'),
+                                      ('Description', 'AVMA'),
+                                      ('CommandLine',
+                                       'cscript //B %windir%/system32/'
+                                       'slmgr.vbs /ipk '
+                                       'C3RCX-M6NRP-6CXC9-TW2F2-4RHYD')
+                                      ]),
+                                  OrderedDict(
+                                      [('@wcm:action', 'add'),
+                                       ('Order', '1'),
+                                       ('RequiresUserInput', 'false'),
+                                       ('Description',
+                                        'Enable Remote Desktop Firewall'),
+                                       ('CommandLine',
+                                        'Netsh advfirewall firewall set rule '
+                                        'group="remote desktop" '
+                                        'new enable=yes')
+                                       ]),
+                                  OrderedDict(
+                                      [('@wcm:action', 'add'),
+                                       ('Order', '3'),
+                                       ('Description', 'Windows Updates'),
+                                       ('RequiresUserInput', 'false'),
+                                       ('CommandLine',
+                                        'Usoclient StartDownload StartInsatll'
+                                        )
+                                       ])
+                                 ])
+                                ]))
+                          ]),
+                      OrderedDict(
+                          [('@name', 'Microsoft-Windows-International-Core'),
+                           ('@processorArchitecture', 'amd64'),
+                           ('@publicKeyToken', '31bf3856ad364e35'),
+                           ('@language', 'neutral'),
+                           ('@versionScope', 'nonSxS'),
+                           ('@xmlns:wcm', 'http://schemas.microsoft.com/'
+                                          'WMIConfig/2002/State'),
+                           ('@xmlns:xsi', 'http://www.w3.org/2001/'
+                                          'XMLSchema-instance'),
+                           ('InputLocale', str(InputLocale)),
+                           ('SystemLocale', str(SystemLocale)),
+                           ('UILanguage', str(UILanguage)),
+                           ('UILanguageFallback', str(UILanguageFallback)),
+                           ('UserLocale', str(UserLocale))
+                           ])
+                     ])
+                    ])
+              ])
+             ])
+    }
 
     for item in data['unattend']['settings']:
         for it in dict(item)['component']:

@@ -2,12 +2,12 @@ import time
 from utils import get_logger_for_name
 from jnpr.junos import Device
 from jnpr.junos.utils.config import Config
-from jnpr.junos.exception import *
-from ro import *
-
+from jnpr.junos.exception import LockError, UnlockError, ConfigLoadError, \
+    CommitError
 
 robot_logger = get_logger_for_name('vrfBuilder')
 
+# TODO not yet fixed
 
 def vrfBuild(VRF, passwd):
     """

@@ -9,7 +9,6 @@ import os
 import string
 import random
 from datetime import datetime
-from pprint import pprint
 
 # libs
 from cloudcix import api
@@ -231,4 +230,3 @@ def password_generator(size=8, chars=string.ascii_letters + string.digits):
     chars: default=A-Za-z0-9; override to provide more/less diversity
     """
     return ''.join(random.choice(chars) for i in range(size))
-
