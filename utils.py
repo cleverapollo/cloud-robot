@@ -1,9 +1,11 @@
 """File containing some utility functions such as generating our logger"""
 # python
+from datetime import datetime
 import logging
 import logging.handlers
 import subprocess
 # libs
+from cloudcix.utils import get_admin_session
 # local
 
 
@@ -40,3 +42,22 @@ def get_current_git_sha() -> str:
     return subprocess.check_output(
         ['git', 'describe', '--always']
     ).strip().decode()
+
+
+class Token:
+    """Wrapper for CloudCIX token that renews itself when necessary"""
+
+    THRESHOLD = 40  # Minutes a token has lived until we get a new one
+
+    def __init__(self):
+        self._token = get_admin_session().get_token()
+        self._created = datetime.now()
+
+    @property
+    def token(self):
+        """Ensures that the token is up to date"""
+        if (datetime.now() - self._created).seconds / 60 > self.THRESHOLD:
+            # We need to regenerate the token
+            self._token = get_admin_session().get_token()
+            self._created = datetime.now()
+        return self._token
