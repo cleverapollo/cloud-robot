@@ -9,6 +9,7 @@ robot_logger = get_logger_for_name('vrfBuilder')
 
 # TODO not yet fixed
 
+
 def vrfBuild(VRF, passwd):
     """
     Builds Virtual Routing and Forwarding (VRF) in corresponding Router,
