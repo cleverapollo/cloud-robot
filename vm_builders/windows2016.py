@@ -266,8 +266,8 @@ def unattend_xml(vm: dict) -> str:
     for setting in data['unattend']['settings']:
         for component in dict(setting)['component']:
             if dict(component)['@name'] == 'Microsoft-Windows-DNS-Client':
-                dict(component)['Interfaces']['Interface']['DNSServerSearchOrder'][
-                    'IpAddress'] = list()
+                dict(component)['Interfaces']['Interface'][
+                    'DNSServerSearchOrder']['IpAddress'] = list()
                 for i in range(len(DNSs)):
                     dict(component)['Interfaces']['Interface'][
                         'DNSServerSearchOrder']['IpAddress'].append(
@@ -277,7 +277,8 @@ def unattend_xml(vm: dict) -> str:
         if UserAccouts:
             if dict(setting)['@pass'] == 'oobeSystem':
                 for component in dict(setting)['component']:
-                    if dict(component)['@name'] == 'Microsoft-Windows-Shell-Setup':
+                    if dict(component)['@name'] == 'Microsoft-Windows-' \
+                                                   'Shell-Setup':
                         dict(component)['UserAccounts']['LocalAccouts'] = \
                             OrderedDict(
                                 [('LocalAccount',

@@ -54,12 +54,12 @@ def dispatch_vrf(vrf: dict, password: str) -> None:
             if ip['idSubnet'] == vrfLan['idSubnet'] and \
                     ip['idIPAddressFIP'] is not None:
                 pip = ro.service_entity_read('iaas', 'ipaddress',
-                                          {'pk': ip['idIPAddressFIP']})
+                                             {'pk': ip['idIPAddressFIP']})
                 vrfJson['NATs'].append({'fIP': str(ip['address']) + '/32',
                                         'pIP': str(pip['address']) + '/32'})
 
     vrfJson['VPNs'] = ro.service_entity_list('iaas', 'vpn_tunnel',
-                                          {'vrf': VRF['idVRF']})
+                                             {'vrf': VRF['idVRF']})
 
     router = ro.service_entity_read('iaas', 'router', {'pk': VRF['idRouter']})
     vrfJson['oobIP'] = str(router['ipOOB'])
@@ -151,7 +151,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
     vmJson['tz'] = 'America/New_York'  # need to add in db(kvm and hyperv)
     # Get the server details
     server_macs = ro.service_entity_list('iaas', 'mac_address',
-                                      {'idServer': VM['idServer']})
+                                         {'idServer': VM['idServer']})
     for mac in server_macs:
         if mac['status'] is True and netaddr.IPAddress(str(mac['ip'])):
             vmJson['host_ip'] = mac['ip']
