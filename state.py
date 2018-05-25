@@ -1,4 +1,5 @@
 # python
+from typing import Optional
 # libs
 from cloudcix import api
 # local
@@ -7,12 +8,12 @@ import utils
 TOKEN_WRAPPER = utils.Token()
 
 
-def vrf(state: int):
+def vrf(state: int) -> Optional[int]:
     """
     Finds the first VRF in the API with the given state
 
     :param state: The state for which to find a VRF
-    :returns: A VRF instance or None
+    :returns: A VRF id or None
     """
     response = api.iaas.vrf.list(
         token=TOKEN_WRAPPER.token,
@@ -23,18 +24,18 @@ def vrf(state: int):
         if data['_metadata']['totalRecords'] > 0:
             return data['content'][0]['idVRF']
     else:
-        utils.get_logger_for_name('state:vrf').error('({}): {}'.format(
-            response.status_code,
-            str(response.json())))
+        utils.get_logger_for_name('state.vrf').error(
+            f'({response.status_code}): {str(response.json())}'
+        )
     return None
 
 
-def vm(state: int):
+def vm(state: int) -> Optional[int]:
     """
     Finds the first VM in the API with the given state
 
     :param state: The state for which to find a VM
-    :returns: A VM instance or None
+    :returns: A VM id or None
     """
     response = api.iaas.vm.list(
         token=TOKEN_WRAPPER.token,
@@ -45,7 +46,7 @@ def vm(state: int):
         if data['_metadata']['totalRecords'] > 0:
             return data['content'][0]['idVM']
     else:
-        utils.get_logger_for_name('state:vm').error('({}): {}'.format(
-            response.status_code,
-            str(response.json())))
+        utils.get_logger_for_name('state.vm').error(
+            f'({response.status_code}): {str(response.json())}'
+        )
     return None
