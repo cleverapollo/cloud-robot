@@ -58,6 +58,10 @@ class Token:
         """Ensures that the token is up to date"""
         if (datetime.now() - self._created).seconds / 60 > self.THRESHOLD:
             # We need to regenerate the token
+            old_token = self._token
             self._token = get_admin_session().get_token()
             self._created = datetime.now()
+            get_logger_for_name('utils.Token').info(
+                f'Generated new token: {old_token} -> {self._token}'
+            )
         return self._token
