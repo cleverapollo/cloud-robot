@@ -41,7 +41,7 @@ def get_logger_for_name(name: str, level=logging.INFO) -> logging.Logger:
         datefmt="%d/%m/%y @ %H:%M:%S"
     )
     logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(level)
     # Get a file handler
     handler = logging.handlers.RotatingFileHandler(
         '/var/log/robot/robot.log',
@@ -76,6 +76,10 @@ class Token:
         """Ensures that the token is up to date"""
         if (datetime.now() - self._created).seconds / 60 > self.THRESHOLD:
             # We need to regenerate the token
+            old_token = self._token
             self._token = get_admin_session().get_token()
             self._created = datetime.now()
+            get_logger_for_name('utils.Token').info(
+                f'Generated new token: {old_token} -> {self._token}'
+            )
         return self._token

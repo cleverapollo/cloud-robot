@@ -23,6 +23,9 @@ def mainloop(watcher: INotify):
         # First check to see if there have been any events
         if watcher.read(timeout=1000):
             robot_logger.info('Update detected. Spawning New Robot.')
+            # Wait until all the deployment is finished
+            time.sleep(10)
+            # Spawn a new robot process in the background
             subprocess.Popen(['python3', 'robot.py'])
             # Wait a couple of seconds for the new robot to take over
             time.sleep(2)
