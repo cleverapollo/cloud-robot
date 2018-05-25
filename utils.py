@@ -23,7 +23,7 @@ def get_logger_for_name(name: str, level=logging.INFO) -> logging.Logger:
         datefmt="%d/%m/%y @ %H:%M:%S"
     )
     logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(level)
     # Get a file handler
     handler = logging.handlers.RotatingFileHandler(
         '/var/log/robot/robot.log',
