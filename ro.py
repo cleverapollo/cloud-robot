@@ -5,24 +5,22 @@
 ######################################################
 
 # python
-import os
 import string
 import random
 from datetime import datetime
 
 # libs
 from cloudcix import api
-from cloudcix.utils import get_admin_session
 
 # locals
 import utils
 
-os.environ.setdefault("CLOUDCIX_SETTINGS_MODULE", 'settings')
-TOKEN = get_admin_session().get_token()
-robot_logger = utils.get_logger_for_name('ro')
+TOKEN = utils.Token().token
+robot_logger = utils.get_logger_for_name('ro_logger')
 
 
-def service_entity_create(service, entity, params):
+def service_entity_create(service: str, entity: str, params: dict) \
+        -> [list, None]:
     """
     Create given entity into a service with params
     :param service: string
@@ -39,15 +37,15 @@ def service_entity_create(service, entity, params):
     if response.status_code == 201:
         entity_create = response.json()['content']
     else:
-        robot_logger.error("An error occurred while creating %s "
-                           "object in %s service with params: %s, "
-                           "response code=%d"
-                           % (entity.upper(), service.upper(),
-                              str(params), response.status_code))
+        robot_logger.error(
+            f"An error occurred while creating {entity.upper()} "
+            f"object in {service.upper()} service with params: {str(params)},"
+            f" response code={response.status_code}"
+        )
     return entity_create
 
 
-def service_entity_list(service, entity, params):
+def service_entity_list(service: str, entity: str, params: dict) -> list:
     """
     Gets the list of given entity and params from given service
     :param service: string
@@ -61,24 +59,24 @@ def service_entity_list(service, entity, params):
     entity_to_call = getattr(service_to_call(), entity)
     # entity_to_call = api.iaas.image (e.g entity = 'image')
     response = entity_to_call.list(token=TOKEN, params=params)
-    print(response)
     if response.status_code == 200:
         entity_list.extend(response.json()['content'])
     else:
-        robot_logger.error("An error occurred while fetching %s "
-                           "list from %s service with params %s, "
-                           "response code=%d"
-                           % (entity.upper(), service.upper(),
-                              str(params), response.status_code))
+        robot_logger.error(
+            f"An error occurred while fetching {entity.upper()} "
+            f"list from {service.upper()} service with params {str(params)},"
+            f" response code={response.status_code}"
+        )
     if response.json()['_metadata']['totalRecords'] > 0:
-        robot_logger.info("%d %ss were found!"
-                          % (len(entity_list), entity.upper()))
+        robot_logger.info(
+            f"{len(entity_list)} {entity.upper()}s were found!"
+        )
     else:
-        robot_logger.info("No requested %ss were found!" % entity.upper())
+        robot_logger.info(f"No requested {entity.upper()}s were found!")
     return entity_list
 
 
-def service_entity_update(service, entity, params):
+def service_entity_update(service: str, entity: str, params: dict) -> [1, 0]:
     """
     Updates given entity and params from given service
     :param service: string
@@ -95,17 +93,20 @@ def service_entity_update(service, entity, params):
         pk=params['pk'], token=TOKEN, data=params['data'])
     # Checking just updation no return of data so 204 No content
     if response.status_code == 204:
-        robot_logger.info(" Updated successfully %s with id:%d in %s"
-                          % (entity, params['pk'], service))
+        robot_logger.info(
+            f"Updated successfully {entity} with id:{params['pk']} "
+            f"in {service}"
+        )
         return 1
     else:
-        robot_logger.error("An error occurred while updating %s in "
-                           "%s service \n %s" % (entity, service,
-                                                 response.content))
+        robot_logger.error(
+            f"An error occurred while updating {entity} in "
+            f"{service} service \n {response.content}"
+        )
         return 0
 
 
-def service_entity_read(service, entity, params):
+def service_entity_read(service: str, entity: str, params: dict) -> dict:
     """
     Reads given entity and params from given service
     :param service: string
@@ -122,12 +123,13 @@ def service_entity_read(service, entity, params):
     if response.status_code == 200:
         entity_read = response.json()['content']
     else:
-        robot_logger.error("An error occurred while reading %s in %s service"
-                           % (entity, service))
+        robot_logger.error(
+            f"An error occurred while reading {entity} in {service} service"
+        )
     return entity_read
 
 
-def get_idrac_details(location):
+def get_idrac_details(location: str) -> tuple:
     """
     Gets the idrac ip address and password of the asset
     given its location as argument
@@ -170,12 +172,13 @@ def get_idrac_details(location):
     if response.status_code in [200, 201]:
         password = response.json()['content']['hexadecimal']
     else:
-        robot_logger.error("Error generating host password for location: %s"
-                           % location)
+        robot_logger.error(
+            f"Error generating host password for location: {location}"
+        )
     return ip, password
 
 
-def ip_validations(address_range='', ip_address=""):
+def ip_validations(address_range: str, ip_address: str) -> object:
     """
     This method is used to validate either address_range given in string,
     and separated by commas, if two or more addresses ranges to be validated
@@ -201,8 +204,9 @@ def ip_validations(address_range='', ip_address=""):
             robot_logger.info(error)
             return response.json()
     except Exception as err:
-        robot_logger.error("Error occurred while requesting ip_validator "
-                           "of iaas %s" % err)
+        robot_logger.error(
+            f"Error occurred while requesting ip_validator of iaas {err}"
+        )
     return 0
 
 

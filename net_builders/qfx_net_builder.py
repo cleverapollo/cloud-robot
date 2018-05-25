@@ -3,7 +3,7 @@ MIN_VLAN = 1000
 MAX_VLAN = 1099
 
 
-def netBuild(vlan):
+def is_valid_vlan(vlan: int) -> bool:
     """
     checks whether vlan is between MIN_VLAN and MAX_VLAN
     :param vlan: int

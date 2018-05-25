@@ -8,7 +8,7 @@ lint:
     before_script:
         - pip3 install flake8
     script: 
-        - flake8 --exclude fabfile.py --ignore E402
+        - flake8 --exclude fabfile.py --ignore E402, __init.py__
 
 deploy_staging:
     image: gitlab.cloudcix.com:5005/cloudcix/deployment/image

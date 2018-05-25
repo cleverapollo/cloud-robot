@@ -11,7 +11,7 @@ winrm.Session.run_ps = fix_run_ps
 path = '/mnt/images/UnattendXMLfiles/'
 
 
-def unattendXML(vm):
+def unattend_xml(vm: dict) -> str:
     """
     Creates autounattend.xml file in 'path'
     :param vm: dict object all fields are compulsory
@@ -299,7 +299,7 @@ def unattendXML(vm):
     return xmltodict.unparse(data, pretty=True)
 
 
-def vmBuild(vm, password):
+def vm_build(vm: dict, password: str) -> bool:
     """
     Makes ready answerfile(unattend.xml) in freenas,
     Winrms into host and creates a VM in HyperV
@@ -307,9 +307,9 @@ def vmBuild(vm, password):
     :param password: string
     :return:
     """
-    vm_build = False
+    vm_built = False
     xml_file = False
-    xml = unattendXML(vm)
+    xml = unattend_xml(vm)
     try:
         with open(path + str(vm['vmname']) + '.xml', 'w') as file:
             file.write(xml)
@@ -337,10 +337,10 @@ def vmBuild(vm, password):
             if run.std_out:
                 for line in run.std_out:
                     robot_logger.info(line)
-                vm_build = True
+                vm_built = True
             elif run.std_err:
                 robot_logger.error(run.std_err)
         except Exception as err:
             robot_logger.error(err)
 
-    return vm_build
+    return vm_built

@@ -5,12 +5,12 @@ from jnpr.junos.utils.config import Config
 from jnpr.junos.exception import LockError, UnlockError, ConfigLoadError, \
     CommitError
 
-robot_logger = get_logger_for_name('vrfBuilder')
+robot_logger = get_logger_for_name('vrf_builder_logger')
 
 # TODO not yet fixed
 
 
-def vrfBuild(VRF, passwd):
+def vrf_build(VRF: dict, passwd: str) -> str:
     """
     Builds Virtual Routing and Forwarding (VRF) in corresponding Router,
     so it first prepares set commands and paramikos into router and executes
@@ -193,7 +193,7 @@ def vrfBuild(VRF, passwd):
 #########################################################
 #   Deploy setconf to Router                            #
 #########################################################
-def deploy_setconf(setconf, ip, password):
+def deploy_setconf(setconf: str, ip: str, password: str) -> bool:
     success = False
     # Open Router
     dev = Device(host=ip, user="robot", password=password, port=22)
@@ -201,15 +201,14 @@ def deploy_setconf(setconf, ip, password):
     try:
         dev.open()
     except Exception as err:
-        robot_logger.error("Unable to open host {}, {}".format(ip, err))
+        robot_logger.error(f"Unable to open host {ip}, {err}")
         return success
     # Lock Router
-    robot_logger.info("Locking the Router with ip: {0} configuration."
-                      .format(ip))
+    robot_logger.info(f"Locking the Router with ip: {ip} configuration.")
     try:
         cu.lock()
     except LockError as err:
-        robot_logger.error("Unable to lock configuration: {0}".format(err))
+        robot_logger.error(f"Unable to lock configuration: {err}")
         dev.close()
         return success
 
@@ -220,29 +219,27 @@ def deploy_setconf(setconf, ip, password):
             robot_logger.info(cmd)
             cu.load(cmd, format="set", merge=True)
     except (ConfigLoadError, Exception) as err:
-        robot_logger.error("Unable to load configuration changes: {0}"
-                           .format(err))
+        robot_logger.error(f"Unable to load configuration changes: {err}")
         robot_logger.error("Unlocking the configuration")
         try:
             cu.unlock()
         except UnlockError:
-            robot_logger.error("Unable to unlock configuration: {0}"
-                               .format(err))
+            robot_logger.error(f"Unable to unlock configuration: {err}")
         dev.close()
         return success
 
     # Commit Configuration
     robot_logger.info("Committing the configuration")
     try:
-        cu.commit(comment='Loaded by robot at {0}.'.format(time.clock()))
+        cu.commit(comment=f"Loaded by robot at {time.clock}.")
         success = True
     except CommitError as err:
-        robot_logger.error("Unable to commit configuration: {0}".format(err))
+        robot_logger.error(f"Unable to commit configuration: {err}")
         robot_logger.info("Unlocking the configuration")
         return success
     try:
         cu.unlock()
     except UnlockError as err:
-        robot_logger.error("Unable to unlock configuration: {0}".format(err))
+        robot_logger.error(f"Unable to unlock configuration: {err}")
         dev.close()
     return success

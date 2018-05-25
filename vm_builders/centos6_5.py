@@ -8,7 +8,7 @@ from ro import robot_logger
 path = "/mnt/images/kickstarts/"
 
 
-def answerFile(vm):
+def answer_file(vm: dict) -> str:
     """
     creates a answerfile data from given vm
     :param vm: dict
@@ -73,18 +73,18 @@ def answerFile(vm):
     return ks_text
 
 
-def vmBuild(vm, password):
+def vm_build(vm: dict, password: str) -> bool:
     """
 
     :param vm:
     :param password:
     :return: vm_biuld: boolean
     """
-    vm_build = False
+    vm_built = False
     # encrypting root and user password
     vm['root_pw'] = str(crypt(vm['r_passwd'], mksalt(METHOD_SHA512)))
     vm['user_pw'] = str(crypt(vm['u_passwd'], mksalt(METHOD_SHA512)))
-    ks_text = answerFile(vm)
+    ks_text = answer_file(vm)
     ks_file = str(vm['name']) + ".cfg"
     with open(path + ks_file, 'w') as ks:
         ks.write(ks_text)
@@ -108,7 +108,7 @@ def vmBuild(vm, password):
         if stdout:
             for line in stdout:
                 robot_logger.info(line)
-            vm_build = True
+            vm_built = True
         elif stderr:
             robot_logger.error(stderr)
     except Exception as err:
@@ -116,4 +116,4 @@ def vmBuild(vm, password):
 
     finally:
         client.close()
-    return vm_build
+    return vm_built
