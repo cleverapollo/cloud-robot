@@ -1,30 +1,12 @@
 """File containing some utility functions such as generating our logger"""
 # python
-import os
 import logging
 import logging.handlers
 import subprocess
 from datetime import datetime
 
 # libs
-from inotify_simple import INotify, flags
 from cloudcix.utils import get_admin_session
-# local
-os.environ.setdefault("CLOUDCIX_SETTINGS_MODULE", 'settings')
-
-
-def watch_directory() -> INotify:
-    """
-    Watches the robot directory for changes.
-    If a change is deteced, spawn a new Robot instance and kill this one
-    :returns: An Inotify instance that can be used to tell if the directory
-              has changed
-    """
-    inotify = INotify()
-    # Create flags for the usual things a deployment will change
-    watch_flags = flags.CREATE | flags.DELETE | flags.MODIFY
-    inotify.add_watch('.', watch_flags)
-    return inotify
 
 
 def get_logger_for_name(name: str, level=logging.INFO) -> logging.Logger:

@@ -3,10 +3,11 @@ import paramiko
 from crypt import crypt, mksalt, METHOD_SHA512
 
 # local
-from ro import robot_logger
+import utils
 
 # kickstart files path
 path = "/mnt/images/kickstarts/"
+driver_logger = utils.get_logger_for_name('ubuntu1404x64.vm_build')
 
 
 def answer_file(vm: str) -> str:
@@ -16,8 +17,7 @@ def answer_file(vm: str) -> str:
     :return: ks_text: string
     """
     ks_text = ''
-    comment = "# {0} Kickstart for VM {1} \n".format(vm['idImage'],
-                                                     vm['vmname'])
+    comment = f"# {vm['idImage']} Kickstart for VM {vm['vmname']} \n"
     ks_text += comment
     # System authorization information
     ks_text += "auth --useshadow --enablemd5\n"
@@ -105,12 +105,12 @@ def vm_build(vm: dict, password: str) -> bool:
         stdin, stdout, stderr = client.exec_command(cmd)
         if stdout:
             for line in stdout:
-                robot_logger.info(line)
+                driver_logger.info(line)
             vm_built = True
         elif stderr:
-            robot_logger.error(stderr)
+            driver_logger.error(stderr)
     except Exception as err:
-        robot_logger.error(err)
+        driver_logger.error(err)
 
     finally:
         client.close()

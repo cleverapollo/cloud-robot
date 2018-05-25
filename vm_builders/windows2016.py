@@ -4,9 +4,11 @@ import winrm
 from collections import OrderedDict
 
 # local
-from ro import robot_logger, fix_run_ps
-winrm.Session.run_ps = fix_run_ps
+import utils
+from ro import fix_run_ps
 
+winrm.Session.run_ps = fix_run_ps
+driver_logger = utils.get_logger_for_name('windows2016.vm_build')
 # FREENAS mounted location in the host /mnt/images
 path = '/mnt/images/UnattendXMLfiles/'
 
@@ -261,22 +263,22 @@ def unattend_xml(vm: dict) -> str:
              ])
     }
 
-    for item in data['unattend']['settings']:
-        for it in dict(item)['component']:
-            if dict(it)['@name'] == 'Microsoft-Windows-DNS-Client':
-                dict(it)['Interfaces']['Interface']['DNSServerSearchOrder'][
+    for setting in data['unattend']['settings']:
+        for component in dict(setting)['component']:
+            if dict(component)['@name'] == 'Microsoft-Windows-DNS-Client':
+                dict(component)['Interfaces']['Interface']['DNSServerSearchOrder'][
                     'IpAddress'] = list()
                 for i in range(len(DNSs)):
-                    dict(it)['Interfaces']['Interface'][
+                    dict(component)['Interfaces']['Interface'][
                         'DNSServerSearchOrder']['IpAddress'].append(
                         OrderedDict([('@wcm:action', 'add'),
                                      ('@wcm:keyValue', str(i + 1)),
                                      ('#text', str(DNSs[i]))]))
         if UserAccouts:
-            if dict(item)['@pass'] == 'oobeSystem':
-                for it in dict(item)['component']:
-                    if dict(it)['@name'] == 'Microsoft-Windows-Shell-Setup':
-                        dict(it)['UserAccounts']['LocalAccouts'] = \
+            if dict(setting)['@pass'] == 'oobeSystem':
+                for component in dict(setting)['component']:
+                    if dict(component)['@name'] == 'Microsoft-Windows-Shell-Setup':
+                        dict(component)['UserAccounts']['LocalAccouts'] = \
                             OrderedDict(
                                 [('LocalAccount',
                                   OrderedDict(
@@ -308,39 +310,39 @@ def vm_build(vm: dict, password: str) -> bool:
     :return:
     """
     vm_built = False
-    xml_file = False
     xml = unattend_xml(vm)
     try:
         with open(path + str(vm['vmname']) + '.xml', 'w') as file:
             file.write(xml)
-        xml_file = True
     except Exception as err:
-        robot_logger.error("Falied to create a answerfile for %d VM"
-                           % vm['vmname'], err)
-    if xml_file:
-        try:
-            session = winrm.Session(vm['hostname'],
-                                    auth=('administrator', str(password)))
+        driver_logger.error(
+            f"Falied to create a answerfile for {vm['vmname']} VM. "
+            f"Error:{err}"
+        )
+        return vm_built
+    try:
+        session = winrm.Session(vm['hostname'],
+                                auth=('administrator', str(password)))
 
-            cmd = "mount \\\\alpha-freenas.cloudcix.com\\mnt\\volume\\" \
-                  "alpha Z: -o nolock & powershell -file " \
-                  "Z:\scripts\VMCreator.ps1 -VMName " + vm['vmname'] + \
-                  " -Gen 1 -OSName WindowsServer2016x64 "\
-                  "-ProcessorCount " + str(vm['cpu']) + \
-                  "-Dynamic 1 " + \
-                  "-Ram " + str(vm['ram']) + \
-                  " -Hdd " + str(vm['hdd']) + \
-                  " -Flash " + str(vm['flash']) + \
-                  " -VlanId " + str(vm['vlan']) + " -Verbose"
+        cmd = "mount \\\\alpha-freenas.cloudcix.com\\mnt\\volume\\" \
+              "alpha Z: -o nolock & powershell -file " \
+              "Z:\scripts\VMCreator.ps1 -VMName " + vm['vmname'] + \
+              " -Gen 1 -OSName WindowsServer2016x64 "\
+              "-ProcessorCount " + str(vm['cpu']) + \
+              "-Dynamic 1 " + \
+              "-Ram " + str(vm['ram']) + \
+              " -Hdd " + str(vm['hdd']) + \
+              " -Flash " + str(vm['flash']) + \
+              " -VlanId " + str(vm['vlan']) + " -Verbose"
 
-            run = session.run_cmd(cmd)
-            if run.std_out:
-                for line in run.std_out:
-                    robot_logger.info(line)
-                vm_built = True
-            elif run.std_err:
-                robot_logger.error(run.std_err)
-        except Exception as err:
-            robot_logger.error(err)
+        run = session.run_cmd(cmd)
+        if run.std_out:
+            for line in run.std_out:
+                driver_logger.info(line)
+            vm_built = True
+        elif run.std_err:
+            driver_logger.error(run.std_err)
+    except Exception as err:
+        driver_logger.error(err)
 
     return vm_built

@@ -1,20 +1,37 @@
 # python
+import os
 import subprocess
 import sys
 import time
 
+# lib
+from inotify_simple import INotify, flags
 
 # local
-from dispatcher import dispatch_vrf, dispatch_vm
-from utils import get_logger_for_name, get_current_git_sha, \
-    watch_directory, INotify
-from ro import service_entity_list
+import dispatcher
+import ro
 import settings
+import utils
 
-robot_logger = get_logger_for_name('robot_logger')
+os.environ.setdefault("CLOUDCIX_SETTINGS_MODULE", 'settings')
+robot_logger = utils.get_logger_for_name('robot.mainloop')
 
 
-def mainloop(watcher: INotify):
+def watch_directory() -> INotify:
+    """
+    Watches the robot directory for changes.
+    If a change is deteced, spawn a new Robot instance and kill this one
+    :returns: An Inotify instance that can be used to tell if the directory
+              has changed
+    """
+    inotify = INotify()
+    # Create flags for the usual things a deployment will change
+    watch_flags = flags.CREATE | flags.DELETE | flags.MODIFY
+    inotify.add_watch('.', watch_flags)
+    return inotify
+
+
+def mainloop(watcher: utils.INotify):
     """
     The main loop of the Robot program
     """
@@ -33,19 +50,19 @@ def mainloop(watcher: INotify):
             sys.exit(0)
         # Now handle the loop events
         # #################  VRF BUILD ######################################
-        vrfs = service_entity_list('iaas', 'vrf', params={'state': 1})
+        vrfs = ro.service_entity_list('iaas', 'vrf', params={'state': 1})
         if len(vrfs) > 0:
             for vrf in vrfs:
                 robot_logger.info(f"Building VRF with ID {vrf['idVRF']}.")
-                dispatch_vrf(vrf, settings.NETWORK_PASSWORD)
+                dispatcher.dispatch_vrf(vrf, settings.NETWORK_PASSWORD)
         else:
             robot_logger.info('No VRFs in "Requested" state.')
         # ######################## VM BUILD  ################################
-        vms = service_entity_list('iaas', 'vm', params={'state': 1})
+        vms = ro.service_entity_list('iaas', 'vm', params={'state': 1})
         if len(vms) > 0:
             for vm in vms:
                 robot_logger.info(f"Building VM with ID {vm['idVM']}")
-                dispatch_vm(vm, settings.NETWORK_PASSWORD)
+                dispatcher.dispatch_vm(vm, settings.NETWORK_PASSWORD)
         else:
             robot_logger.info('No VMs in "Requested" state.')
 
@@ -57,6 +74,6 @@ def mainloop(watcher: INotify):
 if __name__ == '__main__':
     # When the script is run as the main
     robot_logger.info(
-        f'Robot starting. Current Commit >> {get_current_git_sha()}'
+        f'Robot starting. Current Commit >> {utils.get_current_git_sha()}'
     )
-    mainloop(watch_directory())
+    mainloop(utils.watch_directory())

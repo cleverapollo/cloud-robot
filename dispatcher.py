@@ -2,14 +2,11 @@
 import netaddr
 
 # locals
-from utils import get_logger_for_name
-from ro import service_entity_list, service_entity_read, \
-    service_entity_update, password_generator
-from vrf_builders import vrf_build
-from vm_builders import vm_builder
-from net_builders import is_valid_vlan
-
-robot_logger = get_logger_for_name('dispatcher_logger')
+import net_builders
+import ro
+import utils
+import vm_builders
+import vrf_builders
 
 
 def dispatch_vrf(vrf: dict, password: str) -> None:
@@ -27,10 +24,10 @@ def dispatch_vrf(vrf: dict, password: str) -> None:
     # changing state to Building (2)
     VRF['state'] = 2
     params = {'data': VRF, 'pk': VRF['idVRF']}
-    service_entity_update('iaas', 'vrf', params)
+    ro.service_entity_update('iaas', 'vrf', params)
 
-    vrfLans = service_entity_list('iaas', 'subnet', {'vrf': VRF['idVRF']})
-    regionIPs = service_entity_list('iaas', 'ipaddress', {})
+    vrfLans = ro.service_entity_list('iaas', 'subnet', {'vrf': VRF['idVRF']})
+    regionIPs = ro.service_entity_list('iaas', 'ipaddress', {})
 
     vrfJson = dict()
     vrfJson['idProject'] = VRF['idProject']
@@ -47,44 +44,47 @@ def dispatch_vrf(vrf: dict, password: str) -> None:
             # changing state to Unresourced (3)
             VRF['state'] = 3
             params = {'data': VRF, 'pk': VRF['idVRF']}
-            service_entity_update('iaas', 'vrf', params)
+            ro.service_entity_update('iaas', 'vrf', params)
+            utils.get_logger_for_name('dispatcher.dispatch_vrf').error(
+                f"VRF {VRF['idVRF']} Failed to Built in Router as its has "
+                f"invalid vlan so vrf-{VRF['idVRF']} is unresourced")
         # ---------------------------------------------------------------
 
         for ip in regionIPs:
             if ip['idSubnet'] == vrfLan['idSubnet'] and \
                     ip['idIPAddressFIP'] is not None:
-                pip = service_entity_read('iaas', 'ipaddress',
+                pip = ro.service_entity_read('iaas', 'ipaddress',
                                           {'pk': ip['idIPAddressFIP']})
                 vrfJson['NATs'].append({'fIP': str(ip['address']) + '/32',
                                         'pIP': str(pip['address']) + '/32'})
 
-    vrfJson['VPNs'] = service_entity_list('iaas', 'vpn_tunnel',
+    vrfJson['VPNs'] = ro.service_entity_list('iaas', 'vpn_tunnel',
                                           {'vrf': VRF['idVRF']})
 
-    router = service_entity_read('iaas', 'router', {'pk': VRF['idRouter']})
+    router = ro.service_entity_read('iaas', 'router', {'pk': VRF['idRouter']})
     vrfJson['oobIP'] = str(router['ipOOB'])
 
     # ################# data/ip validations ##########################
     # TODO
     # ################################################################
 
-    if vrf_build(vrfJson, password):
-        robot_logger.info(
+    if vrf_builders.vrf_build(vrfJson, password):
+        utils.get_logger_for_name('dispatcher.dispatch_vrf').info(
             f"VRF {VRF['idVRF']} Successfully Built in Router "
             f"{VRF['idRouter']}"
         )
         # changing state to Built (4)
         VRF['state'] = 4
         params = {'data': VRF, 'pk': VRF['idVRF']}
-        service_entity_update('iaas', 'vrf', params)
+        ro.service_entity_update('iaas', 'vrf', params)
     else:
-        robot_logger.error(
+        utils.get_logger_for_name('dispatcher.dispatch_vrf').error(
             f"VRF {VRF['idVRF']} Failed to Built in Router "
             f"{VRF['idVRF']} so vrf is unresourced")
         # changing state to Unresourced (3)
         VRF['state'] = 3
         params = {'data': VRF, 'pk': VRF['idVRF']}
-        service_entity_update('iaas', 'vrf', params)
+        ro.service_entity_update('iaas', 'vrf', params)
     return
 
 
@@ -95,7 +95,7 @@ def dispatch_net(vlan: int) -> bool:
     :param vlan: int
     :return: boolean
     """
-    return is_valid_vlan(vlan)
+    return net_builders.is_valid_vlan(vlan)
 
 
 def dispatch_vm(vm: dict, password: str) -> None:
@@ -114,7 +114,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
     # changing state to Building (2)
     VM['state'] = 2
     params = {'data': VM, 'pk': VM['idVM']}
-    service_entity_update('iaas', 'vm', params)
+    ro.service_entity_update('iaas', 'vm', params)
 
     vmJson = dict()
     # naming of vmname = 123_2345 (idProject_idVM)
@@ -124,21 +124,21 @@ def dispatch_vm(vm: dict, password: str) -> None:
     vmJson['cpu'] = VM['cpu']
     vmJson['ram'] = VM['ram']
     vmJson['idImage'] = VM['idImage']
-    image = service_entity_read('iaas', 'image', {'pk': VM['idImage']})
+    image = ro.service_entity_read('iaas', 'image', {'pk': VM['idImage']})
     vmJson['image'] = str(image['name'])
     vmJson['u_name'] = VM['name']
     # Random passwords generated
-    vmJson['u_passwd'] = password_generator()
-    vmJson['r_passwd'] = password_generator()
+    vmJson['u_passwd'] = ro.password_generator()
+    vmJson['r_passwd'] = ro.password_generator()
     vmJson['dns'] = VM['dns'].split(',')
     # get the ipadddress and subnet details
-    vm_ips = service_entity_list('iaas', 'ipaddress', {'vm': VM['idVM']})
+    vm_ips = ro.service_entity_list('iaas', 'ipaddress', {'vm': VM['idVM']})
     if len(vm_ips) > 0:
         for vm_ip in vm_ips:
             if netaddr.IPAddress(str(vm_ip['address'])).is_private():
                 vmJson['ip'] = str(vm_ip['address'])
                 # get the subnet of this ip
-                ip_subnet = service_entity_read(
+                ip_subnet = ro.service_entity_read(
                     'iaas', 'subnet', {'idSubnet': vm_ip['idSubnet']})
                 addRange = str(ip_subnet['addressRange'])
                 vmJson['gateway'] = addRange.split('/')[0]
@@ -150,7 +150,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
     vmJson['keyboard'] = 'us'  # need to add in db (for kvm only)
     vmJson['tz'] = 'America/New_York'  # need to add in db(kvm and hyperv)
     # Get the server details
-    server_macs = service_entity_list('iaas', 'mac_address',
+    server_macs = ro.service_entity_list('iaas', 'mac_address',
                                       {'idServer': VM['idServer']})
     for mac in server_macs:
         if mac['status'] is True and netaddr.IPAddress(str(mac['ip'])):
@@ -164,28 +164,32 @@ def dispatch_vm(vm: dict, password: str) -> None:
     # ----------------------------------------------------------------
     # CHECK IF VRF IS BUILT OR NOT
     # Get the vrf via idProject which is common for both VM and VRF
-    vm_vrf = service_entity_list('iaas', 'vrf', {'project': VM['idProject']})
+    vm_vrf = ro.service_entity_list('iaas', 'vrf',
+                                    {'project': VM['idProject']})
     if not vm_vrf[0]['state'] == 4:
         # changing state to Unresourced (3)
         VM['state'] = 3
         params = {'data': VM, 'pk': VM['idVM']}
-        service_entity_update('iaas', 'vm', params)
+        ro.service_entity_update('iaas', 'vm', params)
     # ----------------------------------------------------------------
 
     # Despatching VMBuilder driver
-    if vm_builder(vmJson, password):
-        robot_logger.info(f"VM {VM['idVM']} Successfully Built in Asset "
-                          f"{VM['idAsset']}")
+    if vm_builders.vm_builder(vmJson, password):
+        utils.get_logger_for_name('dispatcher.dispatch_vm').info(
+            f"VM {VM['idVM']} Successfully Built in Asset {VM['idAsset']}"
+        )
         # changing state to Built (4)
         VM['state'] = 4
         params = {'data': VM, 'pk': VM['idVM']}
-        service_entity_update('iaas', 'vm', params)
+        ro.service_entity_update('iaas', 'vm', params)
     else:
-        robot_logger.error(f"VM {VM['idVM']} Failed to Built in Asset "
-                           f"{VM['idAsset']}, so VM is unresourced")
+        utils.get_logger_for_name('dispatcher.dispatch_vm').error(
+            f"VM {VM['idVM']} Failed to Built in Asset {VM['idAsset']}, "
+            f"so VM is unresourced"
+        )
         # changing state to Unresourced (3)
         VM['state'] = 3
         params = {'data': VM, 'pk': VM['idVM']}
-        service_entity_update('iaas', 'vm', params)
+        ro.service_entity_update('iaas', 'vm', params)
 
     return
