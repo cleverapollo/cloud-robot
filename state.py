@@ -25,7 +25,7 @@ def vrf(state: int) -> Optional[int]:
             return data['content'][0]['idVRF']
     else:
         utils.get_logger_for_name('state.vrf').error(
-            f'({response.status_code}): {str(response.json()))}'
+            f'({response.status_code}): {str(response.json())}'
         )
     return None
 
@@ -47,6 +47,6 @@ def vm(state: int) -> Optional[int]:
             return data['content'][0]['idVM']
     else:
         utils.get_logger_for_name('state.vm').error(
-            f'({response.status_code}): {str(response.json()))}'
+            f'({response.status_code}): {str(response.json())}'
         )
     return None
