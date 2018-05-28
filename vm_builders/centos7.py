@@ -112,8 +112,8 @@ def vm_build(vm: dict, password: str) -> bool:
             vm_built = True
         elif stderr:
             driver_logger.error(stderr)
-    except Exception as err:
-        driver_logger.exception(err)
+    except Exception:
+        driver_logger.exception("Exception occurred during SSHing into host")
 
     finally:
         client.close()

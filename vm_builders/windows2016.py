@@ -343,7 +343,8 @@ def vm_build(vm: dict, password: str) -> bool:
             vm_built = True
         elif run.std_err:
             driver_logger.error(run.std_err)
-    except Exception as err:
-        driver_logger.exception(err)
-
+    except Exception:
+        driver_logger.exception(
+            "Exception occurred during Winrm-ing into host"
+        )
     return vm_built

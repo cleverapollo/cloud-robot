@@ -121,6 +121,7 @@ def service_entity_update(service: str, entity: str, params: dict) -> [1, 0]:
         utils.get_logger_for_name('ro.service_entity_update').error(
             f"An error occurred while updating {entity} in "
             f"{service} service \n {response.content}"
+            f"Error code: {response.status_code}"
         )
         return 0
 
@@ -149,6 +150,7 @@ def service_entity_read(service: str, entity: str, params: dict) -> dict:
     else:
         utils.get_logger_for_name('ro.service_entity_read').error(
             f"An error occurred while reading {entity} in {service} service"
+            f"Error code: {response.status_code}"
         )
     return entity_read
 
@@ -229,12 +231,13 @@ def ip_validations(address_range: str, ip_address: str) -> Optional[dict]:
                     f"Error: {response.json()['detail']}"
                 )
                 return None
-        except Exception as error:
-            utils.get_logger_for_name('ro.ip_validations').exception(error)
+        except Exception:
+            utils.get_logger_for_name('ro.ip_validations').exception(
+                "Successfully validated")
             return response.json()
-    except Exception as err:
+    except Exception:
         utils.get_logger_for_name('ro.ip_validations').exception(
-            f"Error occurred while requesting ip_validator of iaas {err}"
+            f"Error occurred while requesting ip_validator of iaas"
         )
     utils.get_logger_for_name('ro.ip_validations').error(
         f"Nothing found while requesting ip_validator of iaas"
