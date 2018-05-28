@@ -1,5 +1,6 @@
 # python
 import os
+os.environ.setdefault("CLOUDCIX_SETTINGS_MODULE", 'settings')
 import subprocess
 import sys
 import time
@@ -13,7 +14,7 @@ import ro
 import settings
 import utils
 
-os.environ.setdefault("CLOUDCIX_SETTINGS_MODULE", 'settings')
+
 robot_logger = utils.get_logger_for_name('robot.mainloop')
 
 
@@ -31,7 +32,7 @@ def watch_directory() -> INotify:
     return inotify
 
 
-def mainloop(watcher: utils.INotify):
+def mainloop(watcher: INotify):
     """
     The main loop of the Robot program
     """
@@ -74,6 +75,11 @@ def mainloop(watcher: utils.INotify):
 if __name__ == '__main__':
     # When the script is run as the main
     robot_logger.info(
-        f'Robot starting. Current Commit >> {utils.get_current_git_sha()}'
-    )
-    mainloop(utils.watch_directory())
+        'Robot starting. Current Commit >> %s' % utils.get_current_git_sha())
+    try:
+        mainloop(watch_directory())
+    except Exception:
+        robot_logger.exception(
+            'Exception thrown in robot. Exiting.'
+        )
+        sys.exit(1)
