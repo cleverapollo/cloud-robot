@@ -78,7 +78,7 @@ if __name__ == '__main__':
         'Robot starting. Current Commit >> %s' % utils.get_current_git_sha())
     try:
         mainloop(watch_directory())
-    except Exception:
+    except:
         robot_logger.exception(
             'Exception thrown in robot. Exiting.'
         )
