@@ -31,17 +31,18 @@ def answer_file(vm: dict) -> str:
     # Run the Setup Agent on first boot
     ks_text += "firstboot --disable\n"
     # System keyboard
-    ks_text += "keyboard {}\n".format(vm['keyboard'])
+    ks_text += f"keyboard {vm['keyboard']}\n"
     # System language
-    ks_text += "lang {}.UTF-8\n".format(vm['lang'])
+    ks_text += f"lang {vm['lang']}.UTF-8\n"
     # Installation logging level
     ks_text += "logging --level=info\n"
     #  installation media
     ks_text += "cdrom\n"
     # Network Information
-    ks_text += "network --bootproto=static --ip=" + str(vm['ip']) + \
-               " --netmask=" + str(vm['netmask_ip']) + " --gateway=" + \
-               str(vm['gateway']) + " --nameserver=" + str(vm['dns']) + "\n"
+    ks_text += f"network --bootproto=static --ip={str(vm['ip'])} " \
+               f"--netmask={str(vm['netmask_ip'])} " \
+               f"--gateway={str(vm['gateway'])} " \
+               f"--nameserver={str(vm['dns'])}\n"
     # System bootloader configuration
     ks_text += "bootloader --location=mbr\n"
     # Disk Partioning

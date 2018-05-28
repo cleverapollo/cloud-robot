@@ -21,8 +21,9 @@ import utils
 TOKEN_WRAPPER = utils.Token()
 
 
-def service_entity_create(service: str, entity: str, params: dict) \
-        -> Optional[list]:
+def service_entity_create(service: str,
+                          entity: str,
+                          params: dict) -> Optional[list]:
     """
     Create given entity into a service with params
     :param service: string
@@ -222,7 +223,8 @@ def ip_validations(address_range: str, ip_address: str) -> Optional[dict]:
     return None
 
 
-def fix_run_ps(session: winrm.Session.run_ps, script: str) -> Optional:
+def fix_run_ps(session: winrm.Session.run_ps,
+               script: str) -> winrm.Response:
     """
     winrm supporting function, dont make anychanges
     :param script:

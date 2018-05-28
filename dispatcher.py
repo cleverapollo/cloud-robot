@@ -51,8 +51,8 @@ def dispatch_vrf(vrf: dict, password: str) -> None:
         # ---------------------------------------------------------------
 
         for ip in regionIPs:
-            if ip['idSubnet'] == vrfLan['idSubnet'] and \
-                    ip['idIPAddressFIP'] is not None:
+            if (ip['idSubnet'] == vrfLan['idSubnet']
+                    and ip['idIPAddressFIP'] is not None):
                 pip = ro.service_entity_read('iaas', 'ipaddress',
                                              {'pk': ip['idIPAddressFIP']})
                 vrfJson['NATs'].append({'fIP': str(ip['address']) + '/32',

@@ -10,7 +10,9 @@ from ro import fix_run_ps
 winrm.Session.run_ps = fix_run_ps
 driver_logger = utils.get_logger_for_name('windows2016.vm_build')
 # FREENAS mounted location in the host /mnt/images
+freenas_path = "alpha-freenas.cloudcix.com\\mnt\\volume\\alpha"
 path = '/mnt/images/UnattendXMLfiles/'
+osname = "WindowsServer2016x64"
 
 
 def unattend_xml(vm: dict) -> str:
@@ -278,8 +280,8 @@ def unattend_xml(vm: dict) -> str:
             if setting['@pass'] == 'oobeSystem':
                 for component in setting['component']:
                     if component['@name'] == 'Microsoft-Windows-Shell-Setup':
-                        component['UserAccounts']['LocalAccouts'] = \
-                            OrderedDict(
+                        component['UserAccounts'][
+                            'LocalAccouts'] = OrderedDict(
                                 [('LocalAccount',
                                   OrderedDict(
                                       [('@wcm:action', 'add'),
@@ -324,16 +326,15 @@ def vm_build(vm: dict, password: str) -> bool:
         session = winrm.Session(vm['hostname'],
                                 auth=('administrator', str(password)))
 
-        cmd = "mount \\\\alpha-freenas.cloudcix.com\\mnt\\volume\\" \
-              "alpha Z: -o nolock & powershell -file " \
-              "Z:\scripts\VMCreator.ps1 -VMName " + vm['vmname'] + \
-              " -Gen 1 -OSName WindowsServer2016x64 "\
-              "-ProcessorCount " + str(vm['cpu']) + \
-              "-Dynamic 1 " + \
-              "-Ram " + str(vm['ram']) + \
-              " -Hdd " + str(vm['hdd']) + \
-              " -Flash " + str(vm['flash']) + \
-              " -VlanId " + str(vm['vlan']) + " -Verbose"
+        cmd = f"mount \\\\{freenas_path} "
+        cmd += "Z: -o nolock & powershell -file "
+        cmd += f"Z:\scripts\VMCreator.ps1 -VMName {vm['vmname']} "
+        cmd += f"-Gen 1 -OSName {osname} "
+        cmd += f"-ProcessorCount {str(vm['cpu'])} -Dynamic 1 "
+        cmd += f"-Ram {str(vm['ram'])} "
+        cmd += f"-Hdd {str(vm['hdd'])} "
+        cmd += f"-Flash {str(vm['flash'])} "
+        cmd += f"-VlanId {str(vm['vlan'])} -Verbose"
 
         run = session.run_cmd(cmd)
         if run.std_out:
