@@ -113,7 +113,7 @@ def vm_build(vm: dict, password: str) -> bool:
         elif stderr:
             driver_logger.error(stderr)
     except Exception as err:
-        driver_logger.error(err)
+        driver_logger.exception(err)
 
     finally:
         client.close()

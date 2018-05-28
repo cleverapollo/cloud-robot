@@ -9,6 +9,7 @@ import random
 import string
 import winrm
 
+from base64 import b64encode
 from datetime import datetime
 from typing import Optional
 
@@ -39,6 +40,12 @@ def service_entity_create(service: str,
     response = entity_to_call.create(token=TOKEN_WRAPPER.token, params=params)
     if response.status_code == 201:
         entity_create = response.json()['content']
+    elif response.status_code == 400:
+        utils.get_logger_for_name('ro.service_entity_create').error(
+            f"An error occurred while creating {entity.upper()} "
+            f"object in {service.upper()} service with params: {str(params)},"
+            f" response code={response.status_code} and "
+            f"Details: {response.json()['detail']}")
     else:
         utils.get_logger_for_name('ro.service_entity_create').error(
             f"An error occurred while creating {entity.upper()} "
@@ -64,6 +71,13 @@ def service_entity_list(service: str, entity: str, params: dict) -> list:
     response = entity_to_call.list(token=TOKEN_WRAPPER.token, params=params)
     if response.status_code == 200:
         entity_list.extend(response.json()['content'])
+    elif response.status_code == 400:
+        utils.get_logger_for_name('ro.service_entity_list').error(
+            f"An error occurred while fetching {entity.upper()} "
+            f"list from {service.upper()} service with params {str(params)},"
+            f" response code={response.status_code} and "
+            f"Details: {response.json()['detail']}"
+        )
     else:
         utils.get_logger_for_name('ro.service_entity_list').error(
             f"An error occurred while fetching {entity.upper()} "
@@ -127,6 +141,11 @@ def service_entity_read(service: str, entity: str, params: dict) -> dict:
     response = entity_to_call.read(pk=params['pk'], token=TOKEN_WRAPPER.token)
     if response.status_code == 200:
         entity_read = response.json()['content']
+    elif response.status_code == 400:
+        utils.get_logger_for_name('ro.service_entity_read').error(
+            f"An error occurred while reading {entity} in {service} service"
+            f"Details: {response.json()['detail']}"
+        )
     else:
         utils.get_logger_for_name('ro.service_entity_read').error(
             f"An error occurred while reading {entity} in {service} service"
@@ -207,14 +226,14 @@ def ip_validations(address_range: str, ip_address: str) -> Optional[dict]:
             if response.json()['response_code'] == 400:
                 utils.get_logger_for_name('ro.ip_validations').error(
                     f"400 Error, No result found, please check the "
-                    f"syntax of address_range and ip_address"
+                    f"Error: {response.json()['detail']}"
                 )
                 return None
         except Exception as error:
-            utils.get_logger_for_name('ro.ip_validations').info(error)
+            utils.get_logger_for_name('ro.ip_validations').exception(error)
             return response.json()
     except Exception as err:
-        utils.get_logger_for_name('ro.ip_validations').error(
+        utils.get_logger_for_name('ro.ip_validations').exception(
             f"Error occurred while requesting ip_validator of iaas {err}"
         )
     utils.get_logger_for_name('ro.ip_validations').error(
@@ -230,7 +249,6 @@ def fix_run_ps(session: winrm.Session.run_ps,
     :param script:
     :return:
     """
-    from base64 import b64encode
     encoded_ps = b64encode(script.encode('utf_16_le')).decode('ascii')
     rs = session.run_cmd(f'powershell -encodedcommand {encoded_ps}')
     if len(rs.std_err):

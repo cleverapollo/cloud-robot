@@ -317,7 +317,7 @@ def vm_build(vm: dict, password: str) -> bool:
         with open(path + str(vm['vmname']) + '.xml', 'w') as file:
             file.write(xml)
     except Exception as err:
-        driver_logger.error(
+        driver_logger.exception(
             f"Falied to create a answerfile for {vm['vmname']} VM. "
             f"Error:{err}"
         )
@@ -344,6 +344,6 @@ def vm_build(vm: dict, password: str) -> bool:
         elif run.std_err:
             driver_logger.error(run.std_err)
     except Exception as err:
-        driver_logger.error(err)
+        driver_logger.exception(err)
 
     return vm_built

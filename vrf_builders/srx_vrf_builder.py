@@ -201,14 +201,14 @@ def deploy_setconf(setconf: str, ip: str, password: str) -> bool:
     try:
         dev.open()
     except Exception as err:
-        driver_logger.error(f"Unable to open host {ip}, {err}")
+        driver_logger.exception(f"Unable to open host {ip}, {err}")
         return success
     # Lock Router
     driver_logger.info(f"Locking the Router with ip: {ip} configuration.")
     try:
         cu.lock()
     except LockError as err:
-        driver_logger.error(f"Unable to lock configuration: {err}")
+        driver_logger.exception(f"Unable to lock configuration: {err}")
         dev.close()
         return success
 
@@ -219,12 +219,13 @@ def deploy_setconf(setconf: str, ip: str, password: str) -> bool:
             driver_logger.info(cmd)
             cu.load(cmd, format="set", merge=True)
     except (ConfigLoadError, Exception) as err:
-        driver_logger.error(f"Unable to load configuration changes: {err}")
-        driver_logger.error("Unlocking the configuration")
+        driver_logger.exception(
+            f"Unable to load configuration changes: {err}. "
+            f"Unlocking the configuration")
         try:
             cu.unlock()
         except UnlockError:
-            driver_logger.error(f"Unable to unlock configuration: {err}")
+            driver_logger.exception(f"Unable to unlock configuration: {err}")
         dev.close()
         return success
 
@@ -234,12 +235,13 @@ def deploy_setconf(setconf: str, ip: str, password: str) -> bool:
         cu.commit(comment=f"Loaded by robot at {time.clock}.")
         success = True
     except CommitError as err:
-        driver_logger.error(f"Unable to commit configuration: {err}")
-        driver_logger.info("Unlocking the configuration")
+        driver_logger.exception(
+            f"Unable to commit configuration: {err}. "
+            f"Unlocking the configuration")
         return success
     try:
         cu.unlock()
     except UnlockError as err:
-        driver_logger.error(f"Unable to unlock configuration: {err}")
+        driver_logger.exception(f"Unable to unlock configuration: {err}")
         dev.close()
     return success
