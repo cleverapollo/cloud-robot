@@ -7,6 +7,7 @@
 # python
 import random
 import string
+import winrm
 
 from datetime import datetime
 from typing import Optional
@@ -204,7 +205,8 @@ def ip_validations(address_range: str, ip_address: str) -> Optional[dict]:
         try:
             if response.json()['response_code'] == 400:
                 utils.get_logger_for_name('ro.ip_validations').error(
-                    f"400 Error occurred while requesting ip_validator"
+                    f"400 Error, No result found, please check the "
+                    f"syntax of address_range and ip_address"
                 )
                 return None
         except Exception as error:
@@ -220,7 +222,7 @@ def ip_validations(address_range: str, ip_address: str) -> Optional[dict]:
     return None
 
 
-def fix_run_ps(session: Optional, script: str) -> Optional:
+def fix_run_ps(session: winrm.Session.run_ps, script: str) -> Optional:
     """
     winrm supporting function, dont make anychanges
     :param script:
@@ -235,8 +237,7 @@ def fix_run_ps(session: Optional, script: str) -> Optional:
 
 
 def password_generator(size: int = 8,
-                       chars: str = string.ascii_letters + string.digits)\
-        -> str:
+                       chars: Optional[str] = None) -> str:
     """
     Returns a string of random characters, useful in generating temporary
     passwords for automated password resets.
@@ -244,4 +245,6 @@ def password_generator(size: int = 8,
     size: default=8; override to provide smaller/larger passwords
     chars: default=A-Za-z0-9; override to provide more/less diversity
     """
+    if chars is None:
+        chars = string.ascii_letters + string.digits
     return ''.join(random.choice(chars) for i in range(size))
