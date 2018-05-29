@@ -148,11 +148,11 @@ def dispatch_vm(vm: dict, password: str) -> None:
                 # get the subnet of this ip
                 ip_subnet = ro.service_entity_read(
                     'iaas', 'subnet', vm_ip['idSubnet'])
-                addRange = str(ip_subnet['addressRange'])
-                vm_json['gateway'] = addRange.split('/')[0]
-                vm_json['netmask'] = addRange.split('/')[1]
-                vm_json['netmask_ip'] = str(netaddr.IPNetwork(
-                    addRange).netmask)
+                address_range = str(ip_subnet['addressRange'])
+                vm_json['gateway'] = address_range.split('/')[0]
+                vm_json['netmask'] = address_range.split('/')[1]
+                vm_json['netmask_ip'] = str(
+                    netaddr.IPNetwork(address_range).netmask)
                 vm_json['vlan'] = ip_subnet['vlan']
     vm_json['lang'] = 'en_IE'  # need to add in db (for kvm and hyperv)
     vm_json['keyboard'] = 'ie'  # need to add in db (for kvm only)
