@@ -108,9 +108,9 @@ def vrf_build(vrf: dict, password: str) -> bool:
             'set security nat static rule-set inbound-static from zone '
             f'{vlan[0]}.private\n'
         )
-        rule_name = str(proxy_ips[i]).split("/")[0]
+        rule_name = str(proxy_ips[i]).split('/')[0]
         # rule names in Junos cannot contain /
-        rule_name = rule_name.replace(".", "-")
+        rule_name = rule_name.replace('.', '-')
         # rule names in Junos cannot contain .
         conf += (
             f'set security nat static rule-set inbound-static rule {rule_name}'
@@ -132,7 +132,7 @@ def vrf_build(vrf: dict, password: str) -> bool:
             'authentication-algorithm sha1\n'
             f'set security ike proposal ike-{id_project}-{vlan[0]}-proposal '
             'encryption-algorithm aes-128-cbc\n'
-            
+
             # Create IKE policy
             f'sec security ike policy {id_project}-{vlan[0]}-ikepolicy mode '
             'main\n'
@@ -230,7 +230,7 @@ def deploy_setconf(setconf: str, ip: str, password: str) -> bool:
             driver_logger.debug(
                 f'Attempting to run "{cmd}" on the router.'
             )
-            cu.load(cmd, format="set", merge=True)
+            cu.load(cmd, format='set', merge=True)
     except (ConfigLoadError, Exception):
         driver_logger.exception(
             f'Unable to load configuration changes on router @ {ip}.'
@@ -254,7 +254,7 @@ def deploy_setconf(setconf: str, ip: str, password: str) -> bool:
         f'Attempting to commit the changes'
     )
     try:
-        cu.commit(comment=f"Loaded by robot at {time.asctime()}.")
+        cu.commit(comment=f'Loaded by robot at {time.asctime()}.')
         success = True
     except CommitError:
         driver_logger.exception(
