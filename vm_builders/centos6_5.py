@@ -15,7 +15,7 @@ def answer_file(vm: dict) -> str:
     :param vm: Data for the VM that will be created
     :return: ks_text: The answer file that can build the specified VM
     """
-    ks_text = f'# {vm['idImage']} Kickstart for VM {vm['vmname']} \n'
+    ks_text = f'# {vm["idImage"]} Kickstart for VM {vm["vmname"]} \n'
     # System authorization information
     ks_text += 'auth --enableshadow --passalgo=sha512\n'
     # Clear the Master Boot Record
@@ -29,19 +29,19 @@ def answer_file(vm: dict) -> str:
     # Run the Setup Agent on first boot
     ks_text += 'firstboot --disable\n'
     # System keyboard
-    ks_text += f'keyboard {vm['keyboard']}\n'
+    ks_text += f'keyboard {vm["keyboard"]}\n'
     # System language
-    ks_text += f'lang {vm['lang']}.UTF-8\n'
+    ks_text += f'lang {vm["lang"]}.UTF-8\n'
     # Installation logging level
     ks_text += 'logging --level=info\n'
     #  installation media
     ks_text += 'cdrom\n'
     # Network Information
     ks_text += (
-        f'network --bootproto=static --ip={str(vm['ip'])} '
-        f'--netmask={str(vm['netmask_ip'])} '
-        f'--gateway={str(vm['gateway'])} '
-        f'--nameserver={str(vm['dns'])}\n'
+        f'network --bootproto=static --ip={str(vm["ip"])} '
+        f'--netmask={str(vm["netmask_ip"])} '
+        f'--gateway={str(vm["gateway"])} '
+        f'--nameserver={str(vm["dns"])}\n'
     )
     # System bootloader configuration
     ks_text += 'bootloader --location=mbr\n'
@@ -56,18 +56,18 @@ def answer_file(vm: dict) -> str:
         ' --size=1 --grow\n'
     )
     # Root password
-    ks_text += f'rootpw --iscrypted {vm['root_pw']}\n'
+    ks_text += f'rootpw --iscrypted {vm["root_pw"]}\n'
     # username and password
     ks_text += (
-        f'user administrator --name "{vm['u_name']}" '
-        f'--password={vm['user_pw']} --iscrypted\n'
+        f'user administrator --name "{vm["u_name"]}" '
+        f'--password={vm["user_pw"]} --iscrypted\n'
     )
     # SELinux configuration
     ks_text += 'selinux --disabled\n'
     # Do not configure the X Window System
     ks_text += 'skipx\n'
     # System timezone
-    ks_text += f'timezone --utc {vm['tz']}\n'
+    ks_text += f'timezone --utc {vm["tz"]}\n'
     # Install OS instead of upgrade
     ks_text += 'install\n'
     # Reboot after installation
@@ -90,14 +90,17 @@ def vm_build(vm: dict, password: str) -> bool:
     vm['root_pw'] = str(crypt(vm['r_passwd'], mksalt(METHOD_SHA512)))
     vm['user_pw'] = str(crypt(vm['u_passwd'], mksalt(METHOD_SHA512)))
     ks_text = answer_file(vm)
-    ks_file = f'{vm['name']}.cfg'
+    ks_file = f'{vm["name"]}.cfg'
     with open(f'{path}{ks_file}', 'w') as ks:
         ks.write(ks_text)
     try:
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(hostname=vm['host_ip'], username='administrator',
-                       password=password)
+        client.connect(
+            hostname=vm['host_ip'],
+            username='administrator',
+            password=password
+        )
 
         # make the cmd
         image_replaced = vm['image'].replace(' ', r'\ ')
@@ -121,6 +124,6 @@ def vm_build(vm: dict, password: str) -> bool:
             f'Exception occurred during SSHing into host {vm["host_ip"]}'
         )
 
-    finally:
+    else:
         client.close()
     return vm_built

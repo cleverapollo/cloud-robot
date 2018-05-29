@@ -10,7 +10,7 @@ path = '/mnt/images/kickstarts/'
 driver_logger = utils.get_logger_for_name('ubuntu1404x64.vm_build')
 
 
-def answer_file(vm: str) -> str:
+def answer_file(vm: dict) -> str:
     """
     Creates an answer file to be used to create the VM specified
     :param vm: Data for the VM that will be created
@@ -75,24 +75,27 @@ def answer_file(vm: str) -> str:
 
 def vm_build(vm: dict, password: str) -> bool:
     """
-
-    :param vm:
-    :param password:
-    :return: vm_biuld: boolean
+    Builds a VM with the given information
+    :param vm: Data to use for building the VM
+    :param password: Password for the VM
+    :return: vm_built: Flag stating whether or not the build succeeded
     """
     vm_built = False
     # encrypting root and user password
     vm['root_pw'] = str(crypt(vm['r_passwd'], mksalt(METHOD_SHA512)))
     vm['user_pw'] = str(crypt(vm['u_passwd'], mksalt(METHOD_SHA512)))
     ks_text = answer_file(vm)
-    ks_file = f'{vm['name']}.cfg'
+    ks_file = f'{vm["name"]}.cfg'
     with open(f'{path}{ks_file}', 'w') as ks:
         ks.write(ks_text)
     try:
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(hostname=vm['host_ip'], username='administrator',
-                       password=password)
+        client.connect(
+            hostname=vm['host_ip'],
+            username='administrator',
+            password=password
+        )
 
         # make the cmd
         image_replaced = vm['image'].replace(' ', r'\ ')
@@ -116,6 +119,6 @@ def vm_build(vm: dict, password: str) -> bool:
             f'Exception occurred during SSHing into host {vm["host_ip"]}'
         )
 
-    finally:
+    else:
         client.close()
     return vm_built

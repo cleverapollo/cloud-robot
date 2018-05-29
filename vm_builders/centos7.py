@@ -56,7 +56,7 @@ def answer_file(vm: dict) -> str:
         ' --size=1 --grow\n'
     )
     # Root password
-    ks_text += f'rootpw --iscrypted {vm["root_pw"]}\n'.format()
+    ks_text += f'rootpw --iscrypted {vm["root_pw"]}\n'
     # username and password
     ks_text += (
         f'user administrator --name "{vm["u_name"]}" '
@@ -90,14 +90,17 @@ def vm_build(vm: dict, password: str) -> bool:
     vm['root_pw'] = str(crypt(vm['r_passwd'], mksalt(METHOD_SHA512)))
     vm['user_pw'] = str(crypt(vm['u_passwd'], mksalt(METHOD_SHA512)))
     ks_text = answer_file(vm)
-    ks_file = f'{vm['name']}.cfg'
+    ks_file = f'{vm["name"]}.cfg'
     with open(f'{path}{ks_file}', 'w') as ks:
         ks.write(ks_text)
     try:
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(hostname=vm['host_ip'], username='administrator',
-                       password=password)
+        client.connect(
+            hostname=vm['host_ip'],
+            username='administrator',
+            password=password
+        )
 
         # make the cmd
         image_replaced = vm['image'].replace(' ', r'\ ')
@@ -121,6 +124,6 @@ def vm_build(vm: dict, password: str) -> bool:
             f'Exception occurred during SSHing into host {vm["host_ip"]}'
         )
 
-    finally:
+    else:
         client.close()
     return vm_built
