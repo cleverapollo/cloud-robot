@@ -1,2 +1,3 @@
 cloudcix
+influxdb
 inotify_simple
