@@ -1,6 +1,6 @@
 # python
 import os
-os.environ.setdefault("CLOUDCIX_SETTINGS_MODULE", 'settings')
+os.environ.setdefault('CLOUDCIX_SETTINGS_MODULE', 'settings')
 import subprocess
 import sys
 import time
@@ -54,7 +54,7 @@ def mainloop(watcher: INotify):
         vrfs = ro.service_entity_list('iaas', 'vrf', params={'state': 1})
         if len(vrfs) > 0:
             for vrf in vrfs:
-                robot_logger.info(f"Building VRF with ID {vrf['idVRF']}.")
+                robot_logger.info(f'Building VRF with ID {vrf["idVRF"]}.')
                 dispatcher.dispatch_vrf(vrf, settings.NETWORK_PASSWORD)
         else:
             robot_logger.info('No VRFs in "Requested" state.')
@@ -62,7 +62,7 @@ def mainloop(watcher: INotify):
         vms = ro.service_entity_list('iaas', 'vm', params={'state': 1})
         if len(vms) > 0:
             for vm in vms:
-                robot_logger.info(f"Building VM with ID {vm['idVM']}")
+                robot_logger.info(f'Building VM with ID {vm["idVM"]}')
                 dispatcher.dispatch_vm(vm, settings.NETWORK_PASSWORD)
         else:
             robot_logger.info('No VMs in "Requested" state.')
