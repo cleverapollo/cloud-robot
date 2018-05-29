@@ -6,9 +6,9 @@ lint:
     image: python:latest
     stage: lint
     before_script:
-        - pip3 install flake8
+        - pip3 install flake8 flake8-quotes
     script:
-        - flake8 --exclude fabfile.py,__init__.py --ignore E402,E722
+        - flake8 --exclude fabfile.py,__init__.py --ignore E402,E722 --inline-quotes 'single' --multiline-quotes '"'
 
 deploy_staging:
     image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
