@@ -9,6 +9,7 @@ import time
 from inotify_simple import INotify, flags
 
 # local
+import metrics
 import state
 import utils
 
@@ -33,6 +34,7 @@ def mainloop(watcher: INotify):
     """
     last = time.time()
     while True:
+        metrics.heartbeat()
         # First check to see if there have been any events
         if watcher.read(timeout=1000):
             robot_logger.info('Update detected. Spawning New Robot.')
@@ -47,7 +49,7 @@ def mainloop(watcher: INotify):
         # Now handle the loop events
         id_vrf = state.vrf(1)
         if id_vrf is not None:
-            robot_logger.info('Building VRF with ID %i.' % id_vrf)
+            robot_logger.info(f'Building VRF with ID %i.' % id_vrf)
             # TODO: Build the VRF
         else:
             robot_logger.info('No VRFs in "Requested" state.')
@@ -75,4 +77,5 @@ if __name__ == '__main__':
         robot_logger.exception(
             'Exception thrown in robot. Exiting.'
         )
+        metrics.robot_down()
         sys.exit(1)
