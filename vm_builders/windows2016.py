@@ -5,7 +5,9 @@ from collections import OrderedDict
 
 # local
 import utils
+from ro import fix_run_ps
 
+winrm.Session.run_ps = fix_run_ps
 driver_logger = utils.get_logger_for_name('windows2016.vm_build')
 # FREENAS mounted location in the host /mnt/images
 freenas_path = "alpha-freenas.cloudcix.com\\mnt\\volume\\alpha"
