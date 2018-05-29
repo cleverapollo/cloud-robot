@@ -90,7 +90,7 @@ def unattend_xml(vm: dict) -> str:
                             ('FirewallGroups', OrderedDict([
                                 ('FirewallGroup', OrderedDict([
                                     ('@wcm:action', 'add'),
-                                    ('@wcm:keyValue','EnableRemoteDesktop'),
+                                    ('@wcm:keyValue', 'EnableRemoteDesktop'),
                                     ('Active', 'true'),
                                     ('Group', 'Remote Desktop'),
                                     ('Profile', 'all')
@@ -134,7 +134,7 @@ def unattend_xml(vm: dict) -> str:
                                     ]))
                                 ]))
                             ]))
-                        ]), 
+                        ]),
                         OrderedDict([
                             ('@name', 'Microsoft-Windows-DNS-Client'),
                             ('@processorArchitecture', 'amd64'),
@@ -212,8 +212,8 @@ def unattend_xml(vm: dict) -> str:
                                         ('CommandLine', (
                                             'cscript //B %windir%/system32/'
                                             'slmgr.vbs /ipk '
-                                            'C3RCX-M6NRP-6CXC9-TW2F2-4RHYD')
-                                        )
+                                            'C3RCX-M6NRP-6CXC9-TW2F2-4RHYD'
+                                        ))
                                     ]),
                                     OrderedDict([
                                         ('@wcm:action', 'add'),
