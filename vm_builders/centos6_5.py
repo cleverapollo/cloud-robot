@@ -15,7 +15,7 @@ def answer_file(vm: dict) -> str:
     :param vm: Data for the VM that will be created
     :return: ks_text: The answer file that can build the specified VM
     """
-    ks_text = f'# {vm["idImage"]} Kickstart for VM {vm["vmname"]} \n'
+    ks_text = f'# {vm["idImage"]} Kickstart for VM {vm["vmIdentifier"]} \n'
     # System authorization information
     ks_text += 'auth --enableshadow --passalgo=sha512\n'
     # Clear the Master Boot Record

@@ -273,11 +273,11 @@ def vm_build(vm: dict, password: str) -> bool:
     vm_built = False
     xml = unattend_xml(vm)
     try:
-        with open(f'{path}{vm["vmname"]}.xml', 'w') as file:
+        with open(f'{path}{vm["vmIdentifer"]}.xml', 'w') as file:
             file.write(xml)
     except Exception:
         driver_logger.exception(
-            f'Failed to write answerfile to file for {vm["vmname"]}'
+            f'Failed to write answerfile to file for VM {vm["vmIdentifier"]}'
         )
         return vm_built
     try:
@@ -288,8 +288,8 @@ def vm_build(vm: dict, password: str) -> bool:
 
         cmd = (
             f'mount \\\\{freenas_path} Z: -o nolock & powershell -file '
-            f'Z:\scripts\VMCreator.ps1 -VMName {vm["vmname"]} -Gen 1 -OSName '
-            f'{os_name} -ProcessorCount {vm["cpu"]} -Dynamic 1 -Ram '
+            f'Z:\scripts\VMCreator.ps1 -VMName {vm["vmIdentifier"]} -Gen 1 '
+            f'-OSName {os_name} -ProcessorCount {vm["cpu"]} -Dynamic 1 -Ram '
             f'{vm["ram"]} -Hdd {vm["hdd"]} -Flash {vm["flash"]} -VlanId '
             f'{vm["vlan"]} -Verbose'
         )
