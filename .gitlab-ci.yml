@@ -6,7 +6,7 @@ lint:
     image: python:latest
     stage: lint
     before_script:
-        - pip3 install flake8 flake8-quotes
+        - pip3 install flake8 flake8-quotes pep8-naming
     script:
         - flake8 --exclude fabfile.py,__init__.py --ignore E402,E722 --inline-quotes 'single' --multiline-quotes '"'
 
