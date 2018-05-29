@@ -1,192 +1,186 @@
 import time
-from utils import get_logger_for_name
 from jnpr.junos import Device
+from jnpr.junos.exception import (
+    CommitError,
+    ConfigLoadError,
+    LockError,
+    UnlockError,
+)
 from jnpr.junos.utils.config import Config
-from jnpr.junos.exception import LockError, UnlockError, ConfigLoadError, \
-    CommitError
+from utils import get_logger_for_name
 
 driver_logger = get_logger_for_name('srx_vrf_builder.deploy_setconf')
 
 # TODO not yet fixed
 
 
-def vrf_build(VRF: dict, passwd: str) -> str:
+def vrf_build(vrf: dict, password: str) -> bool:
     """
     Builds Virtual Routing and Forwarding (VRF) in corresponding Router,
-    so it first prepares set commands and paramikos into router and executes
-    the set commands, so replies True on success or False on Failure.
-    :param VRF: dict object
-    :param passwd: string
-    :return: Boolean
+    so it first prepares set commands and paramiko-s into router and executes
+    the set commands
+    :param vrf: Information used to build the VRF
+    :param password: Password for the robot user in the physical router
+    :return: Flag stating whether or not the build was successful
     """
-
-    idProject = VRF['idProject']
-    vLANs = VRF['vLANs']
+    id_project = vrf['idProject']
+    driver_logger.info(
+        f'Generating configuration for project #{id_project}'
+    )
+    vlans = vrf['vLANs']
     # proxyIP is used to create proxy-arp NAT with customers
     # public IP addresses
-    proxyIPs = VRF['proxyIPs']
+    proxy_ips = vrf['proxyIPs']
     # privatNATips address to wich all inbound traffic will be NATed
-    privateNATips = VRF['privateNATips']
+    private_nat_ips = vrf['privateNATips']
     # publicIP add.ress used for NAT pool and as IKE gateway
-    publicIP = VRF['publicIP']
+    public_ip = vrf['publicIP']
     # oobIP = "10.252.14.32"
-    oobIP = VRF['oobIP']
-    setconf = ''
+    oob_ip = vrf['oobIP']
 
     # Routing Instances
     # Create vrf
-    setconf += 'set routing-instances vrf-' + str(idProject) + \
-               ' instance-type virtual-router\n'
-
+    conf = (
+        f'set routing-instances vrf-{id_project} instance-type virtual-router'
+        '\n'
+    )
     # Create southbound sub interface and gateway for each VLAN and
     # attach to vrf
-    for vLAN in vLANs:
-        setconf += 'set routing-instances vrf-' + str(idProject) + \
-                   ' interface ge-0/0/1.' + str(vLAN[0]) + '\n'
+    for vlan in vlans:
+        conf += (
+            f'set routing-instances vrf-{id_project} interface ge-0/0/1.'
+            f'{vlan[0]}\n'
+        )
 
     # Create a northbound route
-    setconf += 'set routing-instances vrf-' + str(idProject)
-    setconf += ' routing-options static route 0.0.0.0/0 next-table ' \
-               'PUBLIC.inet.0\n'
+    conf += (
+        f'set routing-instances vrf-{id_project} routing-options static route '
+        '0.0.0.0/0 next-table PUBLIC.inet.0\n'
+    )
 
     # Configure sub-interfaces
-    for vLAN in vLANs:
-        setconf += 'set interfaces ge-0/0/1 unit ' + str(vLAN[0]) + \
-                   ' description '
-        setconf += str(idProject) + '-' + str(vLAN[0]) + ' vlan-id ' \
-            + str(vLAN[0])
-        setconf += ' family inet address ' + str(vLAN[1]) + '\n'
+    for vlan in vlans:
+        conf += (
+            f'set interfaces ge-0/0/1 unit {vlan[0]} description {id_project}-'
+            f'{vlan[0]} vlan-id {vlan[0]} family inet address {vlan[1]}\n'
+        )
 
     # Create private zones
-    for vLAN in vLANs:
-        setconf += 'set security zones security-zone ' + str(vLAN[0]) + \
-                   '.private interfaces ge-0/0/1.' + str(vLAN[0])
-        setconf += ' host-inbound-traffic system-services ping\n'
+    for vlan in vlans:
+        conf += (
+            f'set security zones security-zone {vlan[0]}.private interfaces '
+            f'ge-0/0/1.{vlan[0]} host-inbound-traffic system-services ping\n'
+        )
 
     # Source (outbound) NAT
-    setconf += 'set security nat source rule-set ' + str(idProject) + \
-               '-outbound description '
-    setconf += str(idProject) + '-outbound-nat\n'
-    setconf += 'set security nat source pool ' + str(idProject) + \
-               '-public routing-instance vrf-' + str(idProject) + '\n'
-    setconf += 'set security nat source pool ' + str(idProject) + \
-               '-public address ' + str(publicIP[0]) + '\n'
-    for vLAN in vLANs:
-        setconf += 'set security nat source rule-set ' + str(idProject) + \
-                   '-outbound from zone '
-        setconf += str(vLAN[0]) + '.private\n'
-        setconf += 'set security nat source rule-set ' + str(idProject) + \
-                   '-outbound rule '
-        setconf += str(vLAN[0]) + '-outbound match source-address ' + \
-            str(vLAN[1]) + '\n'
-        setconf += 'set security nat source rule-set ' + str(idProject) + \
-                   '-outbound rule '
-        setconf += str(vLAN[0]) + '-outbound then source-nat pool ' + \
-            str(idProject) + '-public\n'
-    setconf += 'set security nat source rule-set ' + str(idProject) + \
-               '-outbound to zone PUBLIC\n'
+    conf += (
+        f'set security nat source rule-set {id_project}-outbound description '
+        f'{id_project}-outbound-nat\n'
+        f'set security nat source pool {id_project}-public routing-instance '
+        f'vrf-{id_project}\n'
+        f'set security nat source pool {id_project}-public address '
+        f'{public_ip[0]}\n'
+    )
+    for vlan in vlans:
+        conf += (
+            f'set security nat source rule-set {id_project}-outbound from zone'
+            f' {vlan[0]}.private\n'
+            f'set security nat source rule-set {id_project}-outbound rule '
+            f'{vlan[0]}-outbound match source-address {vlan[1]}\n'
+            f'set security nat source rule-set {id_project}-outbound rule '
+            f'{vlan[0]}-outbound then source-nat pool {id_project}-public\n'
+        )
+    conf += (
+        f'set security nat source rule-set {id_project}-outbound to zone '
+        'PUBLIC'
+    )
 
     # Create proxy-arp on specific interface with predefined IP addresses
-    for proxyIP in proxyIPs:
-        setconf += 'set security nat proxy-arp interface ge-0/0/0.0 address '\
-                   + str(proxyIP) + '\n'
+    for proxy in proxy_ips:
+        conf += (
+            f'set security nat proxy-arp interface ge-0/0/0.0 address {proxy}'
+            '\n'
+        )
 
     # Create NAT static rule-set inbound
-    i = 0
-    for vLAN in vLANs:
-        setconf += 'set security nat static rule-set inbound-static from ' \
-                   'zone ' + str(vLAN[0]) + '.private\n'
-        ruleName = str(proxyIPs[i]).split("/")[0]
-        # ruleNames in Junos cannot contain /
-        ruleName = ruleName.replace(".", "-")
-        # ruleNames in Junos cannot contain .
-        setconf += 'set security nat static rule-set inbound-static rule ' \
-                   + ruleName
-        setconf += ' match destination-address ' + str(proxyIPs[i]) + '\n'
-        setconf += 'set security nat static rule-set inbound-static rule ' \
-                   + ruleName
-        setconf += ' then static-nat prefix ' + str(privateNATips[i]) + '\n'
-        setconf += 'set security nat static rule-set inbound-static rule ' \
-                   + ruleName
-        setconf += ' then static-nat prefix routing-instance vrf-' + \
-                   str(idProject) + '\n'
-        i += 1
+    for i, vlan in enumerate(vlans):
+        conf += (
+            'set security nat static rule-set inbound-static from zone '
+            f'{vlan[0]}.private\n'
+        )
+        rule_name = str(proxy_ips[i]).split("/")[0]
+        # rule names in Junos cannot contain /
+        rule_name = rule_name.replace(".", "-")
+        # rule names in Junos cannot contain .
+        conf += (
+            f'set security nat static rule-set inbound-static rule {rule_name}'
+            f' match destination-address {proxy_ips[i]}\n'
+            f'set security nat static rule-set inbound-static rule {rule_name}'
+            f' then static-nat prefix {private_nat_ips[i]}\n'
+            f'set security nat static rule-set inbound-static rule {rule_name}'
+            f' then static-nat prefix routing-instance vrf-{id_project}\n'
+        )
     # Create IKE
-    # Create IKE proposal
-    setconf += 'set security ike proposal ike-' + \
-               str(idProject) + '-' + str(vLAN[0])
-    setconf += '-proposal authentication-method pre-shared-keys\n'
-    setconf += 'set security ike proposal ike-' + \
-               str(idProject) + '-' + str(vLAN[0]) + \
-               '-proposal dh-group group2\n'
-    setconf += 'set security ike proposal ike-' + \
-               str(idProject) + '-' + str(vLAN[0])
-    setconf += '-proposal authentication-algorithm sha1\n'
-    setconf += 'set security ike proposal ike-' + \
-               str(idProject) + '-' + str(vLAN[0])
-    setconf += '-proposal encryption-algorithm aes-128-cbc\n'
+    for vlan in vlans:
+        conf += (
+            # Create IKE proposal
+            f'set security ike proposal ike-{id_project}-{vlan[0]}-proposal '
+            'authentication-method pre-shared-keys\n'
+            f'set security ike proposal ike-{id_project}-{vlan[0]}-proposal '
+            'dh-group group2\n'
+            f'set security ike proposal ike-{id_project}-{vlan[0]}-proposal '
+            'authentication-algorithm sha1\n'
+            f'set security ike proposal ike-{id_project}-{vlan[0]}-proposal '
+            'encryption-algorithm aes-128-cbc\n'
+            
+            # Create IKE policy
+            f'sec security ike policy {id_project}-{vlan[0]}-ikepolicy mode '
+            'main\n'
+            f'set security ike policy {id_project}-{vlan[0]}-ikepolicy '
+            f'proposals ike-{id_project}-{vlan[0]}-proposal\n'
+            f'set security ike policy {id_project}-{vlan[0]}-ikepolicy '
+            'pre-shared-key ascii-text "abcdefgh01234"\n'
 
-    # Create IKE policy
-    setconf += 'set security ike policy ' + \
-               str(idProject) + '-' + str(vLAN[0]) + '-ikepolicy mode main\n'
-    setconf += 'set security ike policy ' + \
-               str(idProject) + '-' + str(vLAN[0])
-    setconf += '-ikepolicy proposals ike-' + \
-               str(idProject) + '-' + str(vLAN[0]) + '-proposal\n'
-    setconf += 'set security ike policy ' + str(idProject) + '-' + \
-               str(vLAN[0]) + '-ikepolicy pre-shared-key '
-    setconf += 'ascii-text "abcdefgh01234"\n'
+            # Configure IKE gateway
+            f'set security ike gateway {id_project}-{vlan[0]}-gw ike-policy '
+            f'{id_project}-{vlan[0]}-ikepolicy\n'
+            f'set security ike gateway {id_project}-{vlan[0]}-gw address '
+            '1.2.3.4\n'
+            f'set security ike gateway {id_project}-{vlan[0]}-gw '
+            'external-interface ge-0/0/0.0\n'
+            f'set security ike gateway {id_project}-{vlan[0]}-gw local-address'
+            f' {public_ip[0]}\n'
 
-    # Configure IKE gateway
-    setconf += 'set security ike gateway ' + \
-               str(idProject) + '-' + str(vLAN[0]) + '-gw ike-policy '
-    setconf += str(idProject) + '-' + str(vLAN[0]) + '-ikepolicy\n'
-    setconf += 'set security ike gateway ' + \
-               str(idProject) + '-' + str(vLAN[0]) + '-gw address 1.2.3.4\n'
-    setconf += 'set security ike gateway ' + str(idProject) + '-' + \
-               str(vLAN[0]) + '-gw external-interface ge-0/0/0.0\n'
-    setconf += 'set security ike gateway ' + str(idProject) + '-' + \
-               str(vLAN[0]) + '-gw local-address ' + str(publicIP[0]) + '\n'
+            # Create ipsec VPN
+            # Configure st interface
+            f'set interfaces st0 unit {vlan[0]}\n'
+            f'set security ipsec vpn {id_project}-{vlan[0]}-vpn bind-interface'
+            f' st0.{vlan[0]}\n'
+            f'set security ipsec vpn {id_project}-{vlan[0]}-vpn ike gateway '
+            f'{id_project}-{vlan[0]}-gw\n'
 
-    # Create ipsec VPN
-    # Configure st interface
-    setconf += 'set interfaces st0 unit ' + str(vLAN[0]) + '\n'
-    setconf += 'set security ipsec vpn ' + str(idProject) + '-' + \
-               str(vLAN[0]) + '-vpn bind-interface st0.'
-    setconf += str(vLAN[0]) + '\n'
-    setconf += 'set security ipsec vpn ' + str(idProject) + '-' + \
-               str(vLAN[0]) + '-vpn ike gateway '
-    setconf += str(idProject) + '-' + str(vLAN[0]) + '-gw\n'
+            # Add configured st interfaces to security zone
+            f'set routing-instances vrf-{id_project} interface st0.{vlan[0]}\n'
+            f'set security zones security-zone {vlan[0]}.private interfaces '
+            f'st0.{vlan[0]}\n'
 
-    # Add configured st interfaces to security zone
-    setconf += 'set routing-instances vrf-' + str(idProject) + \
-               ' interface st0.' + str(vLAN[0]) + '\n'
-    setconf += 'set security zones security-zone ' + str(vLAN[0]) + \
-               '.private interfaces st0.' + str(vLAN[0]) + '\n'
+            # Create ipsec proposal
+            f'set security ipsec proposal ipsec-{id_project}-{vlan[0]}'
+            '-proposal protocol esp\n'
+            f'set security ipsec proposal ipsec-{id_project}-{vlan[0]}'
+            '-proposal authentication-algorithm hmac-sha-96\n'
+            f'set security ipsec proposal ipsec-{id_project}-{vlan[0]}'
+            '-proposal encryption-algorithm aes-128-cbc\n'
 
-    # Create ipsec proposal
-    setconf += 'set security ipsec proposal ipsec-' + str(idProject) + '-' \
-               + str(vLAN[0]) + '-proposal protocol esp\n'
-    setconf += 'set security ipsec proposal ipsec-' + str(idProject) + '-' \
-               + str(vLAN[0])
-    setconf += '-proposal authentication-algorithm hmac-sha1-96\n'
-    setconf += 'set security ipsec proposal ipsec-' + str(idProject) + '-' \
-               + str(vLAN[0])
-    setconf += '-proposal encryption-algorithm aes-128-cbc\n'
-
-    # Create ipsec policy
-    setconf += 'set security ipsec policy vpn-' + str(idProject) + '-' + \
-               str(vLAN[0]) + ' perfect-forward-secrecy keys group2\n'
-    setconf += 'set security ipsec policy vpn-' + str(idProject) + '-' + \
-               str(vLAN[0])
-    setconf += ' proposals ipsec-' + str(idProject) + '-' + str(vLAN[0]) + \
-               '-proposal\n'
-    setconf += 'set security ipsec vpn ' + str(idProject) + '-' + str(vLAN[0])
-    setconf += '-vpn ike ipsec-policy vpn-' + str(idProject) + '-' + \
-               str(vLAN[0]) + '\n'
-
-    password = passwd
-    vrf_status = deploy_setconf(setconf, oobIP, password)
+            # Create ipsec policy
+            f'set security ipsec policy vpn-{id_project}-{vlan[0]} '
+            'perfect-forward-secrecy keys group2\n'
+            f'set security ipsec policy vpn-{id_project}-{vlan[0]} proposals '
+            f'ipsec-{id_project}-{vlan[0]}-proposal\n'
+            f'set security ipsec vpn {id_project}-{vlan[0]}-vpn ike '
+            f'ipsec-policy vpn-{id_project}-{vlan[0]}\n'
+        )
+    vrf_status = deploy_setconf(conf, oob_ip, password)
     return vrf_status
 
 
@@ -194,54 +188,87 @@ def vrf_build(VRF: dict, passwd: str) -> str:
 #   Deploy setconf to Router                            #
 #########################################################
 def deploy_setconf(setconf: str, ip: str, password: str) -> bool:
+    """
+    Deploy the configuration generated by vrf_build to the actual router
+    :param setconf: The configuration generated by vrf_build
+    :param ip: The ip_address of the router to install the conf on
+    :param password: The password for the 'robot' user of the router
+    :return: Flag stating whether or not the build was successful
+    """
     success = False
     # Open Router
-    dev = Device(host=ip, user="robot", password=password, port=22)
+    dev = Device(host=ip, user='robot', password=password, port=22)
     cu = Config(dev)
     try:
         dev.open()
     except Exception:
-        driver_logger.exception(f"Unable to open host {ip}.")
+        driver_logger.exception(
+            f'Unable to connect to router @ {ip}'
+        )
         return success
     # Lock Router
-    driver_logger.info(f"Locking the Router with ip: {ip} configuration.")
+    driver_logger.info(
+        f'Successfully connected to router @ {ip}.'
+        f' Attempting to lock router to apply configuration'
+    )
     try:
         cu.lock()
     except LockError:
-        driver_logger.exception(f"Unable to lock configuration")
+        driver_logger.exception(
+            f'Unable to lock router @ {ip}'
+        )
         dev.close()
         return success
 
     # Load Configuration
-    driver_logger.info("Loading configuration changes")
+    driver_logger.info(
+        f'Successfully locked router @ {ip}. '
+        f'Now attempting to apply configuration.'
+    )
     try:
         for cmd in setconf.split('\n'):
-            driver_logger.info(cmd)
+            driver_logger.debug(
+                f'Attempting to run "{cmd}" on the router.'
+            )
             cu.load(cmd, format="set", merge=True)
     except (ConfigLoadError, Exception):
         driver_logger.exception(
-            f"Unable to load configuration changes. "
-            f"Unlocking the configuration")
+            f'Unable to load configuration changes on router @ {ip}.'
+        )
+        driver_logger.info(
+            f'Attempting to unlock configuration on router @ {ip} '
+            f'after exception'
+        )
         try:
             cu.unlock()
         except UnlockError:
-            driver_logger.exception(f"Unable to unlock configuration:")
+            driver_logger.exception(
+                f'Unable to unlock configuration on router @ {ip}'
+            )
         dev.close()
         return success
 
     # Commit Configuration
-    driver_logger.info("Committing the configuration")
+    driver_logger.info(
+        f'All commands loaded successfully onto router @ {ip}. '
+        f'Attempting to commit the changes'
+    )
     try:
-        cu.commit(comment=f"Loaded by robot at {time.clock}.")
+        cu.commit(comment=f"Loaded by robot at {time.asctime()}.")
         success = True
     except CommitError:
         driver_logger.exception(
-            f"Unable to commit configuration. "
-            f"Unlocking the configuration")
+            f'Unable to commit changes onto router @ {ip}'
+        )
         return success
+    driver_logger.info(
+        f'Attempting to unlock configuration on router @ {ip}'
+    )
     try:
         cu.unlock()
     except UnlockError:
-        driver_logger.exception(f"Unable to unlock configuration")
+        driver_logger.exception(
+            f'Unable to unlock configuration on router @ {ip}'
+        )
         dev.close()
     return success
