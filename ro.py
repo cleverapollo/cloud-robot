@@ -172,14 +172,14 @@ def get_idrac_details(location: str) -> Optional[(str, str)]:
     """
     logger = utils.get_logger_for_name('ro.get_idrac_details')
     logger.info(f'Attempting to generate iDRAC info for location {location}')
-    location = location.replace(" ", "")  # Remove white spaces
+    location = location.replace(' ', '')  # Remove white spaces
     # Find the ipaddress
-    if location[:5] == "CIX1A":
-        ip = "10.253"
-    elif location[:5] == "CIX1B":
-        ip = "10.252"
-    elif location[:5] == "CIX1C":
-        ip = "10.251"
+    if location[:5] == 'CIX1A':
+        ip = '10.253'
+    elif location[:5] == 'CIX1B':
+        ip = '10.252'
+    elif location[:5] == 'CIX1C':
+        ip = '10.251'
     else:
         # Undefined location, return error
         logger.error(
@@ -188,17 +188,17 @@ def get_idrac_details(location: str) -> Optional[(str, str)]:
         )
         return
 
-    if location[5] in ["A", "G", "M"]:
+    if location[5] in ['A', 'G', 'M']:
         base = 0
-    elif location[5] in ["B", "H", "N"]:
+    elif location[5] in ['B', 'H', 'N']:
         base = 20
-    elif location[5] in ["C", "I", "O"]:
+    elif location[5] in ['C', 'I', 'O']:
         base = 40
-    elif location[5] in ["D", "J", "P"]:
+    elif location[5] in ['D', 'J', 'P']:
         base = 60
-    elif location[5] in ["E", "K", "Q"]:
+    elif location[5] in ['E', 'K', 'Q']:
         base = 80
-    elif location[5] in ["F", "L", "R"]:
+    elif location[5] in ['F', 'L', 'R']:
         base = 80
     else:
         logger.error(
