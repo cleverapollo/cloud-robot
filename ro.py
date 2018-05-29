@@ -245,20 +245,6 @@ def ip_validations(address_range: str, ip_address: str) -> Optional[dict]:
     return None
 
 
-def fix_run_ps(session: winrm.Session.run_ps,
-               script: str) -> winrm.Response:
-    """
-    winrm supporting function, dont make anychanges
-    :param script:
-    :return:
-    """
-    encoded_ps = b64encode(script.encode('utf_16_le')).decode('ascii')
-    rs = session.run_cmd(f'powershell -encodedcommand {encoded_ps}')
-    if len(rs.std_err):
-        rs.std_err = session.clean_error_msg(rs.std_err.decode('utf-8'))
-    return rs
-
-
 def password_generator(size: int = 8,
                        chars: Optional[str] = None) -> str:
     """
