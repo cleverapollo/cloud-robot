@@ -1,3 +1,9 @@
 cloudcix
 influxdb
 inotify_simple
+pywinrm
+xmltodict
+paramiko
+crypt
+junos-eznc
+netaddr
