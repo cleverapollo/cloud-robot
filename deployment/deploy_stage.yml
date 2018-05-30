@@ -18,6 +18,7 @@
     - name: Check if Robot is already running
       shell: ps -ef | grep robot | grep -v grep
       register: is_running
+      ignore_errors: yes
     - name: Start initial robot process if Robot isn't already running
       shell: python3 robot.py &
       args:
