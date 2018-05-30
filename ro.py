@@ -43,14 +43,14 @@ def service_entity_create(
     if response.status_code == 201:
         entity_create = response.json()['content']
         logger.info(
-            f'Successfully created an instance of {service}.{entity} with the '
-            f'following data: {data}'
+            f'Successfully created an instance of {service}.{entity} with '
+            f'the following data: {data}'
         )
     else:
         logger.error(
             f'HTTP Error {response.status_code} occurred while trying to '
-            f'create an instance of {service}.{entity} with the following data'
-            f': {data}.\nResponse from API: {response.content.decode()}'
+            f'create an instance of {service}.{entity} with the following '
+            f'data: {data}.\nResponse from API: {response.content.decode()}'
         )
     return entity_create
 
@@ -66,8 +66,8 @@ def service_entity_list(service: str, entity: str, params: dict) -> list:
     """
     logger = utils.get_logger_for_name('ro.service_entity_list')
     logger.info(
-        f'Attempting to retrieve a list of {service}.{entity} records with the'
-        f' following params : {params}'
+        f'Attempting to retrieve a list of {service}.{entity} records '
+        f'with the following params : {params}'
     )
     service_to_call = getattr(api, service)
     # service_to_call = api.iaas  (e.g service = 'iaas')

@@ -54,15 +54,16 @@ def vrf_build(vrf: dict, password: str) -> bool:
 
     # Create a northbound route
     conf += (
-        f'set routing-instances vrf-{id_project} routing-options static route '
-        '0.0.0.0/0 next-table PUBLIC.inet.0\n'
+        f'set routing-instances vrf-{id_project} routing-options static '
+        f'route 0.0.0.0/0 next-table PUBLIC.inet.0\n'
     )
 
     # Configure sub-interfaces
     for vlan in vlans:
         conf += (
-            f'set interfaces ge-0/0/1 unit {vlan[0]} description {id_project}-'
-            f'{vlan[0]} vlan-id {vlan[0]} family inet address {vlan[1]}\n'
+            f'set interfaces ge-0/0/1 unit {vlan[0]} description '
+            f'{id_project}-{vlan[0]} vlan-id {vlan[0]} family inet '
+            f'address {vlan[1]}\n'
         )
 
     # Create private zones
@@ -83,8 +84,8 @@ def vrf_build(vrf: dict, password: str) -> bool:
     )
     for vlan in vlans:
         conf += (
-            f'set security nat source rule-set {id_project}-outbound from zone'
-            f' {vlan[0]}.private\n'
+            f'set security nat source rule-set {id_project}-outbound from '
+            f'zone {vlan[0]}.private\n'
             f'set security nat source rule-set {id_project}-outbound rule '
             f'{vlan[0]}-outbound match source-address {vlan[1]}\n'
             f'set security nat source rule-set {id_project}-outbound rule '
@@ -113,12 +114,13 @@ def vrf_build(vrf: dict, password: str) -> bool:
         rule_name = rule_name.replace('.', '-')
         # rule names in Junos cannot contain .
         conf += (
-            f'set security nat static rule-set inbound-static rule {rule_name}'
-            f' match destination-address {proxy_ips[i]}\n'
-            f'set security nat static rule-set inbound-static rule {rule_name}'
-            f' then static-nat prefix {private_nat_ips[i]}\n'
-            f'set security nat static rule-set inbound-static rule {rule_name}'
-            f' then static-nat prefix routing-instance vrf-{id_project}\n'
+            f'set security nat static rule-set inbound-static '
+            f'rule {rule_name} match destination-address {proxy_ips[i]}\n'
+            f'set security nat static rule-set inbound-static '
+            f'rule {rule_name} then static-nat prefix {private_nat_ips[i]}\n'
+            f'set security nat static rule-set inbound-static '
+            f'rule {rule_name} then static-nat prefix routing-instance '
+            f'vrf-{id_project}\n'
         )
     # Create IKE
     for vlan in vlans:
@@ -148,19 +150,20 @@ def vrf_build(vrf: dict, password: str) -> bool:
             '1.2.3.4\n'
             f'set security ike gateway {id_project}-{vlan[0]}-gw '
             'external-interface ge-0/0/0.0\n'
-            f'set security ike gateway {id_project}-{vlan[0]}-gw local-address'
-            f' {public_ip[0]}\n'
+            f'set security ike gateway {id_project}-{vlan[0]}-gw '
+            f'local-address {public_ip[0]}\n'
 
             # Create ipsec VPN
             # Configure st interface
             f'set interfaces st0 unit {vlan[0]}\n'
-            f'set security ipsec vpn {id_project}-{vlan[0]}-vpn bind-interface'
-            f' st0.{vlan[0]}\n'
+            f'set security ipsec vpn {id_project}-{vlan[0]}-vpn '
+            f'bind-interface st0.{vlan[0]}\n'
             f'set security ipsec vpn {id_project}-{vlan[0]}-vpn ike gateway '
             f'{id_project}-{vlan[0]}-gw\n'
 
             # Add configured st interfaces to security zone
-            f'set routing-instances vrf-{id_project} interface st0.{vlan[0]}\n'
+            f'set routing-instances vrf-{id_project} interface '
+            f'st0.{vlan[0]}\n'
             f'set security zones security-zone {vlan[0]}.private interfaces '
             f'st0.{vlan[0]}\n'
 
