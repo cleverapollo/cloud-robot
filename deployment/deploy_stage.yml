@@ -1,15 +1,28 @@
 ---
 - hosts: staging
+  vars:
+    robot_dir: "/home/administrator/robot"
   remote_user: administrator
   tasks:
+    - name: Check if Robot is already running
+      shell: ps -ef | grep robot | grep -v grep
+      register: is_running
+      ignore_errors: yes
+    - name: Start initial robot process if Robot isn't already running
+      shell: python3 robot.py &
+      args:
+        chdir: "{{ robot_dir }}"
+      async: 100
+      poll: 0
+      when: is_running.rc == 1
     - name: Deploy Robot to Alpha Region for staging
       git:
-        repo: 'git@gitlab.cloudcix.com:CloudCIX/Robot.git'
-        dest: /home/administrator/robot
+        repo: "git@gitlab.cloudcix.com:CloudCIX/Robot.git"
+        dest: "{{ robot_dir }}"
         update: yes
         clone: no
         version: master
     - name: Update requirements
       shell: pip3 install -U -r requirements.txt
       args:
-        chdir: /home/administrator/robot
+        chdir: "{{ robot_dir }}"
