@@ -79,16 +79,12 @@ def vrf_build(vrf: dict, password: str) -> bool:
     conf += (
         f'set groups {id_project} security nat source rule-set '
         f'{id_project}-outbound description {id_project}-outbound-nat\n'
-        
         f'set groups {id_project} security nat source pool '
-        f'{id_project}-public routing-instance vrf-{id_project}\n'
-        
+        f'{id_project}-public routing-instance vrf-{id_project}\n' 
         f'set groups {id_project} security nat source pool '
         f'{id_project}-public address {out_bound_ip}\n'
-        
         f'set groups {id_project} security nat source rule-set '
         f'{id_project}-outbound from zone {id_project}\n'
-        
         f'set groups {id_project} security nat source rule-set '
         f'{id_project}-outbound to zone PUBLIC'
     )
@@ -97,7 +93,6 @@ def vrf_build(vrf: dict, password: str) -> bool:
             f'set groups {id_project} security nat source rule-set '
             f'{id_project}-outbound rule {vlan["vLAN"]}-outbound match '
             f'source-address {vlan["subnet"]}\n'
-            
             f'set groups {id_project} security nat source rule-set '
             f'{id_project}-outbound rule {vlan["vLAN"]}-outbound then '
             f'source-nat pool {id_project}-public\n'
@@ -114,20 +109,18 @@ def vrf_build(vrf: dict, password: str) -> bool:
     for nat in nats:
         conf += (f'set groups {id_project} security nat static rule-set '
                  f'{id_project} inbound-static from zone PUBLIC\n')
-        ruleName = str(nat['fIP']).split("/")[0]
+        rule_name = str(nat['fIP']).split('/')[0]
         # ruleNames in Junos cannot contain /
-        ruleName = ruleName.replace(".", "-")
+        rule_name = rule_name.replace('.', '-')
         # ruleNames in Junos cannot contain .
         conf += (f'set groups {id_project} security nat static rule-set '
-                 f'{id_project}-inbound-static rule {ruleName} '
+                 f'{id_project}-inbound-static rule {rule_name} '
                  f'match destination-address {str(nat["fIP"])}\n'
-                 
                  f'set groups {id_project} security nat static rule-set '
-                 f'{id_project}-inbound-static rule {ruleName} '
-                 f'then static-nat prefix {str(nat["pIP"])}\n'
-                 
+                 f'{id_project}-inbound-static rule {rule_name} '
+                 f'then static-nat prefix {str(nat["pIP"])}\n'                
                  f'set groups {id_project} security nat static rule-set '
-                 f'{id_project}-inbound-static rule {ruleName} '
+                 f'{id_project}-inbound-static rule {rule_name} '
                  f'then static-nat prefix routing-instance '
                  f'vrf-{id_project}\n')
 
