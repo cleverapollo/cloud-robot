@@ -1,16 +1,21 @@
 # python
 import os
-os.environ.setdefault('CLOUDCIX_SETTINGS_MODULE', "settings")
+os.environ.setdefault('CLOUDCIX_SETTINGS_MODULE', 'settings')
 import subprocess
 import sys
 import time
 
-# libs
+# lib
 from inotify_simple import INotify, flags
 
 # local
-import state
+import dispatcher
+import ro
+import settings
 import utils
+
+
+robot_logger = utils.get_logger_for_name('robot.mainloop')
 
 
 def watch_directory() -> INotify:
@@ -45,16 +50,20 @@ def mainloop(watcher: INotify):
             # Exit this process gracefully
             sys.exit(0)
         # Now handle the loop events
-        id_vrf = state.vrf(1)
-        if id_vrf is not None:
-            robot_logger.info('Building VRF with ID %i.' % id_vrf)
-            # TODO: Build the VRF
+        # #################  VRF BUILD ######################################
+        vrfs = ro.service_entity_list('iaas', 'vrf', params={'state': 1})
+        if len(vrfs) > 0:
+            for vrf in vrfs:
+                robot_logger.info(f'Building VRF with ID {vrf["idVRF"]}.')
+                dispatcher.dispatch_vrf(vrf, settings.NETWORK_PASSWORD)
         else:
             robot_logger.info('No VRFs in "Requested" state.')
-        id_vm = state.vm(1)
-        if id_vm is not None:
-            robot_logger.info('Building VM with ID %i' % id_vm)
-            # TODO: Build the VM
+        # ######################## VM BUILD  ################################
+        vms = ro.service_entity_list('iaas', 'vm', params={'state': 1})
+        if len(vms) > 0:
+            for vm in vms:
+                robot_logger.info(f'Building VM with ID {vm["idVM"]}')
+                dispatcher.dispatch_vm(vm, settings.NETWORK_PASSWORD)
         else:
             robot_logger.info('No VMs in "Requested" state.')
 
@@ -65,13 +74,11 @@ def mainloop(watcher: INotify):
 
 if __name__ == '__main__':
     # When the script is run as the main
-    # Now set up the robot
-    robot_logger = utils.get_logger_for_name('robot')
     robot_logger.info(
         'Robot starting. Current Commit >> %s' % utils.get_current_git_sha())
     try:
         mainloop(watch_directory())
-    except:
+    except Exception:
         robot_logger.exception(
             'Exception thrown in robot. Exiting.'
         )
