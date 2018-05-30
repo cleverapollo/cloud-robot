@@ -10,6 +10,7 @@ from inotify_simple import INotify, flags
 
 # local
 import dispatcher
+import metrics
 import ro
 import settings
 import utils
@@ -38,6 +39,7 @@ def mainloop(watcher: INotify):
     """
     last = time.time()
     while True:
+        metrics.heartbeat()
         # First check to see if there have been any events
         if watcher.read(timeout=1000):
             robot_logger.info('Update detected. Spawning New Robot.')
@@ -75,11 +77,13 @@ def mainloop(watcher: INotify):
 if __name__ == '__main__':
     # When the script is run as the main
     robot_logger.info(
-        'Robot starting. Current Commit >> %s' % utils.get_current_git_sha())
+        f'Robot starting. Current Commit >> {utils.get_current_git_sha()}'
+    )
     try:
         mainloop(watch_directory())
     except Exception:
         robot_logger.exception(
             'Exception thrown in robot. Exiting.'
         )
+        metrics.heartbeat(0)
         sys.exit(1)
