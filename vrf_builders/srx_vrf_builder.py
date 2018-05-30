@@ -23,166 +23,116 @@ def vrf_build(vrf: dict, password: str) -> bool:
     :param password: Password for the robot user in the physical router
     :return: Flag stating whether or not the build was successful
     """
-    id_project = vrf['idProject']
+    id_project = str(vrf['idProject'])
     driver_logger.info(
         f'Generating configuration for project #{id_project}'
     )
+    # vlans is used to create interfaces and sub-interfaces
     vlans = vrf['vLANs']
-    # proxyIP is used to create proxy-arp NAT with customers
-    # public IP addresses
-    proxy_ips = vrf['proxyIPs']
-    # privatNATips address to wich all inbound traffic will be NATed
-    private_nat_ips = vrf['privateNATips']
-    # publicIP add.ress used for NAT pool and as IKE gateway
-    public_ip = vrf['publicIP']
+    # nats is used to create proxy-arp NAT with customers
+    nats = vrf['NATs']
+    # out_bound_ip address used for NAT pool and as IKE gateway
+    out_bound_ip = str(vrf['outBoundIP'])
+    # vpns for IPSec VPN
+    vpns = vrf['VPNs']
     # oobIP = "10.252.14.32"
-    oob_ip = vrf['oobIP']
+    oob_ip = str(vrf['oobIP'])
 
     # Routing Instances
     # Create vrf
     conf = (
-        f'set routing-instances vrf-{id_project} instance-type virtual-router'
-        '\n'
+        f'set groups {id_project} routing-instances vrf-{id_project} '
+        f'instance-type virtual-router\n'
     )
     # Create southbound sub interface and gateway for each VLAN and
     # attach to vrf
     for vlan in vlans:
         conf += (
-            f'set routing-instances vrf-{id_project} interface ge-0/0/1.'
-            f'{vlan[0]}\n'
+            f'set groups {id_project} routing-instances vrf-{id_project} '
+            f'interface ge-0/0/1.{vlan["vLAN"]}\n'
         )
 
     # Create a northbound route
     conf += (
-        f'set routing-instances vrf-{id_project} routing-options static '
-        f'route 0.0.0.0/0 next-table PUBLIC.inet.0\n'
+        f'set groups {id_project} routing-instances vrf-{id_project} '
+        f'routing-options static route 0.0.0.0/0 next-table PUBLIC.inet.0\n'
     )
 
     # Configure sub-interfaces
     for vlan in vlans:
+        vlan['vLAN'] = str(vlan['vLAN'])
         conf += (
-            f'set interfaces ge-0/0/1 unit {vlan[0]} description '
-            f'{id_project}-{vlan[0]} vlan-id {vlan[0]} family inet '
-            f'address {vlan[1]}\n'
+            f'set groups {id_project} interfaces ge-0/0/1 unit {vlan["vLAN"]} '
+            f'description {id_project}-{vlan["vLAN"]} vlan-id {vlan["vLAN"]} '
+            f'family inet address {vlan["subnet"]}\n'
         )
 
     # Create private zones
     for vlan in vlans:
         conf += (
-            f'set security zones security-zone {vlan[0]}.private interfaces '
-            f'ge-0/0/1.{vlan[0]} host-inbound-traffic system-services ping\n'
+            f'set groups {id_project} security zones security-zone '
+            f'{id_project} interfaces ge-0/0/1.{str(vlan["vLAN"])} '
+            f'host-inbound-traffic system-services ping\n'
         )
 
     # Source (outbound) NAT
     conf += (
-        f'set security nat source rule-set {id_project}-outbound description '
-        f'{id_project}-outbound-nat\n'
-        f'set security nat source pool {id_project}-public routing-instance '
-        f'vrf-{id_project}\n'
-        f'set security nat source pool {id_project}-public address '
-        f'{public_ip[0]}\n'
+        f'set groups {id_project} security nat source rule-set '
+        f'{id_project}-outbound description {id_project}-outbound-nat\n'
+        
+        f'set groups {id_project} security nat source pool '
+        f'{id_project}-public routing-instance vrf-{id_project}\n'
+        
+        f'set groups {id_project} security nat source pool '
+        f'{id_project}-public address {out_bound_ip}\n'
+        
+        f'set groups {id_project} security nat source rule-set '
+        f'{id_project}-outbound from zone {id_project}\n'
+        
+        f'set groups {id_project} security nat source rule-set '
+        f'{id_project}-outbound to zone PUBLIC'
     )
     for vlan in vlans:
         conf += (
-            f'set security nat source rule-set {id_project}-outbound from '
-            f'zone {vlan[0]}.private\n'
-            f'set security nat source rule-set {id_project}-outbound rule '
-            f'{vlan[0]}-outbound match source-address {vlan[1]}\n'
-            f'set security nat source rule-set {id_project}-outbound rule '
-            f'{vlan[0]}-outbound then source-nat pool {id_project}-public\n'
+            f'set groups {id_project} security nat source rule-set '
+            f'{id_project}-outbound rule {vlan["vLAN"]}-outbound match '
+            f'source-address {vlan["subnet"]}\n'
+            
+            f'set groups {id_project} security nat source rule-set '
+            f'{id_project}-outbound rule {vlan["vLAN"]}-outbound then '
+            f'source-nat pool {id_project}-public\n'
         )
-    conf += (
-        f'set security nat source rule-set {id_project}-outbound to zone '
-        'PUBLIC'
-    )
 
     # Create proxy-arp on specific interface with predefined IP addresses
-    for proxy in proxy_ips:
+    for nat in nats:
         conf += (
-            f'set security nat proxy-arp interface ge-0/0/0.0 address {proxy}'
-            '\n'
+            f'set groups {id_project} security nat proxy-arp interface '
+            f'ge-0/0/0.0 address {str(nat["fIP"])}\n'
         )
 
     # Create NAT static rule-set inbound
-    for i, vlan in enumerate(vlans):
-        conf += (
-            'set security nat static rule-set inbound-static from zone '
-            f'{vlan[0]}.private\n'
-        )
-        rule_name = str(proxy_ips[i]).split('/')[0]
-        # rule names in Junos cannot contain /
-        rule_name = rule_name.replace('.', '-')
-        # rule names in Junos cannot contain .
-        conf += (
-            f'set security nat static rule-set inbound-static '
-            f'rule {rule_name} match destination-address {proxy_ips[i]}\n'
-            f'set security nat static rule-set inbound-static '
-            f'rule {rule_name} then static-nat prefix {private_nat_ips[i]}\n'
-            f'set security nat static rule-set inbound-static '
-            f'rule {rule_name} then static-nat prefix routing-instance '
-            f'vrf-{id_project}\n'
-        )
-    # Create IKE
-    for vlan in vlans:
-        conf += (
-            # Create IKE proposal
-            f'set security ike proposal ike-{id_project}-{vlan[0]}-proposal '
-            'authentication-method pre-shared-keys\n'
-            f'set security ike proposal ike-{id_project}-{vlan[0]}-proposal '
-            'dh-group group2\n'
-            f'set security ike proposal ike-{id_project}-{vlan[0]}-proposal '
-            'authentication-algorithm sha1\n'
-            f'set security ike proposal ike-{id_project}-{vlan[0]}-proposal '
-            'encryption-algorithm aes-128-cbc\n'
+    for nat in nats:
+        conf += (f'set groups {id_project} security nat static rule-set '
+                 f'{id_project} inbound-static from zone PUBLIC\n')
+        ruleName = str(nat['fIP']).split("/")[0]
+        # ruleNames in Junos cannot contain /
+        ruleName = ruleName.replace(".", "-")
+        # ruleNames in Junos cannot contain .
+        conf += (f'set groups {id_project} security nat static rule-set '
+                 f'{id_project}-inbound-static rule {ruleName} '
+                 f'match destination-address {str(nat["fIP"])}\n'
+                 
+                 f'set groups {id_project} security nat static rule-set '
+                 f'{id_project}-inbound-static rule {ruleName} '
+                 f'then static-nat prefix {str(nat["pIP"])}\n'
+                 
+                 f'set groups {id_project} security nat static rule-set '
+                 f'{id_project}-inbound-static rule {ruleName} '
+                 f'then static-nat prefix routing-instance '
+                 f'vrf-{id_project}\n')
 
-            # Create IKE policy
-            f'sec security ike policy {id_project}-{vlan[0]}-ikepolicy mode '
-            'main\n'
-            f'set security ike policy {id_project}-{vlan[0]}-ikepolicy '
-            f'proposals ike-{id_project}-{vlan[0]}-proposal\n'
-            f'set security ike policy {id_project}-{vlan[0]}-ikepolicy '
-            'pre-shared-key ascii-text "abcdefgh01234"\n'
+    # IKE VPNs TODO
 
-            # Configure IKE gateway
-            f'set security ike gateway {id_project}-{vlan[0]}-gw ike-policy '
-            f'{id_project}-{vlan[0]}-ikepolicy\n'
-            f'set security ike gateway {id_project}-{vlan[0]}-gw address '
-            '1.2.3.4\n'
-            f'set security ike gateway {id_project}-{vlan[0]}-gw '
-            'external-interface ge-0/0/0.0\n'
-            f'set security ike gateway {id_project}-{vlan[0]}-gw '
-            f'local-address {public_ip[0]}\n'
-
-            # Create ipsec VPN
-            # Configure st interface
-            f'set interfaces st0 unit {vlan[0]}\n'
-            f'set security ipsec vpn {id_project}-{vlan[0]}-vpn '
-            f'bind-interface st0.{vlan[0]}\n'
-            f'set security ipsec vpn {id_project}-{vlan[0]}-vpn ike gateway '
-            f'{id_project}-{vlan[0]}-gw\n'
-
-            # Add configured st interfaces to security zone
-            f'set routing-instances vrf-{id_project} interface '
-            f'st0.{vlan[0]}\n'
-            f'set security zones security-zone {vlan[0]}.private interfaces '
-            f'st0.{vlan[0]}\n'
-
-            # Create ipsec proposal
-            f'set security ipsec proposal ipsec-{id_project}-{vlan[0]}'
-            '-proposal protocol esp\n'
-            f'set security ipsec proposal ipsec-{id_project}-{vlan[0]}'
-            '-proposal authentication-algorithm hmac-sha-96\n'
-            f'set security ipsec proposal ipsec-{id_project}-{vlan[0]}'
-            '-proposal encryption-algorithm aes-128-cbc\n'
-
-            # Create ipsec policy
-            f'set security ipsec policy vpn-{id_project}-{vlan[0]} '
-            'perfect-forward-secrecy keys group2\n'
-            f'set security ipsec policy vpn-{id_project}-{vlan[0]} proposals '
-            f'ipsec-{id_project}-{vlan[0]}-proposal\n'
-            f'set security ipsec vpn {id_project}-{vlan[0]}-vpn ike '
-            f'ipsec-policy vpn-{id_project}-{vlan[0]}\n'
-        )
     vrf_status = deploy_setconf(conf, oob_ip, password)
     return vrf_status
 
