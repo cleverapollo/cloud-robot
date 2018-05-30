@@ -18,5 +18,5 @@ deploy_staging:
     environment: staging
     stage: deploy
     script:
-        - ansible-playbook -v -i deployment/hosts deployment/deploy_stage.yml
+        - ansible-playbook -i deployment/hosts deployment/deploy_stage.yml
     only: ["master"]
