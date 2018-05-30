@@ -132,6 +132,10 @@ def vrf_build(vrf: dict, password: str) -> bool:
                  f'vrf-{id_project}\n')
 
     # IKE VPNs TODO
+    # for loop is for just to get rid of lint error
+    for vpn in vpns:
+        if vpn:
+            pass
 
     vrf_status = deploy_setconf(conf, oob_ip, password)
     return vrf_status
