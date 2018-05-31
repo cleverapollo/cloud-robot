@@ -19,8 +19,10 @@ def vm_build(vm: dict, password: str) -> bool:
     """
     vm_built = False
     # encrypting root and user password
-    vm['root_pw'] = str(crypt(vm['r_passwd'], mksalt(METHOD_SHA512)))
-    vm['user_pw'] = str(crypt(vm['u_passwd'], mksalt(METHOD_SHA512)))
+    vm['crypted_root_pw'] = str(
+        crypt(vm['root_password'], mksalt(METHOD_SHA512)))
+    vm['crypted_user_pw'] = str(
+        crypt(vm['user_password'], mksalt(METHOD_SHA512)))
     ks_text = utils.jinja_env.get_template('centos_kickstart.j2').render(**vm)
     ks_file = f'{vm["name"]}.cfg'
     with open(f'{path}{ks_file}', 'w') as ks:

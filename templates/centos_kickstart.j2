@@ -31,9 +31,9 @@ part pv.01 --size=1 --grow
 volgroup rootvg01 pv.01
 logvol / --fstype xfs --name=lv01 --vgname=rootvg01 --size=1 --grow
 {# Root password #}
-rootpw --iscrypted {{ root_password }}
+rootpw --iscrypted {{ crypted_root_password }}
 {# Username / Password #}
-user administrator --name "{{ username }}" --password={{ user_password }} --iscrypted
+user administrator --name "{{ username }}" --password={{ crypted_user_password }} --iscrypted
 {# SELinux configuration #}
 selinux --disabled
 {# Do not configure the X Window System #}

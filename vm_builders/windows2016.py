@@ -1,7 +1,5 @@
 # python
 import winrm
-import xmltodict
-from collections import OrderedDict
 
 # local
 import utils
@@ -11,8 +9,6 @@ driver_logger = utils.get_logger_for_name('windows2016.vm_build')
 freenas_path = 'alpha-freenas.cloudcix.com\\mnt\\volume\\alpha'
 path = '/mnt/images/UnattendXMLfiles/'
 os_name = 'WindowsServer2016x64'
-xmlns_wcm = 'http://schemas.microsoft.com/WMIConfig/2002/State'
-xmlns_xsi = 'http://www.w3.org/2001/XMLSchema-instance'
 
 
 def vm_build(vm: dict, password: str) -> bool:
@@ -25,11 +21,11 @@ def vm_build(vm: dict, password: str) -> bool:
     vm_built = False
     xml = utils.jinja_env.get_template('windows2016_unattend.j2').render(**vm)
     try:
-        with open(f'{path}{vm["vm_identifer"]}.xml', 'w') as file:
+        with open(f'{path}{vm["vm_identifier"]}.xml', 'w') as file:
             file.write(xml)
     except Exception:
         driver_logger.exception(
-            f'Failed to write answerfile to file for VM {vm["vm_identifier"]}'
+            f'Failed to write unattend to file for VM {vm["vm_identifier"]}'
         )
         return vm_built
     try:

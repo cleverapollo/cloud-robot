@@ -12,9 +12,9 @@ mouse
 {# System Timezone #}
 timezone {{ tz }}
 {# Root Password #}
-rootpw --iscrypted {{ root_password }}
+rootpw --iscrypted {{ crypted_root_password }}
 {# Username / Password #}
-user administrator --fullname "{{ username }}" --password {{ user_password }}
+user administrator --fullname "{{ username }}" --password {{ crypted_user_password }}
 {# Reboot After Installation #}
 reboot
 {# Use text mode install #}
