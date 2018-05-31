@@ -34,7 +34,7 @@ def vrf_build(vrf: dict, password: str) -> bool:
     # out_bound_ip address used for NAT pool and as IKE gateway
     out_bound_ip = str(vrf['outBoundIP'])
     # vpns for IPSec VPN
-    vpns = vrf['VPNs']
+    # vpns = vrf['VPNs']
     # oobIP = "10.252.14.32"
     oob_ip = str(vrf['oobIP'])
 
@@ -125,10 +125,6 @@ def vrf_build(vrf: dict, password: str) -> bool:
                  f'vrf-{id_project}\n')
 
     # IKE VPNs TODO
-    # for loop is for just to get rid of lint error
-    for vpn in vpns:
-        if vpn:
-            pass
 
     vrf_status = deploy_setconf(conf, oob_ip, password)
     return vrf_status
