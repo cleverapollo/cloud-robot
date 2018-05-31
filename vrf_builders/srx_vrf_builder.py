@@ -26,7 +26,7 @@ def vrf_build(vrf: dict, password: str) -> bool:
     driver_logger.info(
         f'Generating configuration for project #{vrf["idProject"]}'
     )
-    template = utils.jinja_env.get_template('srx_vrf_build.j2')
+    template = utils.jinja_env.get_template('srx_set_conf.j2')
     conf = template.render(**vrf)
 
     # IKE VPNs TODO
