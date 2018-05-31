@@ -1,4 +1,5 @@
 import time
+import utils
 from jnpr.junos import Device
 from jnpr.junos.exception import (
     CommitError,
@@ -7,9 +8,8 @@ from jnpr.junos.exception import (
     UnlockError,
 )
 from jnpr.junos.utils.config import Config
-from utils import get_logger_for_name
 
-driver_logger = get_logger_for_name('srx_vrf_builder.deploy_setconf')
+driver_logger = utils.get_logger_for_name('srx_vrf_builder.deploy_setconf')
 
 # TODO not yet fixed
 
@@ -23,106 +23,11 @@ def vrf_build(vrf: dict, password: str) -> bool:
     :param password: Password for the robot user in the physical router
     :return: Flag stating whether or not the build was successful
     """
-    id_project = str(vrf['idProject'])
     driver_logger.info(
-        f'Generating configuration for project #{id_project}'
+        f'Generating configuration for project #{vrf["idProject"]}'
     )
-    # vlans is used to create interfaces and sub-interfaces
-    vlans = vrf['vLANs']
-    # nats is used to create proxy-arp NAT with customers
-    nats = vrf['NATs']
-    # out_bound_ip address used for NAT pool and as IKE gateway
-    out_bound_ip = str(vrf['outBoundIP'])
-    # vpns for IPSec VPN
-    # vpns = vrf['VPNs']
-    # oobIP = "10.252.14.32"
-    oob_ip = str(vrf['oobIP'])
-
-    # Routing Instances
-    # Create vrf
-    conf = (
-        f'set groups {id_project} routing-instances vrf-{id_project} '
-        f'instance-type virtual-router\n'
-    )
-    # Create southbound sub interface and gateway for each VLAN and
-    # attach to vrf
-    for vlan in vlans:
-        conf += (
-            f'set groups {id_project} routing-instances vrf-{id_project} '
-            f'interface ge-0/0/1.{vlan["vLAN"]}\n'
-        )
-
-    # Create a northbound route
-    conf += (
-        f'set groups {id_project} routing-instances vrf-{id_project} '
-        f'routing-options static route 0.0.0.0/0 next-table PUBLIC.inet.0\n'
-    )
-
-    # Configure sub-interfaces
-    for vlan in vlans:
-        vlan['vLAN'] = str(vlan['vLAN'])
-        conf += (
-            f'set groups {id_project} interfaces ge-0/0/1 unit {vlan["vLAN"]} '
-            f'description {id_project}-{vlan["vLAN"]} vlan-id {vlan["vLAN"]} '
-            f'family inet address {vlan["subnet"]}\n'
-        )
-
-    # Create private zones
-    for vlan in vlans:
-        conf += (
-            f'set groups {id_project} security zones security-zone '
-            f'{id_project} interfaces ge-0/0/1.{str(vlan["vLAN"])} '
-            f'host-inbound-traffic system-services ping\n'
-        )
-
-    # Source (outbound) NAT
-    conf += (
-        f'set groups {id_project} security nat source rule-set '
-        f'{id_project}-outbound description {id_project}-outbound-nat\n'
-        f'set groups {id_project} security nat source pool '
-        f'{id_project}-public routing-instance vrf-{id_project}\n'
-        f'set groups {id_project} security nat source pool '
-        f'{id_project}-public address {out_bound_ip}\n'
-        f'set groups {id_project} security nat source rule-set '
-        f'{id_project}-outbound from zone {id_project}\n'
-        f'set groups {id_project} security nat source rule-set '
-        f'{id_project}-outbound to zone PUBLIC'
-    )
-    for vlan in vlans:
-        conf += (
-            f'set groups {id_project} security nat source rule-set '
-            f'{id_project}-outbound rule {vlan["vLAN"]}-outbound match '
-            f'source-address {vlan["subnet"]}\n'
-            f'set groups {id_project} security nat source rule-set '
-            f'{id_project}-outbound rule {vlan["vLAN"]}-outbound then '
-            f'source-nat pool {id_project}-public\n'
-        )
-
-    # Create proxy-arp on specific interface with predefined IP addresses
-    for nat in nats:
-        conf += (
-            f'set groups {id_project} security nat proxy-arp interface '
-            f'ge-0/0/0.0 address {str(nat["fIP"])}\n'
-        )
-
-    # Create NAT static rule-set inbound
-    for nat in nats:
-        conf += (f'set groups {id_project} security nat static rule-set '
-                 f'{id_project} inbound-static from zone PUBLIC\n')
-        rule_name = str(nat['fIP']).split('/')[0]
-        # ruleNames in Junos cannot contain /
-        rule_name = rule_name.replace('.', '-')
-        # ruleNames in Junos cannot contain .
-        conf += (f'set groups {id_project} security nat static rule-set '
-                 f'{id_project}-inbound-static rule {rule_name} '
-                 f'match destination-address {str(nat["fIP"])}\n'
-                 f'set groups {id_project} security nat static rule-set '
-                 f'{id_project}-inbound-static rule {rule_name} '
-                 f'then static-nat prefix {str(nat["pIP"])}\n'
-                 f'set groups {id_project} security nat static rule-set '
-                 f'{id_project}-inbound-static rule {rule_name} '
-                 f'then static-nat prefix routing-instance '
-                 f'vrf-{id_project}\n')
+    template = utils.jinja_env.get_template('srx_vrf_build.j2')
+    conf = template.render(**vrf)
 
     # IKE VPNs TODO
 

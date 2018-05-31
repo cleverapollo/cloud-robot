@@ -6,7 +6,13 @@ import subprocess
 from datetime import datetime
 
 # libs
+import jinja2
 from cloudcix.utils import get_admin_session
+
+jinja_env = jinja2.Environment(
+    loader=jinja2.FileSystemLoader('templates'),
+    trim_blocks=True
+)
 
 
 def get_logger_for_name(name: str, level=logging.INFO) -> logging.Logger:
