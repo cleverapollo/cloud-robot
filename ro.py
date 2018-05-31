@@ -8,7 +8,7 @@
 import random
 import string
 
-from typing import Optional
+from typing import Optional, Tuple
 
 # libs
 from cloudcix import api
@@ -161,7 +161,7 @@ def service_entity_read(
         return None
 
 
-def get_idrac_details(location: str) -> Optional[(str, str)]:
+def get_idrac_details(location: str) -> Optional[Tuple[str, str]]:
     """
     Generate the ip address and password of the iDRAC interface of an asset,
     given its location
