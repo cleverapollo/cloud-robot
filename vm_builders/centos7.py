@@ -16,66 +16,7 @@ def answer_file(vm: dict) -> str:
     :param vm: Data for the VM that will be created
     :return: ks_text: The answer file that can build the specified VM
     """
-    ks_text = f'# {vm["idImage"]} Kickstart for VM {vm["vmIdentifier"]} \n'
-    # System authorization information
-    ks_text += 'auth --enableshadow --passalgo=sha512\n'
-    # Clear the Master Boot Record
-    ks_text += 'zerombr\n'
-    # Partition clearing information
-    ks_text += 'clearpart --all --initlabel\n'
-    # Use text mode install
-    ks_text += 'text\n'
-    # Firewall configuration
-    ks_text += 'firewall --disabled\n'
-    # Run the Setup Agent on first boot
-    ks_text += 'firstboot --disable\n'
-    # System keyboard
-    ks_text += f'keyboard {vm["keyboard"]}\n'
-    # System language
-    ks_text += f'lang {vm["lang"]}.UTF-8\n'
-    # Installation logging level
-    ks_text += 'logging --level=info\n'
-    #  installation media
-    ks_text += 'cdrom\n'
-    # Network Information
-    ks_text += (
-        f'network --bootproto=static --ip={vm["ip"]} '
-        f'--netmask={vm["netmask_ip"]} --gateway={vm["gateway"]} '
-        f'--nameserver={vm["dns"]}\n'
-    )
-    # System bootloader configuration
-    ks_text += 'bootloader --location=mbr\n'
-    # Disk Partioning
-    ks_text += 'clearpart --all --initlabel\n'
-    ks_text += 'part swap --asprimary --fstype=\'swap\' --size=1024\n'
-    ks_text += 'part /boot --fstype xfs --size=200\n'
-    ks_text += 'part pv.01 --size=1 --grow\n'
-    ks_text += 'volgroup rootvg01 pv.01\n'
-    ks_text += (
-        'logvol / --fstype xfs --name=lv01 --vgname=rootvg01'
-        ' --size=1 --grow\n'
-    )
-    # Root password
-    ks_text += f'rootpw --iscrypted {vm["root_pw"]}\n'
-    # username and password
-    ks_text += (
-        f'user administrator --name "{vm["u_name"]}" '
-        f'--password={vm["user_pw"]} --iscrypted\n'
-    )
-    # SELinux configuration
-    ks_text += 'selinux --disabled\n'
-    # Do not configure the X Window System
-    ks_text += 'skipx\n'
-    # System timezone
-    ks_text += f'timezone --utc {vm["tz"]}\n'
-    # Install OS instead of upgrade
-    ks_text += 'install\n'
-    # Reboot after installation
-    ks_text += 'reboot\n'
-    # list of packages to be installed
-    ks_text += '%%packages\n@core\n%%end\n'
-
-    return ks_text
+    return utils.jinja_env.get_template('centos_vm_build.j2').render(**vm)
 
 
 def vm_build(vm: dict, password: str) -> bool:
