@@ -31,7 +31,7 @@ def vrf_build(vrf: dict, password: str) -> bool:
 
     # IKE VPNs TODO
 
-    vrf_status = deploy_setconf(conf, oob_ip, password)
+    vrf_status = deploy_setconf(conf, vrf['oobIP'], password)
     return vrf_status
 
 
