@@ -127,16 +127,16 @@ def dispatch_vm(vm: dict, password: str) -> None:
     image = ro.service_entity_read('iaas', 'image', vm['idImage'])
     vm_json = {
         # Unique Identifer for VM
-        'vmIdentifier': f'{vm["idProject"]}_{vm["idVM"]}',
+        'vm_identifier': f'{vm["idProject"]}_{vm["idVM"]}',
         'hdd': vm['hdd'],
         'flash': vm['flash'],
         'cpu': vm['cpu'],
         'ram': vm['ram'],
-        'idImage': vm['idImage'],
+        'id_image': vm['idImage'],
         'image': str(image['name']),
-        'u_name': vm['name'],
-        'u_passwd': ro.password_generator(),
-        'r_passwd': ro.password_generator(),
+        'username': vm['name'],
+        'user_password': ro.password_generator(),
+        'root_password': ro.password_generator(),
         'dns': vm['dns'].split(',')
     }
     # get the ipadddress and subnet details

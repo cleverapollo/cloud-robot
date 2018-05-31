@@ -1,4 +1,4 @@
-# Kickstart file for Image #{{ idImage }} in VM {{ vmIdentifier }}
+# Kickstart file for Image #{{ id_image }} in VM {{ vm_identifier }}
 {# System Authorization Information #}
 auth --useshadow --enablemd5
 {# System Language #}
@@ -12,16 +12,18 @@ mouse
 {# System Timezone #}
 timezone {{ tz }}
 {# Root Password #}
-rootpw --iscrypted {{ root_pw }}
+rootpw --iscrypted {{ root_password }}
 {# Username / Password #}
-user administrator --fullname {{ u_name }} --password {{ u_passwd }}
+user administrator --fullname "{{ username }}" --password {{ user_password }}
 {# Reboot After Installation #}
 reboot
 {# Use text mode install #}
+text
+{# Install OS instead of upgrade #}
 install
 {# Installation Media #}
 cdrom
-{# System Bootloaded Configuration #}
+{# System Bootloader Configuration #}
 bootloader --location=mbr
 {# Clear the MBR #}
 zerombr yes

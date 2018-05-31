@@ -16,7 +16,7 @@ def answer_file(vm: dict) -> str:
     :param vm: Data for the VM that will be created
     :return: ks_text: The answer file that can build the specified VM
     """
-    return utils.jinja_env.get_template('ubuntu1404_kickstart.j2').render(**vm)
+    return utils.jinja_env.get_template('ubuntu_kickstart.j2').render(**vm)
 
 
 def vm_build(vm: dict, password: str) -> bool:
