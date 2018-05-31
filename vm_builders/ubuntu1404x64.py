@@ -16,61 +16,7 @@ def answer_file(vm: dict) -> str:
     :param vm: Data for the VM that will be created
     :return: ks_text: The answer file that can build the specified VM
     """
-    ks_text = f'# {vm["idImage"]} Kickstart for VM {vm["vmIdentifier"]} \n'
-    # System authorization information
-    ks_text += 'auth --useshadow --enablemd5\n'
-    # System language
-    ks_text += f'lang {vm["lang"]}\n'
-    # Language modules to install
-    ks_text += f'langsupport {vm["lang"]}\n'
-    # System keyboard
-    ks_text += f'keyboard {vm["keyboard"]}\n'
-    # System mouse
-    ks_text += 'mouse\n'
-    # System timezone
-    ks_text += f'timezone {vm["tz"]}\n'
-    # Root password
-    ks_text += f'rootpw --iscrypted {vm["root_pw"]}'
-    # username and password
-    ks_text += (
-        f'user administrator --fullname "{vm["u_name"]}" '
-        f'--password {vm["u_passwd"]}\n'
-    )
-    # Reboot after installation
-    ks_text += 'reboot\n'
-    # Use text mode install
-    ks_text += 'text\n'
-    # Install OS instead of upgrade
-    ks_text += 'install\n'
-    # Installation media
-    ks_text += 'cdrom\n'
-    # System bootloader configuration
-    ks_text += 'bootloader --location=mbr\n'
-    # Clear the Master Boot Record
-    ks_text += 'zerombr yes\n'
-    ks_text += 'autopart\n'
-    # Partition clearing information
-    ks_text += 'clearpart --all --initlabel\n'
-    # Basic disk partition
-    ks_text += 'part / --fstype ext4 --size 1 --grow --asprimary\n'
-    ks_text += 'part swap --size 1024\n'
-    ks_text += 'part / boot --fstype ext4 --size 256 --asprimary\n'
-    # System authorization infomation
-    ks_text += 'auth --useshadow --enablemd5\n'
-    # Network
-    ks_text += (
-        f'network --bootproto=static --ip={vm["ip"]} --netmask='
-        f'{vm["netmask_ip"]} --gateway={vm["gateway"]} --nameserver='
-        f'{vm["dns"]}\n'
-    )
-    # Do not configure the X Window System
-    ks_text += 'iskipx\n'
-    # post installation
-    ks_text += '%%packages\n'
-    ks_text += '@ ubuntu-server\n'
-    ks_text += '@ openssh-server\n'
-
-    return ks_text
+    return utils.jinja_env.get_template('ubuntu1404_kickstart.j2').render(**vm)
 
 
 def vm_build(vm: dict, password: str) -> bool:

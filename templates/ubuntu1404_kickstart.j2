@@ -1,0 +1,45 @@
+# Kickstart file for Image #{{ idImage }} in VM {{ vmIdentifier }}
+{# System Authorization Information #}
+auth --useshadow --enablemd5
+{# System Language #}
+lang {{ lang }}
+{# Language Modules to install #}
+langsupport {{ lang }}
+{# System Keyboard #}
+keyboard {{ keyboard }}
+{# System Mouse #}
+mouse
+{# System Timezone #}
+timezone {{ tz }}
+{# Root Password #}
+rootpw --iscrypted {{ root_pw }}
+{# Username / Password #}
+user administrator --fullname {{ u_name }} --password {{ u_passwd }}
+{# Reboot After Installation #}
+reboot
+{# Use text mode install #}
+install
+{# Installation Media #}
+cdrom
+{# System Bootloaded Configuration #}
+bootloader --location=mbr
+{# Clear the MBR #}
+zerombr yes
+autopart
+{# Partition Clearing Information #}
+clearpart --all --initlabel
+{# Basic Disk Partition #}
+part / --fstype ext4 --size 1 --grow --asprimary
+part swap --size 1024
+part /boot --fstype ext4 --size 256 --asprimary
+{# System Authorization Information #}
+auth --useshadow --enablemd5
+{# Network #}
+network --bootproto=static --ip={{ ip }} --netmask={{ netmask_ip }} --gateway={{ gateway }} --nameserver={{ dns }}
+{# Do not configure the X Window System #}
+iskipx
+{# Post Install #}
+%packages
+@ ubuntu-server
+@ openssh-server
+%end
