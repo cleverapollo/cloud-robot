@@ -9,75 +9,6 @@ path = '/mnt/images/kickstarts/'
 driver_logger = utils.get_logger_for_name('centos6_5.vm_build')
 
 
-def answer_file(vm: dict) -> str:
-    """
-    Creates an answer file to be used to create the VM specified
-    :param vm: Data for the VM that will be created
-    :return: ks_text: The answer file that can build the specified VM
-    """
-    ks_text = f'# {vm["idImage"]} Kickstart for VM {vm["vmIdentifier"]} \n'
-    # System authorization information
-    ks_text += 'auth --enableshadow --passalgo=sha512\n'
-    # Clear the Master Boot Record
-    ks_text += 'zerombr\n'
-    # Partition clearing information
-    ks_text += 'clearpart --all --initlabel\n'
-    # Use text mode install
-    ks_text += 'text\n'
-    # Firewall configuration
-    ks_text += 'firewall --disabled\n'
-    # Run the Setup Agent on first boot
-    ks_text += 'firstboot --disable\n'
-    # System keyboard
-    ks_text += f'keyboard {vm["keyboard"]}\n'
-    # System language
-    ks_text += f'lang {vm["lang"]}.UTF-8\n'
-    # Installation logging level
-    ks_text += 'logging --level=info\n'
-    #  installation media
-    ks_text += 'cdrom\n'
-    # Network Information
-    ks_text += (
-        f'network --bootproto=static --ip={str(vm["ip"])} '
-        f'--netmask={str(vm["netmask_ip"])} '
-        f'--gateway={str(vm["gateway"])} '
-        f'--nameserver={str(vm["dns"])}\n'
-    )
-    # System bootloader configuration
-    ks_text += 'bootloader --location=mbr\n'
-    # Disk Partioning
-    ks_text += 'clearpart --all --initlabel\n'
-    ks_text += 'part swap --asprimary --fstype="swap" --size=1024\n'
-    ks_text += 'part /boot --fstype xfs --size=200\n'
-    ks_text += 'part pv.01 --size=1 --grow\n'
-    ks_text += 'volgroup rootvg01 pv.01\n'
-    ks_text += (
-        'logvol / --fstype xfs --name=lv01 --vgname=rootvg01'
-        ' --size=1 --grow\n'
-    )
-    # Root password
-    ks_text += f'rootpw --iscrypted {vm["root_pw"]}\n'
-    # username and password
-    ks_text += (
-        f'user administrator --name "{vm["u_name"]}" '
-        f'--password={vm["user_pw"]} --iscrypted\n'
-    )
-    # SELinux configuration
-    ks_text += 'selinux --disabled\n'
-    # Do not configure the X Window System
-    ks_text += 'skipx\n'
-    # System timezone
-    ks_text += f'timezone --utc {vm["tz"]}\n'
-    # Install OS instead of upgrade
-    ks_text += 'install\n'
-    # Reboot after installation
-    ks_text += 'reboot\n'
-    # list of packages to be installed
-    ks_text += '%%packages\n@core\n%%end\n'
-
-    return ks_text
-
-
 def vm_build(vm: dict, password: str) -> bool:
     """
     Builds a VM with the given information
@@ -87,9 +18,11 @@ def vm_build(vm: dict, password: str) -> bool:
     """
     vm_built = False
     # encrypting root and user password
-    vm['root_pw'] = str(crypt(vm['r_passwd'], mksalt(METHOD_SHA512)))
-    vm['user_pw'] = str(crypt(vm['u_passwd'], mksalt(METHOD_SHA512)))
-    ks_text = answer_file(vm)
+    vm['crypted_root_pw'] = str(
+        crypt(vm['root_password'], mksalt(METHOD_SHA512)))
+    vm['crypted_user_pw'] = str(
+        crypt(vm['user_password'], mksalt(METHOD_SHA512)))
+    ks_text = utils.jinja_env.get_template('centos_kickstart.j2').render(**vm)
     ks_file = f'{vm["name"]}.cfg'
     with open(f'{path}{ks_file}', 'w') as ks:
         ks.write(ks_text)
