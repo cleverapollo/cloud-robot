@@ -9,15 +9,6 @@ path = '/mnt/images/kickstarts/'
 driver_logger = utils.get_logger_for_name('centos6_5.vm_build')
 
 
-def answer_file(vm: dict) -> str:
-    """
-    Creates an answer file to be used to create the VM specified
-    :param vm: Data for the VM that will be created
-    :return: ks_text: The answer file that can build the specified VM
-    """
-    return utils.jinja_env.get_template('centos_kickstart.j2').render(**vm)
-
-
 def vm_build(vm: dict, password: str) -> bool:
     """
     Builds a VM with the given information
@@ -29,7 +20,7 @@ def vm_build(vm: dict, password: str) -> bool:
     # encrypting root and user password
     vm['root_pw'] = str(crypt(vm['r_passwd'], mksalt(METHOD_SHA512)))
     vm['user_pw'] = str(crypt(vm['u_passwd'], mksalt(METHOD_SHA512)))
-    ks_text = answer_file(vm)
+    ks_text = utils.jinja_env.get_template('centos_kickstart.j2').render(**vm)
     ks_file = f'{vm["name"]}.cfg'
     with open(f'{path}{ks_file}', 'w') as ks:
         ks.write(ks_text)
