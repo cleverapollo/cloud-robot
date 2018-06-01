@@ -1,7 +1,8 @@
 # python
 import paramiko
 from crypt import crypt, mksalt, METHOD_SHA512
-
+# libs
+from cloudcix.api import dns
 # local
 import utils
 
@@ -53,8 +54,10 @@ def vm_build(vm: dict, password: str) -> bool:
         elif stderr:
             driver_logger.error(stderr)
     except Exception:
-        driver_logger.exception(
-            f'Exception occurred during SSHing into host {vm["host_ip"]}'
+        driver_logger.error(
+            f'Exception occurred during SSHing into host {vm["host_ip"]} '
+            f'for the build of VM #{vm["idVM"]}',
+            exc_info=True
         )
 
     else:

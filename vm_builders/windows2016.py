@@ -50,8 +50,9 @@ def vm_build(vm: dict, password: str) -> bool:
         elif run.std_err:
             driver_logger.error(run.std_err)
     except Exception:
-        driver_logger.exception(
+        driver_logger.error(
             f'Exception thrown when attempting to connect to '
-            f'{vm["host_name"]} for WinRM'
+            f'{vm["host_name"]} for WinRM',
+            exc_info=True
         )
     return vm_built

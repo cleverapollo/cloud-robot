@@ -54,8 +54,9 @@ def vm_build(vm: dict, password: str) -> bool:
         elif stderr:
             driver_logger.error(stderr)
     except Exception:
-        driver_logger.exception(
-            f'Exception occurred during SSHing into host {vm["host_ip"]}'
+        driver_logger.error(
+            f'Exception occurred during SSHing into host {vm["host_ip"]}',
+            exc_info=True
         )
 
     else:

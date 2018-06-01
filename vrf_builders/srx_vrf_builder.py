@@ -53,8 +53,9 @@ def deploy_setconf(setconf: str, ip: str, password: str) -> bool:
     try:
         dev.open()
     except Exception:
-        driver_logger.exception(
-            f'Unable to connect to router @ {ip}'
+        driver_logger.error(
+            f'Unable to connect to router @ {ip}',
+            exc_info=True
         )
         return success
     # Lock Router
@@ -65,8 +66,9 @@ def deploy_setconf(setconf: str, ip: str, password: str) -> bool:
     try:
         cu.lock()
     except LockError:
-        driver_logger.exception(
-            f'Unable to lock router @ {ip}'
+        driver_logger.error(
+            f'Unable to lock router @ {ip}',
+            exc_info=True,
         )
         dev.close()
         return success
@@ -83,8 +85,9 @@ def deploy_setconf(setconf: str, ip: str, password: str) -> bool:
             )
             cu.load(cmd, format='set', merge=True)
     except (ConfigLoadError, Exception):
-        driver_logger.exception(
-            f'Unable to load configuration changes on router @ {ip}.'
+        driver_logger.error(
+            f'Unable to load configuration changes on router @ {ip}.',
+            exc_info=True
         )
         driver_logger.info(
             f'Attempting to unlock configuration on router @ {ip} '
@@ -93,8 +96,9 @@ def deploy_setconf(setconf: str, ip: str, password: str) -> bool:
         try:
             cu.unlock()
         except UnlockError:
-            driver_logger.exception(
-                f'Unable to unlock configuration on router @ {ip}'
+            driver_logger.error(
+                f'Unable to unlock configuration on router @ {ip}',
+                exc_info=True
             )
         dev.close()
         return success
@@ -108,8 +112,9 @@ def deploy_setconf(setconf: str, ip: str, password: str) -> bool:
         cu.commit(comment=f'Loaded by robot at {time.asctime()}.')
         success = True
     except CommitError:
-        driver_logger.exception(
-            f'Unable to commit changes onto router @ {ip}'
+        driver_logger.error(
+            f'Unable to commit changes onto router @ {ip}',
+            exc_info=True
         )
         return success
     driver_logger.info(
@@ -118,8 +123,9 @@ def deploy_setconf(setconf: str, ip: str, password: str) -> bool:
     try:
         cu.unlock()
     except UnlockError:
-        driver_logger.exception(
-            f'Unable to unlock configuration on router @ {ip}'
+        driver_logger.error(
+            f'Unable to unlock configuration on router @ {ip}',
+            exc_info=True
         )
         dev.close()
     return success

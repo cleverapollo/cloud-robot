@@ -21,7 +21,7 @@ def heartbeat(value: int = 1):
         },
         "time": datetime.utcnow(),
         "fields": {
-            "value": 1
+            "value": value
         }
     }]
     INFLUX_CLIENT.write_points(data)

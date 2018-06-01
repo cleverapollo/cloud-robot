@@ -82,11 +82,9 @@ if __name__ == '__main__':
     try:
         mainloop(watch_directory())
     except Exception:
-        robot_logger.exception(
-            'Exception thrown in robot. Exiting.'
-        )
-        robot_logger.info(
-            'Testing if calls made after logger.exception acutally run'
+        robot_logger.error(
+            'Exception thrown in robot. Exiting.',
+            exc_info=True
         )
         metrics.heartbeat(0)
         sys.exit(1)
