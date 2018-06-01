@@ -85,5 +85,8 @@ if __name__ == '__main__':
         robot_logger.exception(
             'Exception thrown in robot. Exiting.'
         )
+        robot_logger.info(
+            'Testing if calls made after logger.exception acutally run'
+        )
         metrics.heartbeat(0)
         sys.exit(1)
