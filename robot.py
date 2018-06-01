@@ -88,3 +88,7 @@ if __name__ == '__main__':
         )
         metrics.heartbeat(0)
         sys.exit(1)
+    except KeyboardInterrupt:
+        # Going down safely
+        metrics.heartbeat(0)
+        sys.exit(0)
