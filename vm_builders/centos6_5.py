@@ -1,8 +1,6 @@
 # python
 import paramiko
 from crypt import crypt, mksalt, METHOD_SHA512
-# libs
-from cloudcix.api import dns
 # local
 import utils
 
