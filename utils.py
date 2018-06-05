@@ -14,6 +14,8 @@ jinja_env = jinja2.Environment(
     trim_blocks=True
 )
 
+handler = None
+
 
 def get_logger_for_name(name: str, level=logging.INFO) -> logging.Logger:
     """
@@ -24,20 +26,22 @@ def get_logger_for_name(name: str, level=logging.INFO) -> logging.Logger:
     :returns: A logger than can be used to log out to
               `/var/log/robot/robot.log`
     """
-    fmt = logging.Formatter(
-        fmt='%(asctime)s - %(name)s: %(levelname)s: %(message)s',
-        datefmt='%d/%m/%y @ %H:%M:%S'
-    )
+    global handler
     logger = logging.getLogger(name)
     logger.setLevel(level)
     # Get a file handler
-    handler = logging.handlers.RotatingFileHandler(
-        '/var/log/robot/robot.log',
-        maxBytes=1024 ** 3,
-        backupCount=7
-    )
-    handler.setFormatter(fmt)
-    logger.addHandler(handler)
+    if handler is None:
+        fmt = logging.Formatter(
+            fmt='%(asctime)s - %(name)s: %(levelname)s: %(message)s',
+            datefmt='%d/%m/%y @ %H:%M:%S'
+        )
+        handler = logging.handlers.RotatingFileHandler(
+            '/var/log/robot/robot.log',
+            maxBytes=1024 ** 3,
+            backupCount=7
+        )
+        handler.setFormatter(fmt)
+        logger.addHandler(handler)
     return logger
 
 
