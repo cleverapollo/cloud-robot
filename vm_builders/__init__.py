@@ -15,4 +15,6 @@ def vm_builder(vm: dict, password: str) -> bool:
         '10': centOS_6_build,
         '11': centOS_7_build,
     }
-    return builder.get(vm['id_image'], lambda vm, password: False)(vm, password)
+    return builder.get(
+        vm['id_image'], lambda vm, password: False
+    )(vm, password)
