@@ -135,7 +135,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
         'id_image': vm['idImage'],
         'image': str(image['name']),
         'username': vm['name'],
-        'user_password': ro.password_generator(),
+        'user_password': ro.password_generator(chars='a', size=8),
         'root_password': ro.password_generator(),
         'dns': vm['dns'].split(',')
     }
