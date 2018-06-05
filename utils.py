@@ -13,8 +13,8 @@ jinja_env = jinja2.Environment(
     loader=jinja2.FileSystemLoader('templates'),
     trim_blocks=True
 )
-
-handler = None
+# Maps names to a handler to prevent creating multiple handlers
+handlers_for_name = {}
 
 
 def get_logger_for_name(name: str, level=logging.INFO) -> logging.Logger:
@@ -26,11 +26,11 @@ def get_logger_for_name(name: str, level=logging.INFO) -> logging.Logger:
     :returns: A logger than can be used to log out to
               `/var/log/robot/robot.log`
     """
-    global handler
+    global handlers_for_name
     logger = logging.getLogger(name)
     logger.setLevel(level)
     # Get a file handler
-    if handler is None:
+    if name not in handlers_for_name:
         fmt = logging.Formatter(
             fmt='%(asctime)s - %(name)s: %(levelname)s: %(message)s',
             datefmt='%d/%m/%y @ %H:%M:%S'
@@ -41,7 +41,10 @@ def get_logger_for_name(name: str, level=logging.INFO) -> logging.Logger:
             backupCount=7
         )
         handler.setFormatter(fmt)
-        logger.addHandler(handler)
+        handlers_for_name[name] = handler
+    else:
+        handler = handlers_for_name[name]
+    logger.addHandler(handler)
     return logger
 
 
