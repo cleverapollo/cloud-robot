@@ -153,7 +153,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
                 vm_json['netmask'] = address_range.split('/')[1]
                 vm_json['netmask_ip'] = str(
                     netaddr.IPNetwork(address_range).netmask)
-                vm_json['vlan'] = ip_subnet['vlan']
+                vm_json['vlan'] = ip_subnet['vLAN']
     vm_json['lang'] = 'en_IE'  # need to add in db (for kvm and hyperv)
     vm_json['keyboard'] = 'ie'  # need to add in db (for kvm only)
     vm_json['tz'] = 'Ireland/Dublin'  # need to add in db(kvm and hyperv)
