@@ -48,6 +48,9 @@ def deploy_setconf(setconf: str, ip: str, password: str) -> bool:
     """
     success = False
     # Open Router
+    driver_logger.info(
+        f'Attempting to connect to router @ {ip}'
+    )
     dev = Device(host=ip, user='robot', password=password, port=22)
     cu = Config(dev)
     try:
