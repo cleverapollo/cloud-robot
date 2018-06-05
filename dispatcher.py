@@ -68,7 +68,7 @@ def dispatch_vrf(vrf: dict, password: str):
         'iaas', 'vpn_tunnel', {'vrf': vrf['idVRF']})
 
     router = ro.service_entity_read('iaas', 'router', vrf['idRouter'])
-    vrf_json['oobIP'] = str(router['ipOOB'])
+    vrf_json['oobIP'] = str(router['ipManagement'])
 
     # ################# data/ip validations ##########################
     # TODO
