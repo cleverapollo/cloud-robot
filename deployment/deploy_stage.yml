@@ -5,7 +5,7 @@
   remote_user: administrator
   tasks:
     - name: Check if Robot is already running
-      shell: ps -ef | grep robot | grep -v grep
+      shell: ps -ef | grep robot | grep -v grep | grep -v tail
       register: is_running
       ignore_errors: yes
     - name: Start initial robot process if Robot isn't already running
