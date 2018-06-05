@@ -9,7 +9,7 @@
       register: is_running
       ignore_errors: yes
     - name: Start initial robot process if Robot isn't already running
-      shell: python3 robot.py &
+      shell: python3 robot.py
       args:
         chdir: "{{ robot_dir }}"
       async: 100
