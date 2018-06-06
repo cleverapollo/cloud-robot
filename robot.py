@@ -1,6 +1,4 @@
 # python
-import os
-os.environ.setdefault('CLOUDCIX_SETTINGS_MODULE', 'settings')
 import subprocess
 import sys
 import time
