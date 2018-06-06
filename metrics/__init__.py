@@ -6,7 +6,7 @@ from settings import REGION_NAME
 INFLUX_CLIENT = influxdb.InfluxDBClient(
     host='influx.cloudcix.com',
     port=80,
-    database="robot"
+    database='robot'
 )
 
 
@@ -17,13 +17,13 @@ def heartbeat(value: int = 1):
         NOTE: Only send a 0 when Robot has gone down
     """
     data = [{
-        "measurement": "robot_heartbeat",
-        "tags": {
-            "region": REGION_NAME
+        'measurement': 'robot_heartbeat',
+        'tags': {
+            'region': REGION_NAME
         },
-        "time": datetime.utcnow(),
-        "fields": {
-            "value": value
+        'time': datetime.utcnow(),
+        'fields': {
+            'value': value
         }
     }]
     INFLUX_CLIENT.write_points(data)
