@@ -8,6 +8,7 @@ CLOUDCIX_API_PASSWORD = 'C1x@lphA'
 CLOUDCIX_API_KEY = '3bc7cc2bddb34d78b31f1223d0a7408e'
 CLOUDCIX_AUTH_URL = 'https://keystone.cloudcix.com:5000/v3/'
 NETWORK_PASSWORD = 'C1xacc355'
+REGION_NAME = "alpha"
 
 
 # # STAGE SETTINGS
