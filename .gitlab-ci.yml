@@ -8,7 +8,7 @@ lint:
     before_script:
         - pip3 install flake8 flake8-quotes pep8-naming
     script:
-        - flake8 --exclude __init__.py --ignore E402 --inline-quotes 'single' --multiline-quotes '"'
+        - flake8 --ignore E402 --inline-quotes 'single' --multiline-quotes '"'
 
 deploy_staging:
     image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
