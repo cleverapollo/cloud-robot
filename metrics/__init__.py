@@ -1,29 +1,22 @@
-import influxdb
-from datetime import datetime
-from settings import REGION_NAME
-
-
-INFLUX_CLIENT = influxdb.InfluxDBClient(
-    host='influx.cloudcix.com',
-    port=80,
-    database='robot'
+from .heartbeat import heartbeat
+from .misc import (
+    current_commit
+)
+from .vrf import (
+    build_failure as vrf_failure,
+    build_success as vrf_success,
+)
+from .vm import (
+    build_failure as vm_failure,
+    build_success as vm_success,
 )
 
-
-def heartbeat(value: int = 1):
-    """
-    Test version of heartbeat for RobotAlpha
-    :param value: The value to send to Influx. Defaults to 1
-        NOTE: Only send a 0 when Robot has gone down
-    """
-    data = [{
-        'measurement': 'robot_heartbeat',
-        'tags': {
-            'region': REGION_NAME
-        },
-        'time': datetime.utcnow(),
-        'fields': {
-            'value': value
-        }
-    }]
-    INFLUX_CLIENT.write_points(data)
+__all__ = [
+    # metric methods
+    'heartbeat',
+    'current_commit',
+    'vrf_failure',
+    'vrf_success',
+    'vm_failure',
+    'vm_success',
+]

@@ -1,4 +1,5 @@
 """python-cloudcix api settings"""
+import os
 # Alpha Robot Credentials
 
 # LIVE SETTINGS
@@ -9,6 +10,7 @@ CLOUDCIX_API_KEY = '3bc7cc2bddb34d78b31f1223d0a7408e'
 CLOUDCIX_AUTH_URL = 'https://keystone.cloudcix.com:5000/v3/'
 NETWORK_PASSWORD = 'C1xacc355'
 REGION_NAME = 'alpha'
+ROBOT_ENV = os.environ.get('ROBOT_ENV', 'dev')
 
 
 # # STAGE SETTINGS

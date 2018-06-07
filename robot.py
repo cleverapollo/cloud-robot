@@ -74,9 +74,13 @@ def mainloop(watcher: INotify):
 
 if __name__ == '__main__':
     # When the script is run as the main
+    current_commit = utils.get_current_git_sha()
+    # Log the current commit to both the file and InfluxDB
     robot_logger.info(
-        f'Robot starting. Current Commit >> {utils.get_current_git_sha()}'
+        f'Robot starting. Current Commit >> {current_commit}'
     )
+    if settings.ROBOT_ENV != 'dev':
+        metrics.current_commit(current_commit)
     try:
         mainloop(watch_directory())
     except Exception:

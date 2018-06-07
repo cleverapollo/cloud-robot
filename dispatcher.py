@@ -3,6 +3,7 @@ import netaddr
 from collections import deque
 
 # locals
+import metrics
 import net_builders
 import ro
 import utils
@@ -81,6 +82,8 @@ def dispatch_vrf(vrf: dict, password: str):
         )
         # changing state to Built (4)
         vrf['state'] = 4
+        # Log a success in Influx
+        metrics.vrf_success()
         ro.service_entity_update('iaas', 'vrf', vrf_id, vrf)
     else:
         logger.error(
@@ -89,6 +92,8 @@ def dispatch_vrf(vrf: dict, password: str):
         )
         # changing state to Unresourced (3)
         vrf['state'] = 3
+        # Log a failure in Influx
+        metrics.vrf_failure()
         ro.service_entity_update('iaas', 'vrf', vrf_id, vrf)
     return
 
@@ -187,6 +192,8 @@ def dispatch_vm(vm: dict, password: str) -> None:
         )
         # changing state to Built (4)
         vm['state'] = 4
+        # Log a success in Influx
+        metrics.vm_success()
         ro.service_entity_update('iaas', 'vm', vm_id, vm)
     else:
         logger.error(
@@ -195,6 +202,8 @@ def dispatch_vm(vm: dict, password: str) -> None:
         )
         # changing state to Unresourced (3)
         vm['state'] = 3
+        # Log a failure in Influx
+        metrics.vm_failure()
         ro.service_entity_update('iaas', 'vm', vm_id, vm)
 
     return
