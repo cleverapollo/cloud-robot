@@ -77,7 +77,8 @@ if __name__ == '__main__':
     current_commit = utils.get_current_git_sha()
     # Log the current commit to both the file and InfluxDB
     robot_logger.info(
-        f'Robot starting. Current Commit >> {current_commit}'
+        f'Robot starting. Current Commit >> {current_commit}. '
+        f'ROBOT_ENV={settings.ROBOT_ENV}'
     )
     if settings.ROBOT_ENV != 'dev':
         metrics.current_commit(current_commit)
