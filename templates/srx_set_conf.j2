@@ -31,7 +31,7 @@ set groups {{ idProject }} security nat proxy-arp interface ge-0/0/0.0 address {
 {# Create NAT static ruleset inbound #}
 {% for nat in NATs %}
 {% set rule_name = nat['fIP'].split('/')[0].replace('.', '-') %}
-set groups {{ idProject }} security nat static rule-set {{ idProject }} inbound-static from zone PUBLIC
+set groups {{ idProject }} security nat static rule-set {{ idProject }}-inbound-static from zone PUBLIC
 set groups {{ idProject }} security nat static rule-set {{ idProject }}-inbound-static rule {{ rule_name }} match destination-address {{ nat['fIP'] }}
 set groups {{ idProject }} security nat static rule-set {{ idProject }}-inbound-static rule {{ rule_name }} then static-nat prefix {{ nat['pIP'] }}
 set groups {{ idProject }} security nat static rule-set {{ idProject }}-inbound-static rule {{ rule_name }} then static-nat prefix routing-instance vrf-{{ idProject }}
