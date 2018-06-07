@@ -79,7 +79,8 @@ if __name__ == '__main__':
     robot_logger.info(
         f'Robot starting. Current Commit >> {current_commit}'
     )
-    metrics.current_commit(current_commit)
+    if settings.ROBOT_ENV != 'dev':
+        metrics.current_commit(current_commit)
     try:
         mainloop(watch_directory())
     except Exception:
