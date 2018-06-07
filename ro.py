@@ -55,13 +55,15 @@ def service_entity_create(
     return entity_create
 
 
-def service_entity_list(service: str, entity: str, params: dict) -> list:
+def service_entity_list(
+        service: str, entity: str, params: dict, **kwargs) -> list:
     """
     Retrieves a list of instances of a given entity in a service, which can
     be filtered
     :param service: The api service the entity belongs to
     :param entity: The entity type to list instances of
     :param params: Search parameters to be passed to the list call
+    :param kwargs: Any extra kwargs to pass to the call
     :return: A list of instances of service.entity
     """
     logger = utils.get_logger_for_name('ro.service_entity_list')
@@ -73,7 +75,11 @@ def service_entity_list(service: str, entity: str, params: dict) -> list:
     # service_to_call = api.iaas  (e.g service = 'iaas')
     entity_to_call = getattr(service_to_call, entity)
     # entity_to_call = api.iaas.image (e.g entity = 'image')
-    response = entity_to_call.list(token=TOKEN_WRAPPER.token, params=params)
+    response = entity_to_call.list(
+        token=TOKEN_WRAPPER.token,
+        params=params,
+        **kwargs
+    )
     if response.status_code != 200:
         logger.error(
             f'HTTP Error {response.status_code} occurred while trying to '

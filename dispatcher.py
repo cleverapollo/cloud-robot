@@ -164,7 +164,11 @@ def dispatch_vm(vm: dict, password: str) -> None:
     vm_json['tz'] = 'Ireland/Dublin'  # need to add in db(kvm and hyperv)
     # Get the server details
     server_macs = ro.service_entity_list(
-        'iaas', 'macaddress', {'idServer': vm['idServer']})
+        'iaas',
+        'macaddress',
+        {},
+        idServer=vm['idServer']
+    )
     for mac in server_macs:
         if mac['status'] is True and netaddr.IPAddress(str(mac['ip'])):
             vm_json['host_ip'] = mac['ip']
