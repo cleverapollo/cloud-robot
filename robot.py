@@ -1,4 +1,5 @@
 # python
+import os
 import subprocess
 import sys
 import time
@@ -44,7 +45,10 @@ def mainloop(watcher: INotify):
             # Wait until all the deployment is finished
             time.sleep(10)
             # Spawn a new robot process in the background
-            subprocess.Popen(['python3', 'robot.py'])
+            subprocess.Popen(
+                ['python3', 'robot.py'],
+                env=os.environ
+            )
             # Wait a couple of seconds for the new robot to take over
             time.sleep(2)
             # Exit this process gracefully
