@@ -1,6 +1,5 @@
-import settings
 import utils
-from datetime import datetime
+from ._helpers import generate_data_packet
 
 
 def heartbeat(value: int = 1):
@@ -10,14 +9,5 @@ def heartbeat(value: int = 1):
         NOTE: Only send a 0 when Robot has gone down
     """
     client = utils.get_influx_client()
-    data = [{
-        'measurement': 'robot_heartbeat',
-        'tags': {
-            'region': settings.REGION_NAME
-        },
-        'time': datetime.utcnow(),
-        'fields': {
-            'value': value
-        }
-    }]
+    data = generate_data_packet('robot_heartbeat', value=value)
     client.write_points(data)
