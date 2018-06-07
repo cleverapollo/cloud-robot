@@ -1,5 +1,6 @@
 """File containing some utility functions such as generating our logger"""
 # python
+import influxdb
 import logging
 import logging.handlers
 import subprocess
@@ -9,6 +10,18 @@ from datetime import datetime
 import jinja2
 from cloudcix.utils import get_admin_session
 
+
+__all__ = [
+    "jinja_env",
+    "Token",
+    "get_logger_for_name",
+    "get_current_git_sha",
+    "get_influx_client"
+]
+
+
+INFLUX_CLIENT = None
+
 jinja_env = jinja2.Environment(
     loader=jinja2.FileSystemLoader('templates'),
     trim_blocks=True
@@ -17,14 +30,37 @@ jinja_env = jinja2.Environment(
 handlers_for_name = {}
 
 
+class Token:
+    """Wrapper for CloudCIX token that renews itself when necessary"""
+
+    THRESHOLD = 40  # Minutes a token has lived until we get a new one
+
+    def __init__(self):
+        self._token = get_admin_session().get_token()
+        self._created = datetime.now()
+
+    @property
+    def token(self):
+        """Ensures that the token is up to date"""
+        if (datetime.now() - self._created).seconds / 60 > self.THRESHOLD:
+            # We need to regenerate the token
+            old_token = self._token
+            self._token = get_admin_session().get_token()
+            self._created = datetime.now()
+            get_logger_for_name('utils.Token').info(
+                f'Generated new token: {old_token} -> {self._token}'
+            )
+        return self._token
+
+
 def get_logger_for_name(name: str, level=logging.INFO) -> logging.Logger:
     """
     Generates logging.logger instance with a given name
 
     :param name: The name to be given to the logger instance
     :param level: The level of the logger. Defaults to `logging.INFO`
-    :returns: A logger than can be used to log out to
-              `/var/log/robot/robot.log`
+    :return: A logger than can be used to log out to
+             `/var/log/robot/robot.log`
     """
     global handlers_for_name
     logger = logging.getLogger(name)
@@ -51,30 +87,23 @@ def get_logger_for_name(name: str, level=logging.INFO) -> logging.Logger:
 def get_current_git_sha() -> str:
     """
     Finds the current git commit sha and returns it
+    :return: The sha of the current commit
     """
     return subprocess.check_output(
         ['git', 'describe', '--always']
     ).strip().decode()
 
 
-class Token:
-    """Wrapper for CloudCIX token that renews itself when necessary"""
-
-    THRESHOLD = 40  # Minutes a token has lived until we get a new one
-
-    def __init__(self):
-        self._token = get_admin_session().get_token()
-        self._created = datetime.now()
-
-    @property
-    def token(self):
-        """Ensures that the token is up to date"""
-        if (datetime.now() - self._created).seconds / 60 > self.THRESHOLD:
-            # We need to regenerate the token
-            old_token = self._token
-            self._token = get_admin_session().get_token()
-            self._created = datetime.now()
-            get_logger_for_name('utils.Token').info(
-                f'Generated new token: {old_token} -> {self._token}'
-            )
-        return self._token
+def get_influx_client() -> influxdb.InfluxDBClient:
+    """
+    Lazy creates a client for connecting to our InfluxDB instance
+    :return: An InfluxDBClient that can log metrics to our instance of Influx
+    """
+    global INFLUX_CLIENT
+    if INFLUX_CLIENT is None:
+        INFLUX_CLIENT = influxdb.InfluxDBClient(
+            host='influx.cloudcix.com',
+            port=80,
+            database="robot"
+        )
+    return INFLUX_CLIENT
