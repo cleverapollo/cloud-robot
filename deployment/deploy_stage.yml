@@ -30,6 +30,9 @@
       args:
         chdir: "{{ robot_dir }}"
 
+    - name: Ensure env entry for the settings is available
+      shell: export CLOUDCIX_SETTINGS_MODULE=settings
+
     - name: Update requirements
       shell: pip3 install -U -r requirements.txt
       args:
