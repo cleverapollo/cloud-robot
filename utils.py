@@ -53,7 +53,7 @@ class Token:
         return self._token
 
 
-def get_logger_for_name(name: str, level=logging.INFO) -> logging.Logger:
+def get_logger_for_name(name: str, level=logging.DEBUG) -> logging.Logger:
     """
     Generates logging.logger instance with a given name
 
@@ -63,8 +63,6 @@ def get_logger_for_name(name: str, level=logging.INFO) -> logging.Logger:
              `/var/log/robot/robot.log`
     """
     global handlers_for_name
-    if level == logging.DEBUG:
-        name = f'{name}.debug'
     logger = logging.getLogger(name)
     logger.setLevel(level)
     # Get a file handler
@@ -73,9 +71,8 @@ def get_logger_for_name(name: str, level=logging.INFO) -> logging.Logger:
             fmt='%(asctime)s - %(name)s: %(levelname)s: %(message)s',
             datefmt='%d/%m/%y @ %H:%M:%S'
         )
-        filename = 'robot.log' if level != logging.DEBUG else 'robot.debug.log'
         handler = logging.handlers.RotatingFileHandler(
-            f'/var/log/robot/{filename}',
+            f'/var/log/robot/robot.log',
             maxBytes=1024 ** 3,
             backupCount=7
         )

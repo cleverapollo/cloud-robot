@@ -1,6 +1,5 @@
 # python
 import winrm
-from logging import DEBUG
 # local
 import utils
 
@@ -20,7 +19,7 @@ def vm_build(vm: dict, password: str) -> bool:
     """
     vm_built = False
     xml = utils.jinja_env.get_template('windows2016_unattend.j2').render(**vm)
-    utils.get_logger_for_name('ubuntu1604x64.vm_build', DEBUG).debug(
+    driver_logger.debug(
         f'Generated xml file for vm #{vm["vm_identifier"]}\n{xml}'
     )
     try:
