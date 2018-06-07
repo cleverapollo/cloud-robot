@@ -12,11 +12,11 @@ from cloudcix.utils import get_admin_session
 
 
 __all__ = [
-    "jinja_env",
-    "Token",
-    "get_logger_for_name",
-    "get_current_git_sha",
-    "get_influx_client"
+    'jinja_env',
+    'Token',
+    'get_logger_for_name',
+    'get_current_git_sha',
+    'get_influx_client'
 ]
 
 
@@ -104,6 +104,6 @@ def get_influx_client() -> influxdb.InfluxDBClient:
         INFLUX_CLIENT = influxdb.InfluxDBClient(
             host='influx.cloudcix.com',
             port=80,
-            database="robot"
+            database='robot'
         )
     return INFLUX_CLIENT
