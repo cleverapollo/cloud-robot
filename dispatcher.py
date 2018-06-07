@@ -27,7 +27,7 @@ def dispatch_vrf(vrf: dict, password: str):
     logger.info(
         f'Commencing dispatch to build VRF #{vrf_id}'
     )
-    ro.service_entity_update('iaas', 'vrf', vrf_id, vrf)
+    ro.service_entity_update('iaas', 'vrf', vrf_id, {'state': 2})
 
     vrf_lans = ro.service_entity_list('iaas', 'subnet', {'vrf': vrf_id})
     region_ips = ro.service_entity_list('iaas', 'ipaddress', {})
@@ -47,7 +47,7 @@ def dispatch_vrf(vrf: dict, password: str):
         if not dispatch_net(vrf_lan['vLAN']):
             # changing state to Unresourced (3)
             vrf['state'] = 3
-            ro.service_entity_update('iaas', 'vrf', vrf_id, vrf)
+            ro.service_entity_update('iaas', 'vrf', vrf_id, {'state': 3})
             logger.error(
                 f'VRF {vrf_id} has become Unresourced as it has an invalid '
                 f'vlan ({vrf_lan["vLAN"]})'
@@ -84,7 +84,7 @@ def dispatch_vrf(vrf: dict, password: str):
         vrf['state'] = 4
         # Log a success in Influx
         metrics.vrf_success()
-        ro.service_entity_update('iaas', 'vrf', vrf_id, vrf)
+        ro.service_entity_update('iaas', 'vrf', vrf_id, {'state': 4})
     else:
         logger.error(
             f'VRF #{vrf_id} failed to build, so it is being moved to '
@@ -94,7 +94,7 @@ def dispatch_vrf(vrf: dict, password: str):
         vrf['state'] = 3
         # Log a failure in Influx
         metrics.vrf_failure()
-        ro.service_entity_update('iaas', 'vrf', vrf_id, vrf)
+        ro.service_entity_update('iaas', 'vrf', vrf_id, {'state': 3})
     return
 
 
@@ -127,7 +127,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
     logger.info(
         f'Commencing dispatch to build VM #{vm_id}'
     )
-    ro.service_entity_update('iaas', 'vm', vm_id, vm)
+    ro.service_entity_update('iaas', 'vm', vm_id, {'state': 2})
 
     image = ro.service_entity_read('iaas', 'image', vm['idImage'])
     vm_json = {
@@ -194,7 +194,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
         vm['state'] = 4
         # Log a success in Influx
         metrics.vm_success()
-        ro.service_entity_update('iaas', 'vm', vm_id, vm)
+        ro.service_entity_update('iaas', 'vm', vm_id, {'state': 4})
     else:
         logger.error(
             f'VM #{vm_id} failed to build, so it is being moved to '
@@ -204,6 +204,6 @@ def dispatch_vm(vm: dict, password: str) -> None:
         vm['state'] = 3
         # Log a failure in Influx
         metrics.vm_failure()
-        ro.service_entity_update('iaas', 'vm', vm_id, vm)
+        ro.service_entity_update('iaas', 'vm', vm_id, {'state': 3})
 
     return
