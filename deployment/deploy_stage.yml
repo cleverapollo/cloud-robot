@@ -26,7 +26,7 @@
         version: master
 
     - name: Deploy Alpha settings
-      shell: ln -s ./deployment/settings/alpha_settings.py ./settings.py
+      shell: ln -sf ./deployment/settings/alpha_settings.py ./settings.py
       args:
         chdir: "{{ robot_dir }}"
 
