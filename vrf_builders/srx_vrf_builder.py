@@ -8,6 +8,7 @@ from jnpr.junos.exception import (
     UnlockError,
 )
 from jnpr.junos.utils.config import Config
+from logging import DEBUG
 
 driver_logger = utils.get_logger_for_name('srx_vrf_builder.deploy_setconf')
 
@@ -28,7 +29,10 @@ def vrf_build(vrf: dict, password: str) -> bool:
     )
     template = utils.jinja_env.get_template('srx_set_conf.j2')
     conf = template.render(**vrf)
-
+    # Log the setconf to debug
+    utils.get_logger_for_name('srx_vrf_builder.deploy_setconf', DEBUG).debug(
+        f'Generated setconf for project #{vrf["idProject"]}\n{conf}'
+    )
     # IKE VPNs TODO
 
     vrf_status = deploy_setconf(conf, vrf['oobIP'], password)

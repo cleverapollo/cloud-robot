@@ -1,7 +1,7 @@
 # python
 import paramiko
 from crypt import crypt, mksalt, METHOD_SHA512
-
+from logging import DEBUG
 # local
 import utils
 
@@ -24,6 +24,9 @@ def vm_build(vm: dict, password: str) -> bool:
     vm['crypted_user_pw'] = str(
         crypt(vm['user_password'], mksalt(METHOD_SHA512)))
     ks_text = utils.jinja_env.get_template('ubuntu_kickstart.j2').render(**vm)
+    utils.get_logger_for_name('ubuntu1604x64.vm_build', DEBUG).debug(
+        f'Generated KS file for vm #{vm["vm_identifier"]}\n{ks_text}'
+    )
     ks_file = f'{vm["name"]}.cfg'
     with open(f'{path}{ks_file}', 'w') as ks:
         ks.write(ks_text)
