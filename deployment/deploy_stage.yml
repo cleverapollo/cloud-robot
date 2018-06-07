@@ -4,6 +4,12 @@
     robot_dir: "/home/administrator/robot"
   remote_user: administrator
   tasks:
+    - name: Ensure env entry for the settings is available
+      shell: export "{{ item }}"
+      with_items:
+        - "CLOUDCIX_SETTINGS_MODULE=settings"
+        - "ROBOT_ENV=alpha"
+
     - name: Check if Robot is already running
       shell: ps -ef | grep robot.py | grep -v grep
       register: is_running
@@ -29,12 +35,6 @@
       shell: ln -sf ./deployment/settings/alpha_settings.py ./settings.py
       args:
         chdir: "{{ robot_dir }}"
-
-    - name: Ensure env entry for the settings is available
-      shell: export "{{ item }}"
-      with_items:
-        - "CLOUDCIX_SETTINGS_MODULE=settings"
-        - "ROBOT_ENV=alpha"
 
     - name: Update requirements
       shell: pip3 install -U -r requirements.txt
