@@ -31,6 +31,6 @@
         chdir: "{{ robot_dir }}"
 
     - name: Update requirements
-      shell: pip3 install -U -r requirements.txt
+      shell: pip3 install -U -r deployment/requirements.txt
       args:
         chdir: "{{ robot_dir }}"
