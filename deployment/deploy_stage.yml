@@ -26,9 +26,10 @@
         version: master
 
     - name: Deploy Alpha settings
-      shell: ln -sf ./deployment/settings/alpha_settings.py ./settings.py
-      args:
-        chdir: "{{ robot_dir }}"
+      file:
+        src: "{{ robot_dir }}/deployment/settings/alpha_settings.py"
+        dest: "{{ robot_dir }}/settings.py"
+        state: link
 
     - name: Update requirements
       shell: pip3 install -U -r deployment/requirements.txt
