@@ -27,7 +27,7 @@
 
     - name: "Deploy {{ env }} settings"
       file:
-        src: "{{ robot_dir }}/deployment/settings/{{ env }}_settings.py"
+        src: "{{ robot_dir }}/deployment/settings/{{ env }}.py"
         dest: "{{ robot_dir }}/settings.py"
         state: link
 

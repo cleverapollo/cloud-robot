@@ -13,10 +13,16 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Installing
 
-Firstly, install the requirements
+Firstly, install the requirements:
 
 ```bash
 sudo pip3 install -r deployment/requirements.txt
+```
+
+Install the alpha settings:
+
+```bash
+ln -s ./deployment/settings/alpha.py ./settings.py
 ```
 
 Run with the following command:
