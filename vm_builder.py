@@ -18,6 +18,7 @@ def vm_build(vm: dict, password: str) -> bool:
     :return: vm_built: Flag stating whether or not the build succeeded
     """
     vm_built = False
+    image_replaced = vm['image'].replace(' ', r'\ ')
 
     # HyperV hosted
     if vm['hypervisor'] == 1:
@@ -53,7 +54,7 @@ def vm_build(vm: dict, password: str) -> bool:
                 f'mount \\\\{freenas_path} Z: -o nolock & powershell -file'
                 f' Z:\HyperV\scripts\VMCreator.ps1 -VMName'
                 f' {vm["vm_identifier"]} -Gen 1'
-                f' -OSName {vm["image"]} -ProcessorCount {vm["cpu"]}'
+                f' -OSName {image_replaced} -ProcessorCount {vm["cpu"]}'
                 f' -Dynamic 1 -Ram {vm["ram"]}'
                 f' -Hdd {vm["hdd"]} -Flash {vm["flash"]}'
                 f' -VlanId {vm["vlan"]} -Verbose'
@@ -109,7 +110,6 @@ def vm_build(vm: dict, password: str) -> bool:
             with open(f'{path}bridge_xmls/br{ vm["vlan"] }', 'w') as xt:
                 xt.write(xml_text)
         # make the cmd
-        image_replaced = vm['image'].replace(' ', r'\ ')
         cmd = (
             f'virsh iface-define --file {path}bridge_xmls/br{vm["vlan"]}\n'
             f'virsh iface-start br{vm["vlan"]}\n'
