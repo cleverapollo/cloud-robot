@@ -1,2 +1,6 @@
 [staging]
 2a02:2078:3::3
+
+[staging:vars]
+env=alpha
+branch=master

@@ -1,5 +1,5 @@
 ---
-- hosts: staging
+- hosts: "{{ deployment_host | default('staging') }}"
   vars:
     robot_dir: "/home/administrator/robot"
   remote_user: administrator
@@ -17,20 +17,21 @@
       poll: 0
       when: is_running.rc == 1
 
-    - name: Deploy Robot to Alpha Region for staging
+    - name: "Deploy Robot to {{ env }} environment"
       git:
         repo: "git@gitlab.cloudcix.com:CloudCIX/Robot.git"
         dest: "{{ robot_dir }}"
         update: yes
         clone: no
-        version: master
+        version: "{{ branch }}"
 
-    - name: Deploy Alpha settings
-      shell: ln -sf ./deployment/settings/alpha_settings.py ./settings.py
-      args:
-        chdir: "{{ robot_dir }}"
+    - name: "Deploy {{ env }} settings"
+      file:
+        src: "{{ robot_dir }}/deployment/settings/{{ env }}.py"
+        dest: "{{ robot_dir }}/settings.py"
+        state: link
 
     - name: Update requirements
-      shell: pip3 install -U -r requirements.txt
+      shell: pip3 install -U -r deployment/requirements.txt
       args:
         chdir: "{{ robot_dir }}"
