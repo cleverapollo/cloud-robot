@@ -28,10 +28,10 @@ def dispatch_vrf(vrf: dict, password: str):
     logger.info(
         f'Commencing dispatch to build VRF #{vrf_id}'
     )
-    ro.service_entity_update('iaas', 'vrf', vrf_id, {'state': 2})
+    ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 2})
 
-    vrf_lans = ro.service_entity_list('iaas', 'subnet', {'vrf': vrf_id})
-    region_ips = ro.service_entity_list('iaas', 'ipaddress', {})
+    vrf_lans = ro.service_entity_list('IAAS', 'subnet', {'vrf': vrf_id})
+    region_ips = ro.service_entity_list('IAAS', 'ipaddress', {})
 
     vrf_json = {
         'idProject': vrf['idProject'],
@@ -48,7 +48,7 @@ def dispatch_vrf(vrf: dict, password: str):
         if not dispatch_net(vrf_lan['vLAN']):
             # changing state to Unresourced (3)
             vrf['state'] = 3
-            ro.service_entity_update('iaas', 'vrf', vrf_id, {'state': 3})
+            ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 3})
             logger.error(
                 f'VRF {vrf_id} has become Unresourced as it has an invalid '
                 f'vlan ({vrf_lan["vLAN"]})'
@@ -59,7 +59,9 @@ def dispatch_vrf(vrf: dict, password: str):
             if (ip['idSubnet'] == vrf_lan['idSubnet'] and
                     ip['idIPAddressFIP'] is not None):
                 pip = ro.service_entity_read(
-                    'iaas', 'ipaddress', ip['idIPAddressFIP']
+                    'IAAS',
+                    'ipaddress',
+                    ip['idIPAddressFIP']
                 )
                 vrf_json['NATs'].append({
                     'fIP': f'{ip["address"]}/32',
@@ -67,9 +69,12 @@ def dispatch_vrf(vrf: dict, password: str):
                 })
 
     vrf_json['VPNs'] = ro.service_entity_list(
-        'iaas', 'vpn_tunnel', {'vrf': vrf['idVRF']})
+        'IAAS',
+        'vpn_tunnel',
+        {'vrf': vrf['idVRF']}
+    )
 
-    router = ro.service_entity_read('iaas', 'router', vrf['idRouter'])
+    router = ro.service_entity_read('IAAS', 'router', vrf['idRouter'])
     vrf_json['oobIP'] = str(router['ipManagement'])
 
     # ################# data/ip validations ##########################
@@ -85,7 +90,7 @@ def dispatch_vrf(vrf: dict, password: str):
         vrf['state'] = 4
         # Log a success in Influx
         metrics.vrf_success()
-        ro.service_entity_update('iaas', 'vrf', vrf_id, {'state': 4})
+        ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 4})
     else:
         logger.error(
             f'VRF #{vrf_id} failed to build, so it is being moved to '
@@ -95,7 +100,7 @@ def dispatch_vrf(vrf: dict, password: str):
         vrf['state'] = 3
         # Log a failure in Influx
         metrics.vrf_failure()
-        ro.service_entity_update('iaas', 'vrf', vrf_id, {'state': 3})
+        ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 3})
     return
 
 
@@ -128,9 +133,9 @@ def dispatch_vm(vm: dict, password: str) -> None:
     logger.info(
         f'Commencing dispatch to build VM #{vm_id}'
     )
-    ro.service_entity_update('iaas', 'vm', vm_id, {'state': 2})
+    ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 2})
 
-    image = ro.service_entity_read('iaas', 'image', vm['idImage'])
+    image = ro.service_entity_read('IAAS', 'image', vm['idImage'])
     vm_json = {
         # Unique Identifer for VM
         'vm_identifier': f'{vm["idProject"]}_{vm["idVM"]}',
@@ -146,14 +151,17 @@ def dispatch_vm(vm: dict, password: str) -> None:
         'dns': vm['dns'].split(',')
     }
     # get the ipadddress and subnet details
-    vm_ips = ro.service_entity_list('iaas', 'ipaddress', {'vm': vm['idVM']})
+    vm_ips = ro.service_entity_list('IAAS', 'ipaddress', {'vm': vm['idVM']})
     if len(vm_ips) > 0:
         for vm_ip in vm_ips:
             if netaddr.IPAddress(str(vm_ip['address'])).is_private():
                 vm_json['ip'] = str(vm_ip['address'])
                 # get the subnet of this ip
                 ip_subnet = ro.service_entity_read(
-                    'iaas', 'subnet', vm_ip['idSubnet'])
+                    'IAAS',
+                    'subnet',
+                    vm_ip['idSubnet']
+                )
                 address_range = str(ip_subnet['addressRange'])
                 vm_json['gateway'] = address_range.split('/')[0]
                 vm_json['netmask'] = address_range.split('/')[1]
@@ -165,7 +173,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
     vm_json['tz'] = 'Ireland/Dublin'  # need to add in db(kvm and hyperv)
     # Get the server details
     server_macs = ro.service_entity_list(
-        'iaas',
+        'IAAS',
         'macaddress',
         {},
         idServer=vm['idServer']
@@ -184,10 +192,10 @@ def dispatch_vm(vm: dict, password: str) -> None:
     # CHECK IF VRF IS BUILT OR NOT
     # Get the vrf via idProject which is common for both VM and VRF
     vrf_request_data = {'project': vm['idProject']}
-    vm_vrf = ro.service_entity_list('iaas', 'vrf', vrf_request_data)
+    vm_vrf = ro.service_entity_list('IAAS', 'vrf', vrf_request_data)
     while vm_vrf[0]['state'] != 4:
         time.sleep(5)
-        vm_vrf = ro.service_entity_list('iaas', 'vrf', vrf_request_data)
+        vm_vrf = ro.service_entity_list('IAAS', 'vrf', vrf_request_data)
     # ----------------------------------------------------------------
 
     # Despatching VMBuilder driver
@@ -199,7 +207,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
         vm['state'] = 4
         # Log a success in Influx
         metrics.vm_success()
-        ro.service_entity_update('iaas', 'vm', vm_id, {'state': 4})
+        ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 4})
     else:
         logger.error(
             f'VM #{vm_id} failed to build, so it is being moved to '
@@ -209,6 +217,6 @@ def dispatch_vm(vm: dict, password: str) -> None:
         vm['state'] = 3
         # Log a failure in Influx
         metrics.vm_failure()
-        ro.service_entity_update('iaas', 'vm', vm_id, {'state': 3})
+        ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 3})
 
     return
