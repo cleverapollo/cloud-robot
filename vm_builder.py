@@ -50,13 +50,13 @@ def vm_build(vm: dict, password: str) -> bool:
             session = winrm.Session(vm['host_name'],
                                     auth=('administrator', str(password)))
             cmd = (
-                f'mount \\\\{freenas_path} Z: -o nolock & powershell -file '
-                f'Z:\HyperV\scripts\VMCreator.ps1 -VMName {vm["vm_identifier"]}'
-                f' -Gen 1'
-                f' -OSName {vm["image"]} -ProcessorCount {vm["cpu"]} -Dynamic 1'
-                f' -Ram {vm["ram"]}'
-                f' -Hdd {vm["hdd"]} -Flash {vm["flash"]} '
-                f'-VlanId {vm["vlan"]} -Verbose'
+                f'mount \\\\{freenas_path} Z: -o nolock & powershell -file'
+                f' Z:\HyperV\scripts\VMCreator.ps1 -VMName'
+                f' {vm["vm_identifier"]} -Gen 1'
+                f' -OSName {vm["image"]} -ProcessorCount {vm["cpu"]}'
+                f' -Dynamic 1 -Ram {vm["ram"]}'
+                f' -Hdd {vm["hdd"]} -Flash {vm["flash"]}'
+                f' -VlanId {vm["vlan"]} -Verbose'
             )
             run = session.run_cmd(cmd)
             if run.std_out:
@@ -104,8 +104,9 @@ def vm_build(vm: dict, password: str) -> bool:
         # bridge network xml file creation
         bridge_file = Path(f'{ path }bridge_xmls/br{ vm["vlan"] }.xml')
         if not bridge_file.is_file():
-            xml_text = utils.jinja_env.get_template('kvm_bridge_network.j2'
-                                                    ).render(**vm["vlan"])
+            xml_text = utils.jinja_env.get_template(
+                'kvm_bridge_network.j2'
+            ).render(**vm["vlan"])
             with open(f'{path}bridge_xmls/br{ vm["vlan"] }', 'w') as xt:
                 xt.write(xml_text)
         # make the cmd
@@ -144,4 +145,3 @@ def vm_build(vm: dict, password: str) -> bool:
         finally:
             client.close()
         return vm_built
-
