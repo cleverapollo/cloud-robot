@@ -36,9 +36,9 @@ def service_entity_create(
     )
     entity_create = None
     service_to_call = getattr(api, service)
-    # service_to_call = api.iaas  (e.g service = 'iaas')
+    # service_to_call = api.IAAS  (e.g service = 'iaas')
     entity_to_call = getattr(service_to_call, entity)
-    # entity_to_call = api.iaas.image (e.g entity = 'image')
+    # entity_to_call = api.IAAS.image (e.g entity = 'image')
     response = entity_to_call.create(token=TOKEN_WRAPPER.token, data=data)
     if response.status_code == 201:
         entity_create = response.json()['content']
@@ -72,9 +72,9 @@ def service_entity_list(
         f'with the following params : {params}'
     )
     service_to_call = getattr(api, service)
-    # service_to_call = api.iaas  (e.g service = 'iaas')
+    # service_to_call = api.IAAS  (e.g service = 'iaas')
     entity_to_call = getattr(service_to_call, entity)
-    # entity_to_call = api.iaas.image (e.g entity = 'image')
+    # entity_to_call = api.IAAS.image (e.g entity = 'image')
     response = entity_to_call.list(
         token=TOKEN_WRAPPER.token,
         params=params,
@@ -113,9 +113,9 @@ def service_entity_update(
         f'with the following data : {data}'
     )
     service_to_call = getattr(api, service)
-    # service_to_call = api.iaas  (e.g service = 'iaas')
+    # service_to_call = api.IAAS  (e.g service = 'iaas')
     entity_to_call = getattr(service_to_call, entity)
-    # entity_to_call = api.iaas.image (e.g entity = 'image')
+    # entity_to_call = api.IAAS.image (e.g entity = 'image')
     response = entity_to_call.partial_update(
         pk=pk,
         token=TOKEN_WRAPPER.token,
@@ -151,9 +151,9 @@ def service_entity_read(
     logger = utils.get_logger_for_name('ro.service_entity_read')
     logger.info(f'Attempting to read the {service}.{entity} instance #{pk}')
     service_to_call = getattr(api, service)
-    # service_to_call = api.iaas  (e.g service = 'iaas')
+    # service_to_call = api.IAAS  (e.g service = 'iaas')
     entity_to_call = getattr(service_to_call, entity)
-    # entity_to_call = api.iaas.image (e.g entity = 'image')
+    # entity_to_call = api.IAAS.image (e.g entity = 'image')
     response = entity_to_call.read(pk=pk, token=TOKEN_WRAPPER.token)
     if response.status_code == 200:
         logger.info(f'Successfully read {service}.{entity} instance #{pk}')
@@ -238,7 +238,7 @@ def get_idrac_details(location: str) -> Optional[Tuple[str, str]]:
 def ip_validator(
         address_range: str = '', ip_address: str = '') -> Optional[dict]:
     """
-    This method acts as a wrapper around the api.iaas.ip_validator endpoint.
+    This method acts as a wrapper around the api.IAAS.ip_validator endpoint.
     This endpoint validates one or more address ranges and ip addresses,
     which are passed in the form of a string where multiple addresses are
     comma separated
