@@ -1,4 +1,4 @@
-cloudcix
+cloudcix<0.5
 influxdb
 inotify_simple
 jinja2
