@@ -1,5 +1,6 @@
 # python
 import netaddr
+import time
 from collections import deque
 
 # locals
@@ -72,7 +73,7 @@ def dispatch_vrf(vrf: dict, password: str):
     vrf_json['oobIP'] = str(router['ipManagement'])
 
     # ################# data/ip validations ##########################
-    # TODO
+    # TODO - Add data/ip validations to vrf dispatcher
     # ################################################################
 
     if vrf_builders.vrf_build(vrf_json, password):
@@ -176,17 +177,17 @@ def dispatch_vm(vm: dict, password: str) -> None:
             break
 
     # ################# data/ip validations ##########################
-    # TODO
+    # TODO - Add data/ip validations to vm dispatcher
     # ################################################################
 
     # ----------------------------------------------------------------
     # CHECK IF VRF IS BUILT OR NOT
     # Get the vrf via idProject which is common for both VM and VRF
-    vm_vrf = ro.service_entity_list(
-        'iaas', 'vrf', {'project': vm['idProject']})
-    if not vm_vrf[0]['state'] == 4:
-        # TODO - Add a wait here until the vrf is built once we add asyncio
-        pass
+    vrf_request_data = {'project': vm['idProject']}
+    vm_vrf = ro.service_entity_list('iaas', 'vrf', vrf_request_data)
+    while vm_vrf[0]['state'] != 4:
+        time.sleep(5)
+        vm_vrf = ro.service_entity_list('iaas', 'vrf', vrf_request_data)
     # ----------------------------------------------------------------
 
     # Despatching VMBuilder driver
