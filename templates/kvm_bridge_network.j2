@@ -1,0 +1,11 @@
+{ # bridge network( vlan tagging) for kvm hosts }
+<interface type='bridge' name='br{{ vlan }}'>
+  <start mode='onboot'/>
+  <bridge stp='on' delay='0.0'>
+    <interface type='vlan' name='enp8s0f0.{{ vlan }}'>
+      <vlan tag='{{ vlan }}'>
+        <interface name='enp8s0f0'/>
+      </vlan>
+    </interface>
+  </bridge>
+</interface>

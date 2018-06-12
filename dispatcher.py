@@ -7,7 +7,7 @@ import metrics
 import net_builders
 import ro
 import utils
-import vm_builders
+import vm_builder
 import vrf_builders
 
 
@@ -139,6 +139,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
         'ram': vm['ram'],
         'id_image': vm['idImage'],
         'image': str(image['name']),
+        'hypervisor': image['hypervisor'],
         'username': vm['name'],
         'user_password': ro.password_generator(chars='a', size=8),
         'root_password': ro.password_generator(),
@@ -190,7 +191,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
     # ----------------------------------------------------------------
 
     # Despatching VMBuilder driver
-    if vm_builders.vm_builder(vm_json, password):
+    if vm_builder.vm_build(vm_json, password):
         logger.info(
             f'VM #{vm["idVM"]} successfully built in Asset #{vm["idAsset"]}'
         )
