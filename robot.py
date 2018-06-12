@@ -1,4 +1,5 @@
 # python
+import multiprocessing as mp
 import os
 import subprocess
 import sys
@@ -32,7 +33,7 @@ def watch_directory() -> INotify:
     return inotify
 
 
-def mainloop(watcher: INotify):
+def mainloop(watcher: INotify, process_pool: mp.Pool):
     """
     The main loop of the Robot program
     """
@@ -67,7 +68,20 @@ def mainloop(watcher: INotify):
         if len(vms) > 0:
             for vm in vms:
                 robot_logger.info(f'Building VM with ID {vm["idVM"]}')
-                dispatcher.dispatch_vm(vm, settings.NETWORK_PASSWORD)
+                # Call the dispatcher asynchronously
+                try:
+                    process_pool.apply_async(
+                        func=dispatcher.dispatch_vm,
+                        kwds={
+                            'vm': vm,
+                            'password': settings.NETWORK_PASSWORD
+                        }
+                    )
+                except mp.ProcessError:
+                    robot_logger.error(
+                        f'Error when building VM #{vm["idVM"]}',
+                        exc_info=True
+                    )
         else:
             robot_logger.info('No VMs in "Requested" state.')
 
@@ -86,16 +100,27 @@ if __name__ == '__main__':
     )
     if settings.ROBOT_ENV != 'dev':
         metrics.current_commit(current_commit)
+    # Create a pool of workers equal in size to the number of cpu cores on the
+    # server
+    mp.set_start_method('fork')
+    pool = mp.Pool(
+        processes=None,
+        maxtasksperchild=1
+    )
+    rc = 0
     try:
-        mainloop(watch_directory())
+        mainloop(watch_directory(), pool)
+    except KeyboardInterrupt:
+        # Going down safely
+        pass
     except Exception:
         robot_logger.error(
             'Exception thrown in robot. Exiting.',
             exc_info=True
         )
+        rc = 1
+    finally:
         metrics.heartbeat(0)
-        sys.exit(1)
-    except KeyboardInterrupt:
-        # Going down safely
-        metrics.heartbeat(0)
-        sys.exit(0)
+        pool.close()
+        pool.join()
+        sys.exit(rc)

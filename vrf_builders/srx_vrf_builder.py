@@ -11,7 +11,7 @@ from jnpr.junos.utils.config import Config
 
 driver_logger = utils.get_logger_for_name('srx_vrf_builder.deploy_setconf')
 
-# TODO not yet fixed
+# TODO - Fix VRF builder. Still having issues with multiple VRFs
 
 
 def vrf_build(vrf: dict, password: str) -> bool:
@@ -32,7 +32,7 @@ def vrf_build(vrf: dict, password: str) -> bool:
     driver_logger.debug(
         f'Generated setconf for project #{vrf["idProject"]}\n{conf}'
     )
-    # IKE VPNs TODO
+    # TODO - IKE VPNs
 
     vrf_status = deploy_setconf(conf, vrf['oobIP'], password)
     return vrf_status

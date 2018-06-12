@@ -217,8 +217,10 @@ def get_idrac_details(location: str) -> Optional[Tuple[str, str]]:
     ip += '.' + rack[rack.index('U') + 1:]
 
     # Get the password
-    response = api.IAAS.location_hasher.create(token=TOKEN_WRAPPER.token,
-                                               data={'location': location})
+    response = api.IAAS.location_hasher.create(
+        token=TOKEN_WRAPPER.token,
+        data={'location': location}
+    )
     if response.status_code in [200, 201]:
         password = response.json()['content']['hexadecimal']
         logger.info(
