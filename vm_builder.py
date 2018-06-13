@@ -22,23 +22,17 @@ def vm_build(vm: dict, password: str) -> bool:
     # HyperV hosted
     if vm['hypervisor'] == 1:
         # FREENAS mounted location in the host /mnt/images
-        vm['freenas_path'] = 'alpha-freenas.cloudcix.com\\mnt\\volume\\alpha'
-        path = '/mnt/images/HyperV/'
-        if vm['idImage'] == 3:
-            xml = utils.jinja_env.get_template(
-                'windows2016_unattend.j2'
-            ).render(**vm)
-        elif vm['idImage'] == 2:
-            xml = utils.jinja_env.get_template(
-                'windows2012_unattend.j2'
-            ).render(**vm)
-        elif vm['idImage'] == 4:
-            xml = utils.jinja_env.get_template(
-                'windows2008_unattend.j2'
-            ).render(**vm)
+        vm['freenas_url'] = 'alpha-freenas.cloudcix.com\\mnt\\volume\\alpha'
+        drive_path = '/mnt/images/HyperV/'
+        template = vm['image'].replace(r'\ ', '_')
+        xml = utils.jinja_env.get_template(
+            f'{ template }.j2'
+        ).render(**vm)
         try:
-            with open(f'{path}unattend_xmls/{vm["vm_identifier"]}.xml',
-                      'w') as file:
+            with open(
+                    f'{drive_path}unattend_xmls/{vm["vm_identifier"]}.xml',
+                    'w'
+            ) as file:
                 file.write(xml)
             driver_logger.debug(
                 f'Generated xml file for vm #{vm["vm_identifier"]}\n{xml}'
@@ -50,8 +44,9 @@ def vm_build(vm: dict, password: str) -> bool:
             )
             return vm_built
         try:
-            session = winrm.Session(vm['host_name'],
-                                    auth=('administrator', str(password)))
+            session = winrm.Session(
+                vm['host_name'], auth=('administrator', str(password))
+            )
             cmd = utils.jinja_env.get_template(
                 'win_cmd.j2'
             ).render(**vm)
@@ -72,24 +67,20 @@ def vm_build(vm: dict, password: str) -> bool:
 
     # KVM hosted
     elif vm['hypervisor'] == 2:
-        vm['path'] = '/mnt/images/KVM/'
+        vm['drive_path'] = '/mnt/images/KVM/'
         # encrypting root and user password
         vm['crypted_root_pw'] = str(
             crypt(vm['root_password'], mksalt(METHOD_SHA512)))
         vm['crypted_user_pw'] = str(
             crypt(vm['user_password'], mksalt(METHOD_SHA512)))
         # kickstart file creation
-        if vm['idImage'] in [10, 11]:
-            ks_text = utils.jinja_env.get_template(
-                'centos_kickstart.j2'
-            ).render(**vm)
-        elif vm['idImage'] in [6, 7, 8, 9]:
-            ks_text = utils.jinja_env.get_template(
-                'ubuntu_kickstart.j2'
-            ).render(**vm)
+        template = vm['image'].split(r'\ ')[0]
+        ks_text = utils.jinja_env.get_template(
+            f'{ template }.j2'
+        ).render(**vm)
         ks_file = f'{vm["name"]}.cfg'
         try:
-            with open(f'{path}kickstarts/{ks_file}', 'w') as ks:
+            with open(f'{drive_path}kickstarts/{ks_file}', 'w') as ks:
                 ks.write(ks_text)
             driver_logger.debug(
                 f'Generated KS file for vm #{vm["vm_identifier"]}\n{ks_text}'
@@ -101,12 +92,12 @@ def vm_build(vm: dict, password: str) -> bool:
             )
             return vm_built
         # bridge network xml file creation
-        bridge_file = Path(f'{ path }bridge_xmls/br{ vm["vlan"] }.xml')
+        bridge_file = Path(f'{drive_path}bridge_xmls/br{ vm["vlan"] }.xml')
         if not bridge_file.is_file():
             xml_text = utils.jinja_env.get_template(
                 'kvm_bridge_network.j2'
             ).render(**vm['vlan'])
-            with open(f'{path}bridge_xmls/br{ vm["vlan"] }', 'w') as xt:
+            with open(f'{drive_path}bridge_xmls/br{ vm["vlan"] }', 'w') as xt:
                 xt.write(xml_text)
         # make the cmd
         cmd = utils.jinja_env.get_template(
