@@ -22,7 +22,7 @@ def vm_build(vm: dict, password: str) -> bool:
     # HyperV hosted
     if vm['hypervisor'] == 1:
         # FREENAS mounted location in the host /mnt/images
-        vm["freenas_path"] = 'alpha-freenas.cloudcix.com\\mnt\\volume\\alpha'
+        vm['freenas_path'] = 'alpha-freenas.cloudcix.com\\mnt\\volume\\alpha'
         path = '/mnt/images/HyperV/'
         if vm['idImage'] == 3:
             xml = utils.jinja_env.get_template(
