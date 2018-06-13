@@ -18,22 +18,24 @@ def vm_build(vm: dict, password: str) -> bool:
     :return: vm_built: Flag stating whether or not the build succeeded
     """
     vm_built = False
-    image_replaced = vm['image'].replace(' ', r'\ ')
 
     # HyperV hosted
     if vm['hypervisor'] == 1:
         # FREENAS mounted location in the host /mnt/images
-        freenas_path = 'alpha-freenas.cloudcix.com\\mnt\\volume\\alpha'
+        vm["freenas_path"] = 'alpha-freenas.cloudcix.com\\mnt\\volume\\alpha'
         path = '/mnt/images/HyperV/'
         if vm['idImage'] == 3:
-            xml = utils.jinja_env.get_template('windows2016_unattend.j2'
-                                               ).render(**vm)
+            xml = utils.jinja_env.get_template(
+                'windows2016_unattend.j2'
+            ).render(**vm)
         elif vm['idImage'] == 2:
-            xml = utils.jinja_env.get_template('windows2012_unattend.j2'
-                                               ).render(**vm)
+            xml = utils.jinja_env.get_template(
+                'windows2012_unattend.j2'
+            ).render(**vm)
         elif vm['idImage'] == 4:
-            xml = utils.jinja_env.get_template('windows2008_unattend.j2'
-                                               ).render(**vm)
+            xml = utils.jinja_env.get_template(
+                'windows2008_unattend.j2'
+            ).render(**vm)
         try:
             with open(f'{path}unattend_xmls/{vm["vm_identifier"]}.xml',
                       'w') as file:
@@ -50,15 +52,9 @@ def vm_build(vm: dict, password: str) -> bool:
         try:
             session = winrm.Session(vm['host_name'],
                                     auth=('administrator', str(password)))
-            cmd = (
-                f'mount \\\\{freenas_path} Z: -o nolock & powershell -file'
-                f' Z:\HyperV\scripts\VMCreator.ps1 -VMName'
-                f' {vm["vm_identifier"]} -Gen 1'
-                f' -OSName {image_replaced} -ProcessorCount {vm["cpu"]}'
-                f' -Dynamic 1 -Ram {vm["ram"]}'
-                f' -Hdd {vm["hdd"]} -Flash {vm["flash"]}'
-                f' -VlanId {vm["vlan"]} -Verbose'
-            )
+            cmd = utils.jinja_env.get_template(
+                'win_cmd.j2'
+            ).render(**vm)
             run = session.run_cmd(cmd)
             if run.std_out:
                 for line in run.std_out:
@@ -76,7 +72,7 @@ def vm_build(vm: dict, password: str) -> bool:
 
     # KVM hosted
     elif vm['hypervisor'] == 2:
-        path = '/mnt/images/KVM/'
+        vm['path'] = '/mnt/images/KVM/'
         # encrypting root and user password
         vm['crypted_root_pw'] = str(
             crypt(vm['root_password'], mksalt(METHOD_SHA512)))
@@ -84,11 +80,13 @@ def vm_build(vm: dict, password: str) -> bool:
             crypt(vm['user_password'], mksalt(METHOD_SHA512)))
         # kickstart file creation
         if vm['idImage'] in [10, 11]:
-            ks_text = utils.jinja_env.get_template('centos_kickstart.j2'
-                                                   ).render(**vm)
+            ks_text = utils.jinja_env.get_template(
+                'centos_kickstart.j2'
+            ).render(**vm)
         elif vm['idImage'] in [6, 7, 8, 9]:
-            ks_text = utils.jinja_env.get_template('ubuntu_kickstart.j2'
-                                                   ).render(**vm)
+            ks_text = utils.jinja_env.get_template(
+                'ubuntu_kickstart.j2'
+            ).render(**vm)
         ks_file = f'{vm["name"]}.cfg'
         try:
             with open(f'{path}kickstarts/{ks_file}', 'w') as ks:
@@ -106,20 +104,14 @@ def vm_build(vm: dict, password: str) -> bool:
         bridge_file = Path(f'{ path }bridge_xmls/br{ vm["vlan"] }.xml')
         if not bridge_file.is_file():
             xml_text = utils.jinja_env.get_template(
-                'kvm_bridge_network.j2').render(**vm['vlan'])
+                'kvm_bridge_network.j2'
+            ).render(**vm['vlan'])
             with open(f'{path}bridge_xmls/br{ vm["vlan"] }', 'w') as xt:
                 xt.write(xml_text)
         # make the cmd
-        cmd = (
-            f'virsh iface-define --file {path}bridge_xmls/br{vm["vlan"]}\n'
-            f'virsh iface-start br{vm["vlan"]}\n'
-            f'sudo virt-install --name {vm["name"]} --memory {vm["ram"]} '
-            f'--vcpus {vm["cpu"]} --disk path=/var/lib/libvirt/images/'
-            f'{vm["name"]}.qcow2,size={vm["hdd"]} --graphics vnc --location '
-            f'/mnt/images/{image_replaced}.iso --os-variant '
-            f'rhel6 --initrd-inject {path}{ks_file} -x "ks=file:/{ks_file}" '
-            f'--network bridge=br{vm["vlan"]}'
-        )
+        cmd = utils.jinja_env.get_template(
+                'linux_cmd.j2'
+            ).render(**vm)
         try:
             client = paramiko.SSHClient()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
