@@ -179,6 +179,9 @@ def dispatch_vm(vm: dict, password: str) -> None:
         {},
         idServer=vm['idServer']
     )
+    # get the server's ip address from the mac address, there will be only one
+    # mac address with its status as True and a valid ipaddress out of many mac
+    # addresses of the server.
     for mac in server_macs:
         if mac['status'] is True and mac['ip'] is not None:
             try:
