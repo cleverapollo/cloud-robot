@@ -28,9 +28,8 @@ def vm_build(vm: dict, password: str) -> bool:
         return _build_linux_vm(vm, password)
     else:
         driver_logger.error(
-            f'Unsupported  hypervisor value of VM {vm["vm_identifier"]}'
-            f"can't be build",
-            exc_info=True
+            f'Unsupported  idHypervisor={vm["hypervisor"]} value of VM '
+            f"{vm['vm_identifier']} can't be build"
         )
         return False
 
@@ -51,19 +50,11 @@ def _build_windows_vm(vm: dict, password: str) -> bool:
         xml = utils.jinja_env.get_template(
             'windows2016_unattend.j2'
         ).render(**vm)
-    elif vm['id_image'] == 2:
-        xml = utils.jinja_env.get_template(
-            'windows2012_unattend.j2'
-        ).render(**vm)
-    elif vm['id_image'] == 4:
-        xml = utils.jinja_env.get_template(
-            'windows2008_unattend.j2'
-        ).render(**vm)
     else:
         driver_logger.error(
-            f'Invalid id_image of VM {vm["vm_identifier"]} which does not'
-            f'belong to Windows family so vm cannot be build',
-            exc_info=True
+            f'Invalid id_image={vm["id_image"]} value of VM '
+            f'{vm["vm_identifier"]} which does not belong to Windows family '
+            f'so vm cannot be build'
         )
         return vm_built
 
@@ -128,9 +119,9 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
         ).render(**vm)
     else:
         driver_logger.error(
-            f'Invalid id_image of VM {vm["vm_identifier"]} which does not'
-            f'belong to Linux family so vm cannot be build',
-            exc_info=True
+            f'Invalid id_image={vm["id_image"]} value of VM '
+            f'{vm["vm_identifier"]} which does not belong to Linux family so '
+            f'vm cannot be build'
         )
         return vm_built
 
@@ -159,7 +150,7 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
     # make the cmd
     cmd = utils.jinja_env.get_template(
         'linux_cmd.j2'
-    ).render(**vm)
+    ).render(drive_path=drive_path, **vm)
     try:
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
