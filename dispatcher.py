@@ -188,9 +188,15 @@ def dispatch_vm(vm: dict, password: str) -> None:
             except netaddr.AddrFormatError:
                 logger.error(
                     f'Exception occurred during reading ip address of mac '
-                    f'with id:{mac["idMacAddress"]}',
+                    f'with id:{mac["idMacAddress"]} so {vm_id} vm is '
+                    f'unresourced',
                     exc_info=True
                 )
+                # changing state to Unresourced (3)
+                vm['state'] = 3
+                # Log a failure in Influx
+                metrics.vm_failure()
+                ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 3})
 
     # ################# data/ip validations ##########################
     # TODO - Add data/ip validations to vm dispatcher
