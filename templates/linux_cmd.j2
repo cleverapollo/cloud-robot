@@ -1,0 +1,3 @@
+sudo virsh iface-define --file {{ drive_path }}bridge_xmls/br{{ vlan }}
+sudo virsh iface-start br{{ vlan }}
+sudo virt-install --name {{ name }} --memory {{ ram }} --vcpus {{ cpu }} --disk path=/var/lib/libvirt/images/{{ name }}.qcow2,size={{ hdd }} --graphics vnc --location {{ drive_path }}ISOs/{{ image }}.iso --os-variant rhel6 --initrd-inject {{ drive_path }}kickstarts/{{ ks_file }} -x "ks=file:/{{ks_file }}" --network bridge=br{{ vlan }}
