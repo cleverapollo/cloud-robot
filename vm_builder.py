@@ -144,7 +144,7 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
     if not bridge_file.is_file():
         xml_text = utils.jinja_env.get_template(
             'kvm_bridge_network.j2'
-        ).render(**vm['vlan'])
+        ).render(**vm)
         with open(f'{drive_path}bridge_xmls/br{ vm["vlan"] }', 'w') as xt:
             xt.write(xml_text)
     # make the cmd
