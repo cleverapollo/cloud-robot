@@ -3,12 +3,10 @@ stages:
     - deploy
 
 lint:
-    image: python:latest
+    image: gitlab.cloudcix.com:5005/utils/ci/lint
     stage: lint
-    before_script:
-        - pip3 install flake8 flake8-quotes pep8-naming
     script:
-        - flake8 --inline-quotes 'single' --multiline-quotes '"'
+        - flake8
 
 deploy_staging:
     image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
