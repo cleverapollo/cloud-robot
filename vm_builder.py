@@ -125,7 +125,7 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
         )
         return vm_built
 
-    ks_file = f'{vm["name"]}.cfg'
+    ks_file = f'{vm["vm_identifier"]}.cfg'
     try:
         with open(f'{drive_path}kickstarts/{ks_file}', 'w') as ks:
             ks.write(ks_text)
