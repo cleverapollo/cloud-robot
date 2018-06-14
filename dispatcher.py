@@ -179,11 +179,27 @@ def dispatch_vm(vm: dict, password: str) -> None:
         {},
         idServer=vm['idServer']
     )
+    # get the server's ip address from the mac address, there will be only one
+    # mac address with its status as True and a valid ipaddress out of many mac
+    # addresses of the server.
     for mac in server_macs:
-        if mac['status'] is True and netaddr.IPAddress(str(mac['ip'])):
-            vm_json['host_ip'] = mac['ip']
-            vm_json['host_name'] = mac['dnsName']
-            break
+        if mac['status'] is True and mac['ip'] is not None:
+            try:
+                vm_json['host_ip'] = netaddr.IPAddress(str(mac['ip']))
+                vm_json['host_name'] = mac['dnsName']
+                break
+            except netaddr.AddrFormatError:
+                logger.error(
+                    f'Exception occurred during reading ip address of mac '
+                    f'with id:{mac["idMacAddress"]} so {vm_id} vm is '
+                    f'unresourced',
+                    exc_info=True
+                )
+                # changing state to Unresourced (3)
+                vm['state'] = 3
+                # Log a failure in Influx
+                metrics.vm_failure()
+                ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 3})
 
     # ################# data/ip validations ##########################
     # TODO - Add data/ip validations to vm dispatcher
