@@ -29,7 +29,7 @@ def vm_build(vm: dict, password: str) -> bool:
     else:
         driver_logger.error(
             f'Unsupported  idHypervisor={vm["hypervisor"]} value of VM '
-            f"{vm['vm_identifier']} can't be build"
+            f"{vm['vm_identifier']} cannot be built"
         )
         return False
 
@@ -54,14 +54,14 @@ def _build_windows_vm(vm: dict, password: str) -> bool:
         driver_logger.error(
             f'Invalid id_image={vm["id_image"]} value of VM '
             f'{vm["vm_identifier"]} which does not belong to Windows family '
-            f'so vm cannot be build'
+            f'so vm cannot be built'
         )
         return vm_built
 
     try:
         with open(
-                f'{drive_path}unattend_xmls/{vm["vm_identifier"]}.xml',
-                'w'
+            f'{drive_path}unattend_xmls/{vm["vm_identifier"]}.xml',
+            'w'
         ) as file:
             file.write(xml)
         driver_logger.debug(
@@ -121,7 +121,7 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
         driver_logger.error(
             f'Invalid id_image={vm["id_image"]} value of VM '
             f'{vm["vm_identifier"]} which does not belong to Linux family so '
-            f'vm cannot be build'
+            f'vm cannot be built'
         )
         return vm_built
 
