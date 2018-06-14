@@ -68,20 +68,25 @@ def mainloop(watcher: INotify, process_pool: mp.Pool):
         if len(vms) > 0:
             for vm in vms:
                 robot_logger.info(f'Building VM with ID {vm["idVM"]}')
+                # Until we know VM dispatch works, keep it synchronous
+                dispatcher.dispatch_vm(
+                    vm,
+                    settings.NETWORK_PASSWORD,
+                )
                 # Call the dispatcher asynchronously
-                try:
-                    process_pool.apply_async(
-                        func=dispatcher.dispatch_vm,
-                        kwds={
-                            'vm': vm,
-                            'password': settings.NETWORK_PASSWORD
-                        }
-                    )
-                except mp.ProcessError:
-                    robot_logger.error(
-                        f'Error when building VM #{vm["idVM"]}',
-                        exc_info=True
-                    )
+                # try:
+                #     process_pool.apply_async(
+                #         func=dispatcher.dispatch_vm,
+                #         kwds={
+                #             'vm': vm,
+                #             'password': settings.NETWORK_PASSWORD
+                #         }
+                #     )
+                # except mp.ProcessError:
+                #     robot_logger.error(
+                #         f'Error when building VM #{vm["idVM"]}',
+                #         exc_info=True
+                #     )
         else:
             robot_logger.info('No VMs in "Requested" state.')
 
