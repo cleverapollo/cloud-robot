@@ -9,14 +9,6 @@
       register: is_running
       ignore_errors: yes
 
-    - name: Start initial robot process if Robot isn't already running
-      shell: CLOUDCIX_SETTINGS_MODULE=settings ROBOT_ENV=alpha python3 robot.py
-      args:
-        chdir: "{{ robot_dir }}"
-      async: 100
-      poll: 0
-      when: is_running.rc == 1
-
     - name: "Deploy Robot to {{ env }} environment"
       git:
         repo: "git@gitlab.cloudcix.com:CloudCIX/Robot.git"
@@ -35,3 +27,11 @@
       shell: pip3 install -U -r deployment/requirements.txt
       args:
         chdir: "{{ robot_dir }}"
+    
+    - name: Start Robot if it wasn't already running
+      shell: CLOUDCIX_SETTINGS_MODULE=settings ROBOT_ENV=alpha python3 robot.py
+      args:
+        chdir: "{{ robot_dir }}"
+      async: 604800
+      poll: 0
+      when: is_running.rc == 1
