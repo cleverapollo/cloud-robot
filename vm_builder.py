@@ -109,11 +109,11 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
     drive_path = '/mnt/images/KVM/'
 
     # kickstart file creation
-    if vm['idImage'] in [10, 11]:
+    if vm['id_image'] in [10, 11]:
         ks_text = utils.jinja_env.get_template(
             'centos_kickstart.j2'
         ).render(**vm)
-    elif vm['idImage'] in [6, 7, 8, 9]:
+    elif vm['id_image'] in [6, 7, 8, 9]:
         ks_text = utils.jinja_env.get_template(
             'ubuntu_kickstart.j2'
         ).render(**vm)
