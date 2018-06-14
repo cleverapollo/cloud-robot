@@ -180,10 +180,17 @@ def dispatch_vm(vm: dict, password: str) -> None:
         idServer=vm['idServer']
     )
     for mac in server_macs:
-        if mac['status'] is True and netaddr.IPAddress(str(mac['ip'])):
-            vm_json['host_ip'] = mac['ip']
-            vm_json['host_name'] = mac['dnsName']
-            break
+        if mac['status'] is True and mac['ip'] is not None:
+            try:
+                vm_json['host_ip'] = netaddr.IPAddress(str(mac['ip']))
+                vm_json['host_name'] = mac['dnsName']
+                break
+            except netaddr.AddrFormatError:
+                logger.error(
+                    f'Exception occurred during reading ip address of mac '
+                    f'with id:{mac["idMacAddress"]}',
+                    exc_info=True
+                )
 
     # ################# data/ip validations ##########################
     # TODO - Add data/ip validations to vm dispatcher
