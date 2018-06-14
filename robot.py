@@ -56,7 +56,7 @@ def mainloop(watcher: INotify, process_pool: mp.Pool):
             sys.exit(0)
         # Now handle the loop events
         # #################  VRF BUILD ######################################
-        vrfs = ro.service_entity_list('iaas', 'vrf', params={'state': 1})
+        vrfs = ro.service_entity_list('IAAS', 'vrf', params={'state': 1})
         if len(vrfs) > 0:
             for vrf in vrfs:
                 robot_logger.info(f'Building VRF with ID {vrf["idVRF"]}.')
@@ -64,7 +64,7 @@ def mainloop(watcher: INotify, process_pool: mp.Pool):
         else:
             robot_logger.info('No VRFs in "Requested" state.')
         # ######################## VM BUILD  ################################
-        vms = ro.service_entity_list('iaas', 'vm', params={'state': 1})
+        vms = ro.service_entity_list('IAAS', 'vm', params={'state': 1})
         if len(vms) > 0:
             for vm in vms:
                 robot_logger.info(f'Building VM with ID {vm["idVM"]}')
