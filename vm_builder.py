@@ -134,7 +134,7 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
         )
     except Exception:
         driver_logger.error(
-            f'Failed to write kickstart to file for VM {vm["idVM"]}',
+            f'Failed to write kickstart to file for VM {vm["vm_identifier"]}',
             exc_info=True
         )
         return vm_built
@@ -169,7 +169,7 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
     except Exception:
         driver_logger.error(
             f'Exception occurred during SSHing into host {vm["host_ip"]} '
-            f'for the build of VM #{vm["idVM"]}',
+            f'for the build of VM #{vm["vm_identifier"]}',
             exc_info=True
         )
     finally:
