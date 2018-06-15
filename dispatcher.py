@@ -167,7 +167,8 @@ def dispatch_vm(vm: dict, password: str) -> None:
                 vm_json['gateway'] = address_range.split('/')[0]
                 vm_json['netmask'] = address_range.split('/')[1]
                 vm_json['netmask_ip'] = str(
-                    netaddr.IPNetwork(address_range).netmask)
+                    netaddr.IPNetwork(address_range).netmask
+                )
                 vm_json['vlan'] = ip_subnet['vLAN']
     vm_json['lang'] = 'en_IE'  # need to add in db (for kvm and hyperv)
     vm_json['keyboard'] = 'ie'  # need to add in db (for kvm only)
@@ -185,7 +186,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
     for mac in server_macs:
         if mac['status'] is True and mac['ip'] is not None:
             try:
-                vm_json['host_ip'] = netaddr.IPAddress(str(mac['ip']))
+                vm_json['host_ip'] = str(netaddr.IPAddress(str(mac['ip'])))
                 vm_json['host_name'] = mac['dnsName']
                 break
             except netaddr.AddrFormatError:
