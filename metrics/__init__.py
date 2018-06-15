@@ -1,6 +1,6 @@
 from .heartbeat import heartbeat
 from .misc import (
-    current_commit
+    current_commit,
 )
 from .vrf import (
     build_failure as vrf_failure,
