@@ -219,7 +219,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
     # Despatching VMBuilder driver
     if vm_builder.vm_build(vm_json, password):
         logger.info(
-            f'VM #{vm["idVM"]} successfully built in Asset #{vm["idAsset"]}',
+            f'VM #{vm["idVM"]} successfully built in Asset #{vm["idServer"]}',
         )
         # changing state to Built (4)
         vm['state'] = 4
