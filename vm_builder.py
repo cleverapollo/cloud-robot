@@ -20,9 +20,9 @@ def vm_build(vm: dict, password: str) -> bool:
         return _build_windows_vm(vm, password)
     elif vm['hypervisor'] == 2:  # KVM hosted
         # encrypting root and user password
-        vm['crypted_root_pw'] = str(
+        vm['crypted_root_password'] = str(
             crypt(vm['root_password'], mksalt(METHOD_SHA512)))
-        vm['crypted_user_pw'] = str(
+        vm['crypted_user_password'] = str(
             crypt(vm['user_password'], mksalt(METHOD_SHA512)))
 
         return _build_linux_vm(vm, password)
