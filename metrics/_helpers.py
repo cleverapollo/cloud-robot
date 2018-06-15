@@ -11,7 +11,7 @@ InfluxData = Dict[str, Union[str, int, datetime]]
 
 
 __all__ = [
-    'generate_data_packet'
+    'generate_data_packet',
 ]
 
 
@@ -27,9 +27,9 @@ def generate_data_packet(measurement: str, **fields) -> List[InfluxData]:
     data = [{
         'measurement': measurement,
         'tags': {
-            'region': settings.REGION_NAME
+            'region': settings.REGION_NAME,
         },
         'time': datetime.utcnow(),
-        'fields': fields
+        'fields': fields,
     }]
     return data
