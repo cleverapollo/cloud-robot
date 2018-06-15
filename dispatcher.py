@@ -26,7 +26,7 @@ def dispatch_vrf(vrf: dict, password: str):
     vrf['state'] = 2
     vrf_id = vrf['idVRF']
     logger.info(
-        f'Commencing dispatch to build VRF #{vrf_id}'
+        f'Commencing dispatch to build VRF #{vrf_id}',
     )
     ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 2})
 
@@ -37,11 +37,11 @@ def dispatch_vrf(vrf: dict, password: str):
         'idProject': vrf['idProject'],
         'outBoundIP': vrf['IPVrf'],
         'NATs': deque(),
-        'vLANs': deque()
+        'vLANs': deque(),
     }
     for vrf_lan in vrf_lans:
         vrf_json['vLANs'].append(
-            {'vLAN': vrf_lan['vLAN'], 'subnet': vrf_lan['addressRange']}
+            {'vLAN': vrf_lan['vLAN'], 'subnet': vrf_lan['addressRange']},
         )
         # --------------------------------------------------------------
         # NET BUILD CHECK
@@ -51,7 +51,7 @@ def dispatch_vrf(vrf: dict, password: str):
             ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 3})
             logger.error(
                 f'VRF {vrf_id} has become Unresourced as it has an invalid '
-                f'vlan ({vrf_lan["vLAN"]})'
+                f'vlan ({vrf_lan["vLAN"]})',
             )
         # ---------------------------------------------------------------
 
@@ -61,17 +61,17 @@ def dispatch_vrf(vrf: dict, password: str):
                 pip = ro.service_entity_read(
                     'IAAS',
                     'ipaddress',
-                    ip['idIPAddressFIP']
+                    ip['idIPAddressFIP'],
                 )
                 vrf_json['NATs'].append({
                     'fIP': f'{ip["address"]}/32',
-                    'pIP': f'{pip["address"]}/32'
+                    'pIP': f'{pip["address"]}/32',
                 })
 
     vrf_json['VPNs'] = ro.service_entity_list(
         'IAAS',
         'vpn_tunnel',
-        {'vrf': vrf['idVRF']}
+        {'vrf': vrf['idVRF']},
     )
 
     router = ro.service_entity_read('IAAS', 'router', vrf['idRouter'])
@@ -84,7 +84,7 @@ def dispatch_vrf(vrf: dict, password: str):
     if vrf_builders.vrf_build(vrf_json, password):
         logger.info(
             f'Successfully built vrf #{vrf["idVRF"]} in router '
-            f'{vrf["idRouter"]}'
+            f'{vrf["idRouter"]}',
         )
         # changing state to Built (4)
         vrf['state'] = 4
@@ -94,7 +94,7 @@ def dispatch_vrf(vrf: dict, password: str):
     else:
         logger.error(
             f'VRF #{vrf_id} failed to build, so it is being moved to '
-            'Unresourced state. Check log for details'
+            'Unresourced state. Check log for details',
         )
         # changing state to Unresourced (3)
         vrf['state'] = 3
@@ -131,7 +131,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
     vm['state'] = 2
     vm_id = vm['idVM']
     logger.info(
-        f'Commencing dispatch to build VM #{vm_id}'
+        f'Commencing dispatch to build VM #{vm_id}',
     )
     ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 2})
 
@@ -149,7 +149,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
         'username': vm['name'],
         'user_password': ro.password_generator(chars='a', size=8),
         'root_password': ro.password_generator(),
-        'dns': vm['dns'].split(',')
+        'dns': vm['dns'].split(','),
     }
     # get the ipadddress and subnet details
     vm_ips = ro.service_entity_list('IAAS', 'ipaddress', {'vm': vm['idVM']})
@@ -161,13 +161,13 @@ def dispatch_vm(vm: dict, password: str) -> None:
                 ip_subnet = ro.service_entity_read(
                     'IAAS',
                     'subnet',
-                    vm_ip['idSubnet']
+                    vm_ip['idSubnet'],
                 )
                 address_range = str(ip_subnet['addressRange'])
                 vm_json['gateway'] = address_range.split('/')[0]
                 vm_json['netmask'] = address_range.split('/')[1]
                 vm_json['netmask_ip'] = str(
-                    netaddr.IPNetwork(address_range).netmask
+                    netaddr.IPNetwork(address_range).netmask,
                 )
                 vm_json['vlan'] = ip_subnet['vLAN']
     vm_json['lang'] = 'en_IE'  # need to add in db (for kvm and hyperv)
@@ -178,7 +178,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
         'IAAS',
         'macaddress',
         {},
-        idServer=vm['idServer']
+        idServer=vm['idServer'],
     )
     # get the server's ip address from the mac address, there will be only one
     # mac address with its status as True and a valid ipaddress out of many mac
@@ -194,7 +194,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
                     f'Exception occurred during reading ip address of mac '
                     f'with id:{mac["idMacAddress"]} so {vm_id} vm is '
                     f'unresourced',
-                    exc_info=True
+                    exc_info=True,
                 )
                 # changing state to Unresourced (3)
                 vm['state'] = 3
@@ -219,7 +219,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
     # Despatching VMBuilder driver
     if vm_builder.vm_build(vm_json, password):
         logger.info(
-            f'VM #{vm["idVM"]} successfully built in Asset #{vm["idAsset"]}'
+            f'VM #{vm["idVM"]} successfully built in Asset #{vm["idAsset"]}',
         )
         # changing state to Built (4)
         vm['state'] = 4
@@ -229,7 +229,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
     else:
         logger.error(
             f'VM #{vm_id} failed to build, so it is being moved to '
-            'Unresourced state. Check log for details'
+            'Unresourced state. Check log for details',
         )
         # changing state to Unresourced (3)
         vm['state'] = 3
