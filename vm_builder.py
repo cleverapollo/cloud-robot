@@ -29,7 +29,7 @@ def vm_build(vm: dict, password: str) -> bool:
     else:
         driver_logger.error(
             f'Unsupported  idHypervisor={vm["hypervisor"]} value of VM '
-            f"{vm['vm_identifier']} cannot be built"
+            f'{vm["vm_identifier"]} cannot be built',
         )
         return False
 
@@ -48,39 +48,37 @@ def _build_windows_vm(vm: dict, password: str) -> bool:
     vm_built = False
     if vm['id_image'] == 3:
         xml = utils.jinja_env.get_template(
-            'windows2016_unattend.j2'
+            'windows2016_unattend.j2',
         ).render(**vm)
     else:
         driver_logger.error(
             f'Invalid id_image={vm["id_image"]} value of VM '
             f'{vm["vm_identifier"]} which does not belong to Windows family '
-            f'so vm cannot be built'
+            f'so vm cannot be built',
         )
         return vm_built
 
     try:
-        with open(
-            f'{drive_path}unattend_xmls/{vm["vm_identifier"]}.xml',
-            'w'
-        ) as file:
+        file_name = f'{drive_path}unattend_xmls/{vm["vm_identifier"]}.xml'
+        with open(file_name, 'w') as file:
             file.write(xml)
         driver_logger.debug(
-            f'Generated xml file for vm #{vm["vm_identifier"]}\n{xml}'
+            f'Generated xml file for vm #{vm["vm_identifier"]}\n{xml}',
         )
     except Exception:
         driver_logger.error(
             f'Failed to write unattend to file for VM {vm["vm_identifier"]}',
-            exc_info=True
+            exc_info=True,
         )
         return vm_built
 
     try:
         session = winrm.Session(
             vm['host_name'],
-            auth=('administrator', str(password))
+            auth=('administrator', str(password)),
         )
         cmd = utils.jinja_env.get_template(
-            'win_cmd.j2'
+            'win_cmd.j2',
         ).render(freenas_url=freenas_url, **vm)
         run = session.run_cmd(cmd)
         if run.std_out:
@@ -93,7 +91,7 @@ def _build_windows_vm(vm: dict, password: str) -> bool:
         driver_logger.error(
             f'Exception thrown when attempting to connect to '
             f'{vm["host_name"]} for WinRM',
-            exc_info=True
+            exc_info=True,
         )
     return vm_built
 
@@ -111,17 +109,17 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
     # kickstart file creation
     if vm['id_image'] in [10, 11]:
         ks_text = utils.jinja_env.get_template(
-            'centos_kickstart.j2'
+            'centos_kickstart.j2',
         ).render(**vm)
     elif vm['id_image'] in [6, 7, 8, 9]:
         ks_text = utils.jinja_env.get_template(
-            'ubuntu_kickstart.j2'
+            'ubuntu_kickstart.j2',
         ).render(**vm)
     else:
         driver_logger.error(
             f'Invalid id_image={vm["id_image"]} value of VM '
             f'{vm["vm_identifier"]} which does not belong to Linux family so '
-            f'vm cannot be built'
+            f'vm cannot be built',
         )
         return vm_built
 
@@ -130,26 +128,27 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
         with open(f'{drive_path}kickstarts/{ks_file}', 'w') as ks:
             ks.write(ks_text)
         driver_logger.debug(
-            f'Generated KS file for vm #{vm["vm_identifier"]}\n{ks_text}'
+            f'Generated KS file for vm #{vm["vm_identifier"]}\n{ks_text}',
         )
     except Exception:
         driver_logger.error(
             f'Failed to write kickstart to file for VM {vm["vm_identifier"]}',
-            exc_info=True
+            exc_info=True,
         )
         return vm_built
 
     # bridge network xml file creation
-    bridge_file = Path(f'{drive_path}bridge_xmls/br{ vm["vlan"] }.xml')
+    bridge_file_name = f'{drive_path}bridge_xmls/br{ vm["vlan"] }.xml'
+    bridge_file = Path(bridge_file_name)
     if not bridge_file.is_file():
         xml_text = utils.jinja_env.get_template(
-            'kvm_bridge_network.j2'
+            'kvm_bridge_network.j2',
         ).render(**vm)
-        with open(f'{drive_path}bridge_xmls/br{ vm["vlan"] }', 'w') as xt:
+        with open(bridge_file_name, 'w') as xt:
             xt.write(xml_text)
     # make the cmd
     cmd = utils.jinja_env.get_template(
-        'linux_cmd.j2'
+        'linux_cmd.j2',
     ).render(drive_path=drive_path, **vm)
     try:
         client = paramiko.SSHClient()
@@ -157,7 +156,7 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
         client.connect(
             hostname=vm['host_ip'],
             username='administrator',
-            password=password
+            password=password,
         )
         stdin, stdout, stderr = client.exec_command(cmd)
         if stdout:
@@ -170,7 +169,7 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
         driver_logger.error(
             f'Exception occurred during SSHing into host {vm["host_ip"]} '
             f'for the build of VM #{vm["vm_identifier"]}',
-            exc_info=True
+            exc_info=True,
         )
     finally:
         client.close()
