@@ -16,7 +16,7 @@ __all__ = [
     'Token',
     'get_logger_for_name',
     'get_current_git_sha',
-    'get_influx_client'
+    'get_influx_client',
 ]
 
 
@@ -24,7 +24,7 @@ INFLUX_CLIENT = None
 
 jinja_env = jinja2.Environment(
     loader=jinja2.FileSystemLoader('templates'),
-    trim_blocks=True
+    trim_blocks=True,
 )
 # Maps names to a handler to prevent creating multiple handlers
 handlers_for_name = {}
@@ -48,7 +48,7 @@ class Token:
             self._token = get_admin_session().get_token()
             self._created = datetime.now()
             get_logger_for_name('utils.Token').info(
-                f'Generated new token: {old_token} -> {self._token}'
+                f'Generated new token: {old_token} -> {self._token}',
             )
         return self._token
 
@@ -69,12 +69,12 @@ def get_logger_for_name(name: str, level=logging.DEBUG) -> logging.Logger:
     if name not in handlers_for_name:
         fmt = logging.Formatter(
             fmt='%(asctime)s - %(name)s: %(levelname)s: %(message)s',
-            datefmt='%d/%m/%y @ %H:%M:%S'
+            datefmt='%d/%m/%y @ %H:%M:%S',
         )
         handler = logging.handlers.RotatingFileHandler(
             f'/var/log/robot/robot.log',
             maxBytes=1024 ** 3,
-            backupCount=7
+            backupCount=7,
         )
         handler.setFormatter(fmt)
         handlers_for_name[name] = handler
@@ -89,9 +89,11 @@ def get_current_git_sha() -> str:
     Finds the current git commit sha and returns it
     :return: The sha of the current commit
     """
-    return subprocess.check_output(
-        ['git', 'describe', '--always']
-    ).strip().decode()
+    return subprocess.check_output([
+        'git',
+        'describe',
+        '--always',
+    ]).strip().decode()
 
 
 def get_influx_client() -> influxdb.InfluxDBClient:
@@ -104,6 +106,6 @@ def get_influx_client() -> influxdb.InfluxDBClient:
         INFLUX_CLIENT = influxdb.InfluxDBClient(
             host='influx.cloudcix.com',
             port=80,
-            database='robot'
+            database='robot',
         )
     return INFLUX_CLIENT

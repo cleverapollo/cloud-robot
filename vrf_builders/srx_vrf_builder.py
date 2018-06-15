@@ -24,13 +24,13 @@ def vrf_build(vrf: dict, password: str) -> bool:
     :return: Flag stating whether or not the build was successful
     """
     driver_logger.info(
-        f'Generating configuration for project #{vrf["idProject"]}'
+        f'Generating configuration for project #{vrf["idProject"]}',
     )
     template = utils.jinja_env.get_template('srx_set_conf.j2')
     conf = template.render(**vrf)
     # Log the setconf to debug
     driver_logger.debug(
-        f'Generated setconf for project #{vrf["idProject"]}\n{conf}'
+        f'Generated setconf for project #{vrf["idProject"]}\n{conf}',
     )
     # TODO - IKE VPNs
 
@@ -52,7 +52,7 @@ def deploy_setconf(setconf: str, ip: str, password: str) -> bool:
     success = False
     # Open Router
     driver_logger.info(
-        f'Attempting to connect to router @ {ip}'
+        f'Attempting to connect to router @ {ip}',
     )
     dev = Device(host=ip, user='robot', password=password, port=22)
     cu = Config(dev)
@@ -61,13 +61,13 @@ def deploy_setconf(setconf: str, ip: str, password: str) -> bool:
     except Exception:
         driver_logger.error(
             f'Unable to connect to router @ {ip}',
-            exc_info=True
+            exc_info=True,
         )
         return success
     # Lock Router
     driver_logger.info(
         f'Successfully connected to router @ {ip}.'
-        f' Attempting to lock router to apply configuration'
+        f' Attempting to lock router to apply configuration',
     )
     try:
         cu.lock()
@@ -82,29 +82,29 @@ def deploy_setconf(setconf: str, ip: str, password: str) -> bool:
     # Load Configuration
     driver_logger.info(
         f'Successfully locked router @ {ip}. '
-        f'Now attempting to apply configuration.'
+        f'Now attempting to apply configuration.',
     )
     try:
         for cmd in setconf.split('\n'):
             driver_logger.debug(
-                f'Attempting to run "{cmd}" on the router.'
+                f'Attempting to run "{cmd}" on the router.',
             )
             cu.load(cmd, format='set', merge=True)
     except (ConfigLoadError, Exception):
         driver_logger.error(
             f'Unable to load configuration changes on router @ {ip}.',
-            exc_info=True
+            exc_info=True,
         )
         driver_logger.info(
             f'Attempting to unlock configuration on router @ {ip} '
-            f'after exception'
+            f'after exception',
         )
         try:
             cu.unlock()
         except UnlockError:
             driver_logger.error(
                 f'Unable to unlock configuration on router @ {ip}',
-                exc_info=True
+                exc_info=True,
             )
         dev.close()
         return success
@@ -112,7 +112,7 @@ def deploy_setconf(setconf: str, ip: str, password: str) -> bool:
     # Commit Configuration
     driver_logger.info(
         f'All commands loaded successfully onto router @ {ip}. '
-        f'Attempting to commit the changes'
+        f'Attempting to commit the changes',
     )
     try:
         cu.commit(comment=f'Loaded by robot at {time.asctime()}.')
@@ -120,18 +120,18 @@ def deploy_setconf(setconf: str, ip: str, password: str) -> bool:
     except CommitError:
         driver_logger.error(
             f'Unable to commit changes onto router @ {ip}',
-            exc_info=True
+            exc_info=True,
         )
         return success
     driver_logger.info(
-        f'Attempting to unlock configuration on router @ {ip}'
+        f'Attempting to unlock configuration on router @ {ip}',
     )
     try:
         cu.unlock()
     except UnlockError:
         driver_logger.error(
             f'Unable to unlock configuration on router @ {ip}',
-            exc_info=True
+            exc_info=True,
         )
         dev.close()
     return success

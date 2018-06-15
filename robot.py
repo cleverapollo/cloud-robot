@@ -48,7 +48,7 @@ def mainloop(watcher: INotify, process_pool: mp.Pool):
             # Spawn a new robot process in the background
             subprocess.Popen(
                 ['python3', 'robot.py'],
-                env=os.environ
+                env=os.environ,
             )
             # Wait a couple of seconds for the new robot to take over
             time.sleep(2)
@@ -101,7 +101,7 @@ if __name__ == '__main__':
     # Log the current commit to both the file and InfluxDB
     robot_logger.info(
         f'Robot starting. Current Commit >> {current_commit}. '
-        f'ROBOT_ENV={settings.ROBOT_ENV}'
+        f'ROBOT_ENV={settings.ROBOT_ENV}',
     )
     if settings.ROBOT_ENV != 'dev':
         metrics.current_commit(current_commit)
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     mp.set_start_method('fork')
     pool = mp.Pool(
         processes=None,
-        maxtasksperchild=1
+        maxtasksperchild=1,
     )
     rc = 0
     try:
@@ -121,7 +121,7 @@ if __name__ == '__main__':
     except Exception:
         robot_logger.error(
             'Exception thrown in robot. Exiting.',
-            exc_info=True
+            exc_info=True,
         )
         rc = 1
     finally:
