@@ -164,11 +164,17 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
         )
         stdin, stdout, stderr = client.exec_command(cmd)
         if stdout:
-            for line in stdout:
-                driver_logger.info(line)
+            msg = stdout.read().strip()
+            if msg:
+                driver_logger.info(
+                    f'Received stdout from client: {msg}',
+                )
             vm_built = True
         elif stderr:
-            driver_logger.error(stderr)
+            driver_logger.error(
+                f'Received stderr from client: {stderr.read().strip()}',
+            )
+        client.close()
     except Exception:
         driver_logger.error(
             f'Exception occurred during SSHing into host {vm["host_ip"]} '
