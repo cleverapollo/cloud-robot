@@ -9,7 +9,7 @@ lint:
     script:
         - flake8
 
-build-alpha:
+build-image:
     stage: build
     tags:
         - docker-build
