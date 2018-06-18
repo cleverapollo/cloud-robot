@@ -72,7 +72,7 @@ def handle_sigterm(*args):
     """
     global sigterm_recv
     robot_logger.info(
-        'SIGTERM received. Gracefully shutting down after current loop.'
+        'SIGTERM received. Gracefully shutting down after current loop.',
     )
     sigterm_recv = True
 
