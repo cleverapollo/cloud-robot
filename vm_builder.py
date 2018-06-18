@@ -174,34 +174,34 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
             password=password,
         )
         # First command
+        driver_logger.info(
+            f'Executing cmd:{cmd1} to build bridge:br{vm["vlan"]}, ',
+        )
         stdin, stdout, stderr = client.exec_command(cmd1)
         if stdout:
             msg = stdout.read().strip()
-            if msg:
+        ‘    if msg:
                 driver_logger.info(
-                    f'Executed cmd:{cmd1} to build bridge:br{vm["vlan"]}, '
                     f'received stdout from client: {msg}',
                 )
         elif stderr:
             driver_logger.error(
-                f'Executed cmd:{cmd1} to build bridge:br{vm["vlan"]}, '
                 f'received stderr from client: {stderr.read().strip()}',
             )
         # Second command
+        driver_logger.info(
+            f'Executing cmd:{cmd2} to build VM #{vm["vm_identifier"]}, ',
+        )
         stdin, stdout, stderr = client.exec_command(cmd2)
         if stdout:
             msg = stdout.read().strip()
             if msg:
                 driver_logger.info(
-                    f'Executed cmd:{cmd2} to build VM '
-                    f'#{vm["vm_identifier"]}, '
                     f'received stdout from client: {msg}',
                 )
             vm_built = True
         elif stderr:
             driver_logger.error(
-                f'Executed cmd:{cmd2} to build VM '
-                f'#{vm["vm_identifier"]}, '
                 f'received stderr from client: {stderr.read().strip()}',
             )
     except Exception:
