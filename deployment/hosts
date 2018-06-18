@@ -3,4 +3,3 @@
 
 [staging:vars]
 env=alpha
-branch=master
