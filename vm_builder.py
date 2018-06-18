@@ -180,7 +180,7 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
         stdin, stdout, stderr = client.exec_command(cmd1)
         if stdout:
             msg = stdout.read().strip()
-        ‘    if msg:
+            if msg:
                 driver_logger.info(
                     f'received stdout from client: {msg}',
                 )
