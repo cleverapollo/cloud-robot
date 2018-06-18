@@ -1,5 +1,6 @@
 stages:
     - lint
+    - build
     - deploy
 
 lint:
@@ -7,6 +8,16 @@ lint:
     stage: lint
     script:
         - flake8
+
+build-alpha:
+    stage: build
+    tags:
+        - docker-build
+    script:
+        - docker build -t gitlab.cloudcix.com:5005/cloudcix/robot:latest --no-cache .
+        - docker push gitlab.cloudcix.com:5005/cloudcix/robot:latest
+    after_script:
+        - docker system prune -f
 
 deploy_staging:
     image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
