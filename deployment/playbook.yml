@@ -2,6 +2,11 @@
 - hosts: "{{ deployment_host | default('staging') }}"
   remote_user: administrator
   tasks:
+    - name: Gracefully shut down last container
+      docker_container:
+        name: "robot-{{ env }}"
+        state: stopped
+        stop_timeout: 300
     - name: Deploy latest Robot image for {{ env }} region
       docker_container:
         - name: "robot-{{ env }}"
