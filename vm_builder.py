@@ -151,8 +151,11 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
         with open(bridge_file_name, 'w') as xt:
             xt.write(xml_text)
     # make the cmd
-    cmd = utils.jinja_env.get_template(
-        'linux_cmd.j2',
+    cmd1 = utils.jinja_env.get_template(
+        'linux_cmd1.j2',
+    ).render(drive_path=drive_path, **vm)
+    cmd2 = utils.jinja_env.get_template(
+        'linux_cmd2.j2',
     ).render(drive_path=drive_path, **vm)
     try:
         client = paramiko.SSHClient()
@@ -162,19 +165,31 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
             username='administrator',
             password=password,
         )
-        stdin, stdout, stderr = client.exec_command(cmd)
+        # First command
+        stdin, stdout, stderr = client.exec_command(cmd1)
         if stdout:
             msg = stdout.read().strip()
             if msg:
                 driver_logger.info(
-                    f'Received stdout from client: {msg}',
+                    f'Received 1st stdout from client: {msg}',
+                )
+        elif stderr:
+            driver_logger.error(
+                f'Received 1st stderr from client: {stderr.read().strip()}',
+            )
+        # Second command
+        stdin, stdout, stderr = client.exec_command(cmd2)
+        if stdout:
+            msg = stdout.read().strip()
+            if msg:
+                driver_logger.info(
+                    f'Received 2nd stdout from client: {msg}',
                 )
             vm_built = True
         elif stderr:
             driver_logger.error(
-                f'Received stderr from client: {stderr.read().strip()}',
+                f'Received 2nd stderr from client: {stderr.read().strip()}',
             )
-        client.close()
     except Exception:
         driver_logger.error(
             f'Exception occurred during SSHing into host {vm["host_ip"]} '
