@@ -1,7 +1,5 @@
 # python
 import multiprocessing as mp
-import os
-import subprocess
 import sys
 import time
 
