@@ -18,6 +18,8 @@ build-image:
         - docker push gitlab.cloudcix.com:5005/cloudcix/robot:latest
     after_script:
         - docker system prune -f
+    only:
+        - master
 
 deploy_staging:
     image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
@@ -28,4 +30,5 @@ deploy_staging:
     stage: deploy
     script:
         - ansible-playbook -i deployment/hosts deployment/playbook.yml
-    only: ["master"]
+    only:
+        - master
