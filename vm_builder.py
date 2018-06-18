@@ -87,7 +87,7 @@ def _build_windows_vm(vm: dict, password: str) -> bool:
         run = session.run_cmd(cmd)
         if run.std_out:
             driver_logger.info(
-                f'Excecuted cmd:{cmd} to build a VM #{vm["vm_identifier"]}, '
+                f'Executed cmd:{cmd} to build VM #{vm["vm_identifier"]}, '
                 f'received std_out from client:',
             )
             for line in run.std_out:
@@ -95,7 +95,7 @@ def _build_windows_vm(vm: dict, password: str) -> bool:
             vm_built = True
         elif run.std_err:
             driver_logger.info(
-                f'Excecuted cmd:{cmd} to build a VM #{vm["vm_identifier"]}, '
+                f'Executed cmd:{cmd} to build VM #{vm["vm_identifier"]}, '
                 f'received std_err from client:',
             )
             driver_logger.error(run.std_err)
@@ -179,12 +179,12 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
             msg = stdout.read().strip()
             if msg:
                 driver_logger.info(
-                    f'Excecuted cmd:{cmd1} to build a bridge:br{vm["vlan"]}, '
+                    f'Executed cmd:{cmd1} to build bridge:br{vm["vlan"]}, '
                     f'received stdout from client: {msg}',
                 )
         elif stderr:
             driver_logger.error(
-                f'Excecuted cmd:{cmd1} to build a bridge:br{vm["vlan"]}, '
+                f'Executed cmd:{cmd1} to build bridge:br{vm["vlan"]}, '
                 f'received stderr from client: {stderr.read().strip()}',
             )
         # Second command
@@ -193,14 +193,14 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
             msg = stdout.read().strip()
             if msg:
                 driver_logger.info(
-                    f'Excecuted cmd:{cmd2} to build a VM '
+                    f'Executed cmd:{cmd2} to build VM '
                     f'#{vm["vm_identifier"]}, '
                     f'received stdout from client: {msg}',
                 )
             vm_built = True
         elif stderr:
             driver_logger.error(
-                f'Excecuted cmd:{cmd2} to build a VM '
+                f'Executed cmd:{cmd2} to build VM '
                 f'#{vm["vm_identifier"]}, '
                 f'received stderr from client: {stderr.read().strip()}',
             )
