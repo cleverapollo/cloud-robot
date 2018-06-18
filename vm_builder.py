@@ -82,14 +82,22 @@ def _build_windows_vm(vm: dict, password: str) -> bool:
             auth=('administrator', str(password)),
         )
         cmd = utils.jinja_env.get_template(
-            'win_cmd.j2',
+            'windows_vm_build_cmd.j2',
         ).render(freenas_url=freenas_url, **vm)
         run = session.run_cmd(cmd)
         if run.std_out:
+            driver_logger.info(
+                f'Excecuted cmd:{cmd} to build a VM #{vm["vm_identifier"]}, '
+                f'received std_out from client:'
+            )
             for line in run.std_out:
                 driver_logger.info(line)
             vm_built = True
         elif run.std_err:
+            driver_logger.info(
+                f'Excecuted cmd:{cmd} to build a VM #{vm["vm_identifier"]}, '
+                f'received std_err from client:'
+            )
             driver_logger.error(run.std_err)
     except Exception:
         driver_logger.error(
@@ -152,10 +160,10 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
             xt.write(xml_text)
     # make the cmd
     cmd1 = utils.jinja_env.get_template(
-        'linux_cmd1.j2',
+        'kvm_bridge_build_cmd.j2',
     ).render(drive_path=drive_path, **vm)
     cmd2 = utils.jinja_env.get_template(
-        'linux_cmd2.j2',
+        'linux_vm_build_cmd.j2',
     ).render(drive_path=drive_path, **vm)
     try:
         client = paramiko.SSHClient()
@@ -171,11 +179,13 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
             msg = stdout.read().strip()
             if msg:
                 driver_logger.info(
-                    f'Received 1st stdout from client: {msg}',
+                    f'Excecuted cmd:{cmd1} to build a bridge:br{vm["vlan"]}, '
+                    f'received stdout from client: {msg}',
                 )
         elif stderr:
             driver_logger.error(
-                f'Received 1st stderr from client: {stderr.read().strip()}',
+                f'Excecuted cmd:{cmd1} to build a bridge:br{vm["vlan"]}, '
+                f'received stderr from client: {stderr.read().strip()}',
             )
         # Second command
         stdin, stdout, stderr = client.exec_command(cmd2)
@@ -183,12 +193,16 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
             msg = stdout.read().strip()
             if msg:
                 driver_logger.info(
-                    f'Received 2nd stdout from client: {msg}',
+                    f'Excecuted cmd:{cmd2} to build a VM '
+                    f'#{vm["vm_identifier"]}, '
+                    f'received stdout from client: {msg}',
                 )
             vm_built = True
         elif stderr:
             driver_logger.error(
-                f'Received 2nd stderr from client: {stderr.read().strip()}',
+                f'Excecuted cmd:{cmd2} to build a VM '
+                f'#{vm["vm_identifier"]}, '
+                f'received stderr from client: {stderr.read().strip()}',
             )
     except Exception:
         driver_logger.error(
