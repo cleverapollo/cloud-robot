@@ -1,4 +1,5 @@
 # python
+import logging
 import paramiko
 import winrm
 from crypt import crypt, mksalt, METHOD_SHA512
@@ -6,7 +7,10 @@ from pathlib import Path
 # local
 import utils
 
-driver_logger = utils.get_logger_for_name('vm_builder.vm_build')
+driver_logger = utils.get_logger_for_name(
+    'vm_builder.vm_build',
+    logging.DEBUG
+)
 
 
 def vm_build(vm: dict, password: str) -> bool:
@@ -56,9 +60,10 @@ def _build_windows_vm(vm: dict, password: str) -> bool:
         ).render(**vm)
     else:
         driver_logger.error(
-            f'Invalid id_image={vm["id_image"]} value of VM '
-            f'{vm["vm_identifier"]} which does not belong to Windows family '
-            f'so vm cannot be built',
+            f'Invalid id_image for VM '
+            f'#{vm["vm_identifier"]}. VM is set to KVM hypervisor but '
+            'does not have a valid Windows image id; expected in [3], '
+            f'received {vm["id_image"]}',
         )
         return vm_built
 
@@ -84,19 +89,26 @@ def _build_windows_vm(vm: dict, password: str) -> bool:
         cmd = utils.jinja_env.get_template(
             'windows_vm_build_cmd.j2',
         ).render(freenas_url=freenas_url, **vm)
+        driver_logger.debug(
+            f'Windows VM Build Command for VM  #{vm["vm_identifier"]}'
+            f'generated:\n{cmd}',
+        )
+        driver_logger.info(
+            'Executing command to build VM  #{vm["vm_identifier"]}'
+        )
         run = session.run_cmd(cmd)
         if run.std_out:
+            msg = run.std_out.strip()
             driver_logger.info(
-                f'Executed cmd:{cmd} to build VM #{vm["vm_identifier"]}, '
-                f'received std_out from client:',
+                f'Build of VM  #{vm["vm_identifier"]} generated stdout: '
+                f'{msg}',
             )
-            for line in run.std_out:
-                driver_logger.info(line)
             vm_built = True
         elif run.std_err:
+            run.std_err.strip()
             driver_logger.info(
-                f'Executed cmd:{cmd} to build VM #{vm["vm_identifier"]}, '
-                f'received std_err from client:',
+               f'Build of VM  #{vm["vm_identifier"]} generated stderr: '
+                f'{msg}',
             )
             driver_logger.error(run.std_err)
     except Exception:
@@ -119,19 +131,20 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
     drive_path = '/mnt/images/KVM/'
 
     # kickstart file creation
-    if vm['id_image'] in [10, 11]:
-        ks_text = utils.jinja_env.get_template(
-            'centos_kickstart.j2',
-        ).render(**vm)
-    elif vm['id_image'] in [6, 7, 8, 9]:
+    if vm['id_image'] in [6, 7, 8, 9]:
         ks_text = utils.jinja_env.get_template(
             'ubuntu_kickstart.j2',
         ).render(**vm)
+    elif vm['id_image'] in [10, 11]:
+        ks_text = utils.jinja_env.get_template(
+            'centos_kickstart.j2',
+        ).render(**vm)
     else:
         driver_logger.error(
-            f'Invalid id_image={vm["id_image"]} value of VM '
-            f'{vm["vm_identifier"]} which does not belong to Linux family so '
-            f'vm cannot be built',
+            f'Invalid id_image for VM '
+            f'#{vm["vm_identifier"]}. VM is set to KVM hypervisor but '
+            'does not have a valid Linux image id; expected in [6..11], '
+            f'received {vm["id_image"]}',
         )
         return vm_built
 
@@ -158,13 +171,14 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
         ).render(**vm)
         with open(bridge_file_name, 'w') as xt:
             xt.write(xml_text)
-    # make the cmd
-    cmd1 = utils.jinja_env.get_template(
+    # make the bridge building command
+    cmd = utils.jinja_env.get_template(
         'kvm_bridge_build_cmd.j2',
     ).render(drive_path=drive_path, **vm)
-    cmd2 = utils.jinja_env.get_template(
-        'linux_vm_build_cmd.j2',
-    ).render(drive_path=drive_path, **vm)
+    driver_logger.debug(
+        f'Generated Bridge Build command for VM #{vm["vm_identifier"]}:'
+        f'\n{cmd}',
+    )
     try:
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -175,34 +189,48 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
         )
         # First command
         driver_logger.info(
-            f'Executing cmd:{cmd1} to build bridge:br{vm["vlan"]}, ',
+            f'Attempting to build bridge network for VM '
+            f'#{vm["vm_identifier"]}',
         )
-        stdin, stdout, stderr = client.exec_command(cmd1)
+        stdin, stdout, stderr = client.exec_command(cmd)
         if stdout:
             msg = stdout.read().strip()
             if msg:
                 driver_logger.info(
-                    f'received stdout from client: {msg}',
+                    f'Bridge network build for VM #{vm["vm_identifier"]} '
+                    f'generated stdout: {msg}',
                 )
         elif stderr:
+            msg = stderr.read().strip()
             driver_logger.error(
-                f'received stderr from client: {stderr.read().strip()}',
+                f'Bridge network build for VM #{vm["vm_identifier"]} '
+                f'generated stderr: {msg}',
             )
-        # Second command
-        driver_logger.info(
-            f'Executing cmd:{cmd2} to build VM #{vm["vm_identifier"]}, ',
+        # Generate the VM build command
+        cmd = utils.jinja_env.get_template(
+            'linux_vm_build_cmd.j2',
+        ).render(drive_path=drive_path, **vm)
+        driver_logger.debug(
+            f'Generated VM Build command for VM #{vm["vm_identifier"]}:'
+            f'\n{cmd}',
         )
-        stdin, stdout, stderr = client.exec_command(cmd2)
+        driver_logger.info(
+            f'Attempting to build VM #{vm["vm_identifier"]}',
+        )
+        stdin, stdout, stderr = client.exec_command(cmd)
         if stdout:
             msg = stdout.read().strip()
             if msg:
                 driver_logger.info(
-                    f'received stdout from client: {msg}',
+                    f'VM build for VM #{vm["vm_identifier"]} '
+                    f'generated stdout: {msg}',
                 )
             vm_built = True
         elif stderr:
+            msg = stderr.read().strip()
             driver_logger.error(
-                f'received stderr from client: {stderr.read().strip()}',
+                f'VM build for VM #{vm["vm_identifier"]} '
+                f'generated stderr: {msg}',
             )
     except Exception:
         driver_logger.error(
