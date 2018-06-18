@@ -194,14 +194,14 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
         )
         stdin, stdout, stderr = client.exec_command(cmd)
         if stdout:
-            msg = stdout.read().strip()
+            msg = stdout.read().decode().strip()
             if msg:
                 driver_logger.info(
                     f'Bridge network build for VM #{vm["vm_identifier"]} '
                     f'generated stdout: {msg}',
                 )
         elif stderr:
-            msg = stderr.read().strip()
+            msg = stderr.read().decode().strip()
             driver_logger.error(
                 f'Bridge network build for VM #{vm["vm_identifier"]} '
                 f'generated stderr: {msg}',
