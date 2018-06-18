@@ -88,7 +88,7 @@ def _build_windows_vm(vm: dict, password: str) -> bool:
         if run.std_out:
             driver_logger.info(
                 f'Excecuted cmd:{cmd} to build a VM #{vm["vm_identifier"]}, '
-                f'received std_out from client:'
+                f'received std_out from client:',
             )
             for line in run.std_out:
                 driver_logger.info(line)
@@ -96,7 +96,7 @@ def _build_windows_vm(vm: dict, password: str) -> bool:
         elif run.std_err:
             driver_logger.info(
                 f'Excecuted cmd:{cmd} to build a VM #{vm["vm_identifier"]}, '
-                f'received std_err from client:'
+                f'received std_err from client:',
             )
             driver_logger.error(run.std_err)
     except Exception:
