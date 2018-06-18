@@ -9,7 +9,7 @@ import utils
 
 driver_logger = utils.get_logger_for_name(
     'vm_builder.vm_build',
-    logging.DEBUG
+    logging.DEBUG,
 )
 
 
@@ -94,7 +94,7 @@ def _build_windows_vm(vm: dict, password: str) -> bool:
             f'generated:\n{cmd}',
         )
         driver_logger.info(
-            'Executing command to build VM  #{vm["vm_identifier"]}'
+            'Executing command to build VM  #{vm["vm_identifier"]}',
         )
         run = session.run_cmd(cmd)
         if run.std_out:
@@ -107,7 +107,7 @@ def _build_windows_vm(vm: dict, password: str) -> bool:
         elif run.std_err:
             run.std_err.strip()
             driver_logger.info(
-               f'Build of VM  #{vm["vm_identifier"]} generated stderr: '
+                f'Build of VM  #{vm["vm_identifier"]} generated stderr: '
                 f'{msg}',
             )
             driver_logger.error(run.std_err)
