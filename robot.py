@@ -1,5 +1,6 @@
 # python
 import multiprocessing as mp
+import signal
 import sys
 import time
 
@@ -10,7 +11,7 @@ import ro
 import settings
 import utils
 
-
+sigterm_recv = False
 robot_logger = utils.get_logger_for_name('robot.mainloop')
 
 
@@ -18,8 +19,9 @@ def mainloop(process_pool: mp.Pool):
     """
     The main loop of the Robot program
     """
+    global sigterm_recv
     last = time.time()
-    while True:
+    while not sigterm_recv:
         metrics.heartbeat()
         # Now handle the loop events
         # #################  VRF BUILD ######################################
@@ -62,6 +64,19 @@ def mainloop(process_pool: mp.Pool):
         last = time.time()
 
 
+def handle_sigterm(*args):
+    """
+    Handles the receive of a SIGTERM and gracefully stops the mainloop after
+    it finishes it's current iteration. This is to allow a safe restart
+    without the chances of interrupting anything
+    """
+    global sigterm_recv
+    robot_logger.info(
+        'SIGTERM received. Gracefully shutting down after current loop.'
+    )
+    sigterm_recv = True
+
+
 if __name__ == '__main__':
     # When the script is run as the main
     current_commit = utils.get_current_git_sha()
@@ -80,6 +95,11 @@ if __name__ == '__main__':
         maxtasksperchild=1,
     )
     rc = 0
+    # Set up a SIGTERM listener
+    signal.signal(
+        signal.SIGTERM,
+        handle_sigterm,
+    )
     try:
         mainloop(pool)
     except KeyboardInterrupt:
