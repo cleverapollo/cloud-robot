@@ -4,7 +4,6 @@ import influxdb
 import logging
 import logging.handlers
 import subprocess
-import sys
 from datetime import datetime
 
 # libs
@@ -77,9 +76,7 @@ def get_logger_for_name(name: str, level=logging.DEBUG) -> logging.Logger:
         #     maxBytes=1024 ** 3,
         #     backupCount=7,
         # )
-        handler = logging.handlers.StreamHandler(
-            sys.stdout,
-        )
+        handler = logging.StreamHandler()
         handler.setFormatter(fmt)
         handlers_for_name[name] = handler
     else:
