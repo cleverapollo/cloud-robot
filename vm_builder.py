@@ -94,7 +94,7 @@ def _build_windows_vm(vm: dict, password: str) -> bool:
             f'generated:\n{cmd}',
         )
         driver_logger.info(
-            'Executing command to build VM  #{vm["vm_identifier"]}',
+            f'Executing command to build VM  #{vm["vm_identifier"]}',
         )
         run = session.run_cmd(cmd)
         if run.std_out:
