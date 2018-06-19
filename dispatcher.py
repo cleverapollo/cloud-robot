@@ -144,7 +144,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
         'cpu': vm['cpu'],
         'ram': vm['ram'],
         'id_image': vm['idImage'],
-        'image': str(image['name']).replace(' ', r'\ '),
+        'image': str(image['filename']),
         'hypervisor': image['idHypervisor'],
         'username': vm['name'],
         'user_password': ro.password_generator(chars='a', size=8),
