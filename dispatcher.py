@@ -149,7 +149,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
         'username': vm['name'],
         'user_password': ro.password_generator(chars='a', size=8),
         'root_password': ro.password_generator(),
-        'dns': vm['dns'].split(','),
+        'dns': vm['dns'],
     }
     # get the ipadddress and subnet details
     vm_ips = ro.service_entity_list('IAAS', 'ipaddress', {'vm': vm['idVM']})
