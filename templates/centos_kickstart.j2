@@ -1,35 +1,35 @@
 # Kickstart file for Image #{{ id_image }} in VM {{ vm_identifier }}
+{# Install OS instead of upgrade #}
+install
+{# Installation media #}
+cdrom
+{# System Language #}
+lang {{ lang }}.UTF-8
+{# System Keyboard #}
+keyboard {{ keyboard }}
+{# Firewall configuration #}
+firewall --disabled
+{# Run the setup agent on the first boot #}
+firstboot --disabled
+{# System Timezone #}
+timezone --utc {{ tz }}
+{# Use text mode install #}
+text
 {# System Authorization Information #}
 auth --enableshadow --passalgo=sha512
 {# Clear the MBR #}
 zerombr
 {# Partition Clearing Information #}
 clearpart --all --initlabel
-{# Use text mode install #}
-text
-{# Firewall configuration #}
-firewall --disabled
-{# Run the setup agent on the first boot #}
-firstboot --disable
-{# System Keyboard #}
-keyboard {{ keyboard }}
-{# System Language #}
-lang {{ lang }}.UTF-8
 {# Installation log level #}
 logging --level=info
-{# Installation media #}
-cdrom
 {# Network Information #}
 network --bootproto=static --ip={{ ip }} --netmask={{ netmask_ip }} --gateway={{ gateway }} --nameserver={{ dns }}
 {# System Bootloader information #}
 bootloader --location=mbr
 {# Disk Partioning #}
 clearpart --all --initlabel
-part swap --asprimary --fstype="swap" --size=1024
-part /boot --fstype xfs --size=200
-part pv.01 --size=1 --grow
-volgroup rootvg01 pv.01
-logvol / --fstype xfs --name=lv01 --vgname=rootvg01 --size=1 --grow
+autopart --type=lvm
 {# Root password #}
 rootpw --iscrypted {{ crypted_root_password }}
 {# Username / Password #}
@@ -38,12 +38,8 @@ user administrator --name "{{ username }}" --password={{ crypted_user_password }
 selinux --disabled
 {# Do not configure the X Window System #}
 skipx
-{# System Timezone #}
-timezone --utc {{ tz }}
-{# Install OS instead of upgrade #}
-install
 {# Reboot after installation #}
-reboot
+reboot --eject
 {# Install packages #}
 %packages
 @core
