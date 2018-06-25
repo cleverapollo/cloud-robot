@@ -177,7 +177,7 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
     ).render(drive_path=drive_path, **vm)
     driver_logger.debug(
         f'Generated Bridge Build command for VM #{vm["vm_identifier"]}:'
-        f'\n{cmd}',
+        f'\n{br_cmd}',
     )
     # make the vm build command
     vm_cmd = utils.jinja_env.get_template(
@@ -185,7 +185,7 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
     ).render(drive_path=drive_path, **vm)
     driver_logger.debug(
         f'Generated VM Build command for VM #{vm["vm_identifier"]}:'
-        f'\n{cmd}',
+        f'\n{vm_cmd}',
     )
     try:
         client = paramiko.SSHClient()
