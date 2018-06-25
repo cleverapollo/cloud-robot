@@ -139,10 +139,10 @@ def dispatch_vm(vm: dict, password: str) -> None:
     vm_json = {
         # Unique Identifer for VM
         'vm_identifier': f'{vm["idProject"]}_{vm["idVM"]}',
-        'hdd': vm['hdd'],
-        'flash': vm['flash'],
+        'hdd': vm['hdd'],  # in GBytes form
+        'flash': vm['flash'],  # in GBytes form
         'cpu': vm['cpu'],
-        'ram': vm['ram'],
+        'ram': vm['ram']*1024,  # in MBytes form
         'id_image': vm['idImage'],
         'image': str(image['filename']),
         'hypervisor': image['idHypervisor'],

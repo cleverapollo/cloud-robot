@@ -187,26 +187,26 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
             username='administrator',
             password=password,
         )
-        # First command
-        # driver_logger.info(
-        #     f'Attempting to build bridge network for VM '
-        #     f'#{vm["vm_identifier"]}',
-        # )
-        # stdin, stdout, stderr = client.exec_command(cmd)
-        # if stdout:
-        #     msg = stdout.read().decode().strip()
-        #     if msg:
-        #         driver_logger.info(
-        #             f'Bridge network build for VM #{vm["vm_identifier"]} '
-        #             f'generated stdout: {msg}',
-        #         )
-        # elif stderr:
-        #     msg = stderr.read().decode().strip()
-        #     driver_logger.error(
-        #         f'Bridge network build for VM #{vm["vm_identifier"]} '
-        #         f'generated stderr: {msg}',
-        #     )
-        # Generate the VM build command
+        # executing bridge interface build command
+        driver_logger.info(
+            f'Attempting to build bridge network for VM '
+            f'#{vm["vm_identifier"]}',
+        )
+        stdin, stdout, stderr = client.exec_command(cmd)
+        if stdout:
+            msg = stdout.read().decode().strip()
+            if msg:
+                driver_logger.info(
+                    f'Bridge network build for VM #{vm["vm_identifier"]} '
+                    f'generated stdout: {msg}',
+                )
+        elif stderr:
+            msg = stderr.read().decode().strip()
+            driver_logger.error(
+                f'Bridge network build for VM #{vm["vm_identifier"]} '
+                f'generated stderr: {msg}',
+            )
+        # executing the VM build command
         cmd = utils.jinja_env.get_template(
             'linux_vm_build_cmd.j2',
         ).render(drive_path=drive_path, **vm)
