@@ -32,7 +32,7 @@
 						<RouterDiscoveryEnabled>false</RouterDiscoveryEnabled>
 					</Ipv6Settings>
 					<UnicastIpAddresses>
-						<IpAddress wcm:action="add" wcm:keyValue="1">{{ ip }}</IpAddress>
+						<IpAddress wcm:action="add" wcm:keyValue="1">{{ ip }}/{{ netmask }}</IpAddress>
 					</UnicastIpAddresses>
 					<Identifier>Ethernet</Identifier>
 					<Routes>
@@ -73,15 +73,17 @@
 					<Value>{{ root_password }}</Value>
 					<PlainText>true</PlainText>
 				</AdministratorPassword>
-				<LocalAccounts wcm:action="add">
-					<Password>
-						<Value>{{ user_password }}</Value>
-						<PlainText>true</PlainText>
-					</Password>
-					<Description>User Account</Description>
-					<DisplayName>{{ username }}</DisplayName>
-					<Group>Administrators</Group>
-					<Name>{{ username }}</Name>
+				<LocalAccounts>
+                    <LocalAccount wcm:action="add">
+                        <Password>
+                            <Value>{{ user_password }}</Value>
+                            <PlainText>true</PlainText>
+                        </Password>
+                        <Description>User Account</Description>
+                        <DisplayName>{{ username }}</DisplayName>
+                        <Group>Administrators</Group>
+                        <Name>{{ username }}</Name>
+                    </LocalAccount>
 				</LocalAccounts>
 			</UserAccounts>
 			<TimeZone>{{ tz }}</TimeZone>
@@ -107,11 +109,11 @@
 			</FirstLogonCommands>
 		</component>
 		<component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-			<InputLocale>{{ language }}</InputLocale>
-			<SystemLocale>{{ language }}</SystemLocale>
-			<UILanguage>{{ language }}</UILanguage>
-			<UILanguageFallback>{{ language }}</UILanguageFallback>
-			<UserLocale>{{ language }}</UserLocale>
+			<InputLocale>{{ lang }}</InputLocale>
+			<SystemLocale>{{ lang }}</SystemLocale>
+			<UILanguage>{{ lang }}</UILanguage>
+			<UILanguageFallback>{{ lang }}</UILanguageFallback>
+			<UserLocale>{{ lang }}</UserLocale>
 		</component>
 	</settings>
 </unattend>
