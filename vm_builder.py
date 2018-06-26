@@ -94,7 +94,7 @@ def _build_windows_vm(vm: dict, password: str) -> bool:
             f'generated:\n{cmd}',
         )
         driver_logger.info(
-            'Executing command to build VM  #{vm["vm_identifier"]}',
+            f'Executing command to build VM  #{vm["vm_identifier"]}',
         )
         run = session.run_cmd(cmd)
         if run.std_out:
@@ -172,12 +172,20 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
         with open(bridge_file_name, 'w') as xt:
             xt.write(xml_text)
     # make the bridge building command
-    cmd = utils.jinja_env.get_template(
+    br_cmd = utils.jinja_env.get_template(
         'kvm_bridge_build_cmd.j2',
     ).render(drive_path=drive_path, **vm)
     driver_logger.debug(
         f'Generated Bridge Build command for VM #{vm["vm_identifier"]}:'
-        f'\n{cmd}',
+        f'\n{br_cmd}',
+    )
+    # make the vm build command
+    vm_cmd = utils.jinja_env.get_template(
+        'linux_vm_build_cmd.j2',
+    ).render(drive_path=drive_path, **vm)
+    driver_logger.debug(
+        f'Generated VM Build command for VM #{vm["vm_identifier"]}:'
+        f'\n{vm_cmd}',
     )
     try:
         client = paramiko.SSHClient()
@@ -187,12 +195,12 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
             username='administrator',
             password=password,
         )
-        # First command
+        # executing bridge interface build command
         driver_logger.info(
             f'Attempting to build bridge network for VM '
             f'#{vm["vm_identifier"]}',
         )
-        stdin, stdout, stderr = client.exec_command(cmd)
+        stdin, stdout, stderr = client.exec_command(br_cmd)
         if stdout:
             msg = stdout.read().decode().strip()
             if msg:
@@ -206,18 +214,11 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
                 f'Bridge network build for VM #{vm["vm_identifier"]} '
                 f'generated stderr: {msg}',
             )
-        # Generate the VM build command
-        cmd = utils.jinja_env.get_template(
-            'linux_vm_build_cmd.j2',
-        ).render(drive_path=drive_path, **vm)
-        driver_logger.debug(
-            f'Generated VM Build command for VM #{vm["vm_identifier"]}:'
-            f'\n{cmd}',
-        )
+        # executing the VM build command
         driver_logger.info(
             f'Attempting to build VM #{vm["vm_identifier"]}',
         )
-        stdin, stdout, stderr = client.exec_command(cmd)
+        stdin, stdout, stderr = client.exec_command(vm_cmd)
         if stdout:
             msg = stdout.read().strip()
             if msg:

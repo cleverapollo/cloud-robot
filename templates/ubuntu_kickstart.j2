@@ -1,6 +1,4 @@
 # Kickstart file for Image #{{ id_image }} in VM {{ vm_identifier }}
-{# System Authorization Information #}
-auth --useshadow --enablemd5
 {# System Language #}
 lang {{ lang }}
 {# Language Modules to install #}
@@ -38,7 +36,7 @@ auth --useshadow --enablemd5
 {# Network #}
 network --bootproto=static --ip={{ ip }} --netmask={{ netmask_ip }} --gateway={{ gateway }} --nameserver={{ dns }}
 {# Do not configure the X Window System #}
-iskipx
+skipx
 {# Post Install #}
 %packages
 @ ubuntu-server
