@@ -21,6 +21,8 @@ def vm_build(vm: dict, password: str) -> bool:
     :return: vm_built: Flag stating whether or not the build succeeded
     """
     if vm['hypervisor'] == 1:  # HyperV hosted
+        vm['dns'] = str(vm['dns']).split(',')
+        vm['tz'] = 'GMT Standard Time'
         return _build_windows_vm(vm, password)
     elif vm['hypervisor'] == 2:  # KVM hosted
         # encrypting root and user password
