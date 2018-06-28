@@ -1,1 +1,1 @@
-mount \\{{ freenas_url }} Z: -o nolock & powershell -file Z:\HyperV\scripts\VMCreator.ps1 -VMName {{ vm_identifier }} -Gen 1 -OSName {{ image }} -ProcessorCount {{ cpu }} -Dynamic 0 -Ram {{ ram }} -Hdd {{ hdd }} -Flash {{ flash }} -VlanId {{ vlan }} -Verbose
+mount \\\\{{ freenas_url }} Z: -o nolock & powershell -file Z:\HyperV\scripts\VMCreator.ps1 -VMName {{ vm_identifier }} -Gen 1 -OSName {{ image }} -ProcessorCount {{ cpu }} -Dynamic 0 -Ram {{ ram }} -Hdd {{ hdd }} -Flash {{ flash }} -VlanId {{ vlan }} -Verbose
