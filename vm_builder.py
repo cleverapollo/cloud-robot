@@ -52,7 +52,7 @@ def _build_windows_vm(vm: dict, password: str) -> bool:
     :return: vm_built: bool
     """
     # FREENAS mounted location in the host /mnt/images and drive path
-    freenas_url = 'alpha-freenas.cloudcix.com\\mnt\\volume\\alpha'
+    freenas_url = '\\\\alpha-freenas.cloudcix.com\\mnt\\volume\\alpha'
     drive_path = '/mnt/images/HyperV/'
 
     vm_built = False
