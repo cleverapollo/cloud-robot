@@ -1,38 +1,39 @@
 {# Create VRF #}
-set groups {{ idProject }} routing-instances vrf-{{ idProject }} instance-type virtual-router
+set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} instance-type virtual-router
 {# Create southbound sub interface and gateway for each VLAN and attach them to the VRF #}
 {% for vlan in vLANs %}
-set groups {{ idProject }} routing-instances vrf-{{ idProject }} interface ge-0/0/1.{{ vlan['vLAN'] }}
+set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} interface ge-0/0/1.{{ vlan['vLAN'] }}
 {% endfor %}
 {# Create a northbound route #}
-set groups {{ idProject }} routing-instances vrf-{{ idProject }} routing-options static route 0.0.0.0/0 next-table PUBLIC.inet.0
+set routing-instances PUBLIC routing-options static route vrf-{{ idProject }}.inet.0 next-hop {{ outBoundIP }}
+set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} routing-options static route 0.0.0.0/0 next-table PUBLIC
 {# Configure sub-interfaces #}
 {% for vlan in vLANs %}
-set groups {{ idProject }} interfaces ge-0/0/1 unit {{ vlan['vLAN'] }} description {{ idProject }}-{{ vlan['vLAN'] }} vlan-id {{ vlan['vLAN'] }} family inet address {{ vlan['subnet'] }}
+set groups vrf-{{ idProject }} interfaces ge-0/0/1 unit {{ vlan['vLAN'] }} description vrf-{{ idProject }}-{{ vlan['vLAN'] }} vlan-id {{ vlan['vLAN'] }} family inet address {{ vlan['subnet'] }}
 {% endfor %}
 {# Create private zones #}
 {% for vlan in vLANs %}
-set groups {{ idProject }} security zones security-zone {{ idProject }} interfaces ge-0/0/1.{{ vlan['vLAN'] }} host-inbound-traffic system-services ping
+set groups vrf-{{ idProject }} security zones security-zone vrf-{{ idProject }} interfaces ge-0/0/1.{{ vlan['vLAN'] }} host-inbound-traffic system-services ping
 {% endfor %}
 {# Source (outbound) NAT #}
-set groups {{ idProject }} security nat source rule-set {{ idProject }}-outbound description {{ idProject }}-outbound-nat
-set groups {{ idProject }} security nat source pool {{ idProject }}-public routing-instance vrf-{{ idProject }}
-set groups {{ idProject }} security nat source pool {{ idProject }}-public address {{ outBoundIP }}
-set groups {{ idProject }} security nat source rule-set {{ idProject }}-outbound from zone {{ idProject }}
-set groups {{ idProject }} security nat source rule-set {{ idProject }}-outbound to zone PUBLIC
+set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound description vrf-{{ idProject }}-outbound-nat
+set groups vrf-{{ idProject }} security nat source pool vrf-{{ idProject }}-public routing-instance vrf-{{ idProject }}
+set groups vrf-{{ idProject }} security nat source pool vrf-{{ idProject }}-public address {{ outBoundIP }}
+set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound from zone vrf-{{ idProject }}
+set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound to zone PUBLIC
 {% for vlan in vLANs %}
-set groups {{ idProject }} security nat source rule-set {{ idProject }}-outbound rule {{ vlan['vLAN'] }}-outbound match source-address {{ vlan['subnet'] }}
-set groups {{ idProject }} security nat source rule-set {{ idProject }}-outbound rule {{ vlan['vLAN'] }}-outbound then source-nat pool {{ idProject }}-public
+set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound rule {{ vlan['vLAN'] }}-outbound match source-address {{ vlan['subnet'] }}
+set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound rule {{ vlan['vLAN'] }}-outbound then source-nat pool vrf-{{ idProject }}-public
 {% endfor %}
 {# Create proxy-arp on specific interface with predefined IP addresses #}
 {% for nat in NATs %}
-set groups {{ idProject }} security nat proxy-arp interface ge-0/0/0.0 address {{ nat['fIP'] }}
+set groups vrf-{{ idProject }} security nat proxy-arp interface ge-0/0/0.0 address {{ nat['fIP'] }}
 {% endfor %}
 {# Create NAT static ruleset inbound #}
 {% for nat in NATs %}
 {% set rule_name = nat['fIP'].split('/')[0].replace('.', '-') %}
-set groups {{ idProject }} security nat static rule-set {{ idProject }}-inbound-static from zone PUBLIC
-set groups {{ idProject }} security nat static rule-set {{ idProject }}-inbound-static rule {{ rule_name }} match destination-address {{ nat['fIP'] }}
-set groups {{ idProject }} security nat static rule-set {{ idProject }}-inbound-static rule {{ rule_name }} then static-nat prefix {{ nat['pIP'] }}
-set groups {{ idProject }} security nat static rule-set {{ idProject }}-inbound-static rule {{ rule_name }} then static-nat prefix routing-instance vrf-{{ idProject }}
+set groups vrf-{{ idProject }} security nat static rule-set vrf-{{ idProject }}-inbound-static from zone PUBLIC
+set groups vrf-{{ idProject }} security nat static rule-set vrf-{{ idProject }}-inbound-static rule {{ rule_name }} match destination-address {{ nat['fIP'] }}
+set groups vrf-{{ idProject }} security nat static rule-set vrf-{{ idProject }}-inbound-static rule {{ rule_name }} then static-nat prefix {{ nat['pIP'] }}
+set groups vrf-{{ idProject }} security nat static rule-set vrf-{{ idProject }}-inbound-static rule {{ rule_name }} then static-nat prefix routing-instance vrf-{{ idProject }}
 {% endfor %}
