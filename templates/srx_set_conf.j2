@@ -5,7 +5,7 @@ set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} instance-ty
 set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} interface ge-0/0/1.{{ vlan['vLAN'] }}
 {% endfor %}
 {# Create a northbound route #}
-set routing-instances PUBLIC routing-options static route vrf-{{ idProject }}.inet.0 next-hop {{ outBoundIP }}
+set routing-instances PUBLIC routing-options static route vrf-{{ idProject }} next-hop {{ outBoundIP }}
 set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} routing-options static route 0.0.0.0/0 next-table PUBLIC
 {# Configure sub-interfaces #}
 {% for vlan in vLANs %}
