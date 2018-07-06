@@ -5,7 +5,6 @@ set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} instance-ty
 set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} interface ge-0/0/1.{{ vlan['vLAN'] }}
 {% endfor %}
 {# Create a northbound route #}
-set routing-instances PUBLIC routing-options static route vrf-{{ idProject }} next-hop {{ outBoundIP }}
 set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} routing-options static route 0.0.0.0/0 next-table PUBLIC
 {# Configure sub-interfaces #}
 {% for vlan in vLANs %}
@@ -20,7 +19,7 @@ set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-
 set groups vrf-{{ idProject }} security nat source pool vrf-{{ idProject }}-public routing-instance vrf-{{ idProject }}
 set groups vrf-{{ idProject }} security nat source pool vrf-{{ idProject }}-public address {{ outBoundIP }}
 set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound from zone vrf-{{ idProject }}
-set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound to zone PUBLIC
+set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound to zone PUBLIC.inet.0
 {% for vlan in vLANs %}
 set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound rule {{ vlan['vLAN'] }}-outbound match source-address {{ vlan['subnet'] }}
 set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound rule {{ vlan['vLAN'] }}-outbound then source-nat pool vrf-{{ idProject }}-public
