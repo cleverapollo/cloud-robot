@@ -6,4 +6,4 @@ junos-eznc
 netaddr
 paramiko
 pywinrm
-
+git+https://gitlab.cloudcix.com/CloudCIX/cloudcix_metrics
