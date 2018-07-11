@@ -1,20 +1,15 @@
-import utils
-from ._helpers import generate_data_packet
+from cloudcix_metrics import prepare_metrics, Metric
 
 
 def build_success():
     """
     Sends a data packet to Influx reporting a successful build
     """
-    client = utils.get_influx_client()
-    data = generate_data_packet('vrf_success', value=1)
-    client.write_points(data)
+    prepare_metrics(lambda: Metric('vrf_success', 1, {}))
 
 
 def build_failure():
     """
-    Sends a data packet to Influx reporting a successful build
+    Sends a data packet to Influx reporting a failed build
     """
-    client = utils.get_influx_client()
-    data = generate_data_packet('vrf_failure', value=1)
-    client.write_points(data)
+    prepare_metrics(lambda: Metric('vrf_failure', 1, {}))

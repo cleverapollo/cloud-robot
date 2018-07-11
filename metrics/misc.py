@@ -1,5 +1,4 @@
-import utils
-from ._helpers import generate_data_packet
+from cloudcix_metrics import prepare_metrics, Metric
 
 
 def current_commit(sha: str):
@@ -8,6 +7,4 @@ def current_commit(sha: str):
     Grafana will display this at the top of each Robot's dashboard
     :param sha: The commit sha obtained from git
     """
-    client = utils.get_influx_client()
-    data = generate_data_packet('robot_commit', value=sha)
-    client.write_points(data)
+    prepare_metrics(lambda: Metric('robot_commit', sha, {}))
