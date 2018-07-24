@@ -142,7 +142,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
         'hdd': vm['hdd'],  # in GBytes form
         'flash': vm['flash'],  # in GBytes form
         'cpu': vm['cpu'],
-        'ram': vm['ram']*1024,  # in MBytes form
+        'ram': vm['ram'] * 1024,  # in MBytes form
         'id_image': vm['idImage'],
         'image': str(image['filename']),
         'hypervisor': image['idHypervisor'],
