@@ -58,14 +58,14 @@ def dispatch_vrf(vrf: dict, password: str):
         for ip in region_ips:
             if (ip['idSubnet'] == vrf_lan['idSubnet'] and
                     ip['idIPAddressFIP'] is not None):
-                pip = ro.service_entity_read(
+                fip = ro.service_entity_read(
                     'IAAS',
                     'ipaddress',
                     ip['idIPAddressFIP'],
                 )
                 vrf_json['NATs'].append({
-                    'fIP': f'{ip["address"]}/32',
-                    'pIP': f'{pip["address"]}/32',
+                    'pIP': f'{ip["address"]}/32',
+                    'fIP': f'{fip["address"]}/32',
                 })
 
     vrf_json['VPNs'] = ro.service_entity_list(
