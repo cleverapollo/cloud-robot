@@ -1,4 +1,4 @@
-FROM python:3.6
+FROM python:3.7
 # Set workdir and copy context in there
 WORKDIR /opt/robot
 COPY . .
