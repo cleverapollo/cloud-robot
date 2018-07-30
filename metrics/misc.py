@@ -1,5 +1,5 @@
 from cloudcix_metrics import prepare_metrics, Metric
-from ..settings import REGION_NAME
+from settings import REGION_NAME
 
 
 def current_commit(sha: str):
