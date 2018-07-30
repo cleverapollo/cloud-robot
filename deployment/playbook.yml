@@ -6,7 +6,7 @@
       docker_container:
         name: "robot-{{ env }}"
         state: stopped
-        stop_timeout: 300
+        stop_timeout: 600
     - name: Deploy latest Robot image for {{ env }} region
       docker_container:
         - name: "robot-{{ env }}"
