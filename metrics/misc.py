@@ -1,4 +1,5 @@
 from cloudcix_metrics import prepare_metrics, Metric
+from ..settings import REGION_NAME
 
 
 def current_commit(sha: str):
@@ -7,4 +8,4 @@ def current_commit(sha: str):
     Grafana will display this at the top of each Robot's dashboard
     :param sha: The commit sha obtained from git
     """
-    prepare_metrics(lambda: Metric('robot_commit', sha, {}))
+    prepare_metrics(lambda: Metric('robot_commit', sha, {'region': REGION_NAME}))
