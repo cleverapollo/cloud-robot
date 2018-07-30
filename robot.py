@@ -107,7 +107,11 @@ if __name__ == '__main__':
         metrics.current_commit(current_commit)
     # Create a pool of workers equal in size to the number of cpu cores on the
     # server
-    mp.set_start_method('fork')
+    try:
+        mp.set_start_method('fork')
+    except RuntimeError:
+        # Runtime errors thrown when this line is run more than once
+        pass
     pool = mp.Pool(
         processes=None,
         maxtasksperchild=1,
