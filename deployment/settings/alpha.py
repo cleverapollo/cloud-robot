@@ -12,7 +12,7 @@ NETWORK_PASSWORD = 'C1xacc355'
 REGION_NAME = 'alpha'
 ROBOT_ENV = os.environ.get('ROBOT_ENV', 'dev')
 CLOUDCIX_INFLUX_DATABASE = "robot"
-CLOUDCIX_INFLUX_HOST = "influx.cloudcix.com"
+CLOUDCIX_INFLUX_URL = "influx.cloudcix.com"
 CLOUDCIX_INFLUX_PORT = "80"
 
 
