@@ -63,6 +63,9 @@ def mainloop(process_pool: mp.Pool):
             time.sleep(1)
         last = time.time()
 
+    # When we leave the loop, join the process pool
+    process_pool.join()
+
 
 def handle_sigterm(*args):
     """
