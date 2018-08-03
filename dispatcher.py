@@ -84,9 +84,8 @@ def dispatch_vrf(vrf: dict, password: str):
             'preSharedKey': vpn['preSharedKey'],
             'ipRemoteAddress': vpn['ipRemoteAddress'],
             'remoteSubnet': str(
-                str(vpn['vpnRemoteSubnetIP'])
-                + '/'
-                + str(vpn['vpnRemoteSubnetMask'])
+                f'{vpn["vpnRemoteSubnetIP"]}'
+                f'/{vpn["vpnRemoteSubnetMask"]}'
             ),
             'local_subnet': str(netaddr.IPNetwork(loc_sub['addressRange']).cidr),
             'vLAN': loc_sub['vLAN'],
