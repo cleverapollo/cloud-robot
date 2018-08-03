@@ -80,16 +80,18 @@ def dispatch_vrf(vrf: dict, password: str):
             'subnet',
             vpn['localSubnet'],
         )
-        VPN = {
+        vpn_tunnel = {
             'preSharedKey': vpn['preSharedKey'],
             'ipRemoteAddress': vpn['ipRemoteAddress'],
-            'remoteSubnet': str(vpn['vpnRemoteSubnetIP']) +
-                            '/' +
-                            str(vpn['vpnRemoteSubnetMask']),
+            'remoteSubnet': str(
+                str(vpn['vpnRemoteSubnetIP'])
+                + '/'
+                + str(vpn['vpnRemoteSubnetMask'])
+            ),
             'local_subnet': str(netaddr.IPNetwork(loc_sub['addressRange']).cidr),
-            'vLAN': loc_sub['vLAN']
+            'vLAN': loc_sub['vLAN'],
         }
-        vrf_json['VPNs'].append(VPN)
+        vrf_json['VPNs'].append(vpn_tunnel)
     router = ro.service_entity_read('IAAS', 'router', vrf['idRouter'])
     vrf_json['oobIP'] = str(router['ipManagement'])
 
