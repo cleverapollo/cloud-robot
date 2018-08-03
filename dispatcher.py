@@ -38,6 +38,7 @@ def dispatch_vrf(vrf: dict, password: str):
         'outBoundIP': vrf['IPVrf'],
         'NATs': deque(),
         'vLANs': deque(),
+        'VPNs': deque(),
     }
     for vrf_lan in vrf_lans:
         vrf_json['vLANs'].append(
@@ -68,12 +69,27 @@ def dispatch_vrf(vrf: dict, password: str):
                     'fIP': f'{fip["address"]}/32',
                 })
 
-    vrf_json['VPNs'] = ro.service_entity_list(
+    vpns = ro.service_entity_list(
         'IAAS',
         'vpn_tunnel',
         {'vrf': vrf['idVRF']},
     )
-
+    for vpn in vpns:
+        loc_sub = ro.service_entity_read(
+            'IAAS',
+            'subnet',
+            vpn['localSubnet'],
+        )
+        VPN = {
+            'preSharedKey': vpn['preSharedKey'],
+            'ipRemoteAddress': vpn['ipRemoteAddress'],
+            'remoteSubnet': str(vpn['vpnRemoteSubnetIP']) +
+                            '/' +
+                            str(vpn['vpnRemoteSubnetMask']),
+            'local_subnet': str(netaddr.IPNetwork(loc_sub['addressRange']).cidr),
+            'vLAN': loc_sub['vLAN']
+        }
+        vrf_json['VPNs'].append(VPN)
     router = ro.service_entity_read('IAAS', 'router', vrf['idRouter'])
     vrf_json['oobIP'] = str(router['ipManagement'])
 
