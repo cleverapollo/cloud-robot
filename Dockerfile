@@ -4,9 +4,8 @@ WORKDIR /opt/robot
 COPY . .
 
 # SSH Stuff
-RUN mkdir -p ~/.ssh && mv id_rsa ~/.ssh/id_rsa
+RUN mkdir -p ~/.ssh && install -O 1 -G 1 -m 600 id_rsa ~/.ssh/id_rsa
 RUN ssh-keyscan gitlab.cloudcix.com > ~/.ssh/known_hosts
-RUN chmod 600 ~/.ssh/id_rsa
 
 # Install requirements
 RUN pip3 install -r deployment/requirements.txt

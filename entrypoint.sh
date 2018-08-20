@@ -1,6 +1,9 @@
 $CHILD_PID=""
 # Link the settings file to the correct place
 cp "deployment/settings/$ROBOT_ENV.py" ./settings.py
+install -O $(id -u) -G $(id -g) -m 600 "deployment/ssh-keys/$ROBOT_ENV" ~/.ssh/id_rsa
+# Delete the deployment folder after copying
+rm -rf deployment
 # Create a method to catch SIGTERMs and pass them to the python process
 handle_term() {
     kill -TERM "$CHILD_PID"
