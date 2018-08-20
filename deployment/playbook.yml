@@ -6,9 +6,9 @@
     apt:
       update_cache: yes
       name: python3-pip
-    - name: Ensure docker-py is installed so ansible can control docker
-      pip:
-        name: docker
+  - name: Ensure docker-py is installed so ansible can control docker
+    pip:
+      name: docker
   - name: Gracefully shut down last container
       docker_container:
         name: "robot-{{ env }}"
