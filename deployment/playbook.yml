@@ -1,6 +1,7 @@
 ---
 - hosts: "{{ deployment_host | default('staging') }}"
   remote_user: administrator
+  become: yes
   tasks:
     - name: Ensure pip3 is installed
       apt:

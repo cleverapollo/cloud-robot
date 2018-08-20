@@ -6,3 +6,4 @@ ansible_python_interpreter=/usr/bin/python3
 
 [staging:vars]
 env=alpha
+ansible_become_pass=c1xacc355
