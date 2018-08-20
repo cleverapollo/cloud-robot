@@ -10,10 +10,10 @@
       pip:
         name: docker
     - name: Gracefully shut down last container
-        docker_container:
-          name: "robot-{{ env }}"
-          state: stopped
-          stop_timeout: 600
+      docker_container:
+        name: "robot-{{ env }}"
+        state: stopped
+        stop_timeout: 600
     - name: Deploy latest Robot image for {{ env }} region
       docker_container:
         name: "robot-{{ env }}"
