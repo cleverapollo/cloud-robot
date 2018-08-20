@@ -4,8 +4,7 @@ WORKDIR /opt/robot
 COPY . .
 
 # SSH Stuff
-RUN echo "$(id -u) $(id -g)"
-RUN mkdir -p ~/.ssh && install -o 1 -g 1 -m 600 id_rsa ~/.ssh/id_rsa && install -o 1 -g 1 -m 600 ssh-config ~/.ssh/config
+RUN mkdir -p ~/.ssh && install -o $(id -u) -g $(id -g) -m 600 id_rsa ~/.ssh/id_rsa && install -o $(id -u) -g $(id -g) -m 600 ssh-config ~/.ssh/config
 RUN ssh-keyscan gitlab.cloudcix.com > ~/.ssh/known_hosts
 
 # Install requirements
