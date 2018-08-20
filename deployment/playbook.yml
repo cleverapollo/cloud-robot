@@ -12,6 +12,7 @@
         name: docker
     - name: Login to the Docker registry
       docker_login:
+        registry: gitlab.cloudcix.com:5005
         username: cloudadmin
         password: C1xacc355
     - name: Gracefully shut down last container
