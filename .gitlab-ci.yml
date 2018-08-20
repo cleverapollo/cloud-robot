@@ -48,6 +48,6 @@ deploy_production:
     script:
       # Deploy all the production stuff
       # Toronto
-      - ansible-playbook -i deployment/hosts deployment/playbook.yml --extra_vars="deployment_host=toronto01"
+      - ansible-playbook -i deployment/hosts deployment/playbook.yml --extra-vars="deployment_host=toronto01"
     only:
       - stable
