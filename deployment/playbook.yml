@@ -7,7 +7,7 @@
         name: "robot-{{ env }}"
         state: stopped
         stop_timeout: 600
-    - name: Deploy latest Robot image for {{ env }} region
+    - name: "Deploy latest Robot image for {{ env }} region"
       docker_container:
         - name: "robot-{{ env }}"
           image: "gitlab.cloudcix.com:5005/cloudcix/robot:latest"
