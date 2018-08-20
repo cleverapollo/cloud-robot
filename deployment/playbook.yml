@@ -2,18 +2,18 @@
 - hosts: "{{ deployment_host | default('staging') }}"
   remote_user: administrator
   tasks:
-  - name: Ensure pip3 is installed
-    apt:
-      update_cache: yes
-      name: python3-pip
-  - name: Ensure docker-py is installed so ansible can control docker
-    pip:
-      name: docker
-  - name: Gracefully shut down last container
-      docker_container:
-        name: "robot-{{ env }}"
-        state: stopped
-        stop_timeout: 600
+    - name: Ensure pip3 is installed
+      apt:
+        update_cache: yes
+        name: python3-pip
+    - name: Ensure docker-py is installed so ansible can control docker
+      pip:
+        name: docker
+    - name: Gracefully shut down last container
+        docker_container:
+          name: "robot-{{ env }}"
+          state: stopped
+          stop_timeout: 600
     - name: Deploy latest Robot image for {{ env }} region
       docker_container:
         name: "robot-{{ env }}"
