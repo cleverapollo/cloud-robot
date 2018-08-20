@@ -71,11 +71,12 @@ def get_logger_for_name(name: str, level=logging.DEBUG) -> logging.Logger:
             fmt='%(asctime)s - %(name)s: %(levelname)s: %(message)s',
             datefmt='%d/%m/%y @ %H:%M:%S',
         )
-        handler = logging.handlers.RotatingFileHandler(
-            f'/var/log/robot/robot.log',
-            maxBytes=1024 ** 3,
-            backupCount=7,
-        )
+        # handler = logging.handlers.RotatingFileHandler(
+        #     f'/var/log/robot/robot.log',
+        #     maxBytes=1024 ** 3,
+        #     backupCount=7,
+        # )
+        handler = logging.StreamHandler()
         handler.setFormatter(fmt)
         handlers_for_name[name] = handler
     else:

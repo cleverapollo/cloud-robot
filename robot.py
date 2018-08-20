@@ -1,12 +1,8 @@
 # python
 import multiprocessing as mp
-import os
-import subprocess
+import signal
 import sys
 import time
-
-# lib
-from inotify_simple import INotify, flags
 
 # local
 import dispatcher
@@ -15,45 +11,18 @@ import ro
 import settings
 import utils
 
-
+sigterm_recv = False
 robot_logger = utils.get_logger_for_name('robot.mainloop')
 
 
-def watch_directory() -> INotify:
-    """
-    Watches the robot directory for changes.
-    If a change is deteced, spawn a new Robot instance and kill this one
-    :returns: An Inotify instance that can be used to tell if the directory
-              has changed
-    """
-    inotify = INotify()
-    # Create flags for the usual things a deployment will change
-    watch_flags = flags.CREATE | flags.DELETE | flags.MODIFY
-    inotify.add_watch('.', watch_flags)
-    return inotify
-
-
-def mainloop(watcher: INotify, process_pool: mp.Pool):
+def mainloop(process_pool: mp.Pool):
     """
     The main loop of the Robot program
     """
+    global sigterm_recv
     last = time.time()
-    while True:
+    while not sigterm_recv:
         metrics.heartbeat()
-        # First check to see if there have been any events
-        if watcher.read(timeout=1000):
-            robot_logger.info('Update detected. Spawning New Robot.')
-            # Wait until all the deployment is finished
-            time.sleep(10)
-            # Spawn a new robot process in the background
-            subprocess.Popen(
-                ['python3', 'robot.py'],
-                env=os.environ,
-            )
-            # Wait a couple of seconds for the new robot to take over
-            time.sleep(2)
-            # Exit this process gracefully
-            sys.exit(0)
         # Now handle the loop events
         # #################  VRF BUILD ######################################
         vrfs = ro.service_entity_list('IAAS', 'vrf', params={'state': 1})
@@ -94,6 +63,22 @@ def mainloop(watcher: INotify, process_pool: mp.Pool):
             time.sleep(1)
         last = time.time()
 
+    # When we leave the loop, join the process pool
+    process_pool.join()
+
+
+def handle_sigterm(*args):
+    """
+    Handles the receive of a SIGTERM and gracefully stops the mainloop after
+    it finishes it's current iteration. This is to allow a safe restart
+    without the chances of interrupting anything
+    """
+    global sigterm_recv
+    robot_logger.info(
+        'SIGTERM received. Gracefully shutting down after current loop.',
+    )
+    sigterm_recv = True
+
 
 if __name__ == '__main__':
     # When the script is run as the main
@@ -117,8 +102,13 @@ if __name__ == '__main__':
         maxtasksperchild=1,
     )
     rc = 0
+    # Set up a SIGTERM listener
+    signal.signal(
+        signal.SIGTERM,
+        handle_sigterm,
+    )
     try:
-        mainloop(watch_directory(), pool)
+        mainloop(pool)
     except KeyboardInterrupt:
         # Going down safely
         pass

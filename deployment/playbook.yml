@@ -1,37 +1,20 @@
 ---
 - hosts: "{{ deployment_host | default('staging') }}"
-  vars:
-    robot_dir: "/home/administrator/robot"
   remote_user: administrator
   tasks:
-    - name: Check if Robot is already running
-      shell: ps -ef | grep robot.py | grep -v grep
-      register: is_running
-      ignore_errors: yes
+    - name: Gracefully shut down last container
+      docker_container:
+        name: "robot-{{ env }}"
+        state: stopped
+        stop_timeout: 600
+    - name: Deploy latest Robot image for {{ env }} region
+      docker_container:
+        - name: "robot-{{ env }}"
+          image: "gitlab.cloudcix.com:5005/cloudcix/robot:latest"
+          state: started
+          restart-policy: unless-stopped
+          pull: true
+          network_mode: host
+          env:
+            ROBOT_ENV: "{{ env }}"
 
-    - name: "Deploy Robot to {{ env }} environment"
-      git:
-        repo: "git@gitlab.cloudcix.com:CloudCIX/Robot.git"
-        dest: "{{ robot_dir }}"
-        update: yes
-        clone: no
-        version: "{{ branch }}"
-
-    - name: "Deploy {{ env }} settings"
-      file:
-        src: "{{ robot_dir }}/deployment/settings/{{ env }}.py"
-        dest: "{{ robot_dir }}/settings.py"
-        state: link
-
-    - name: Update requirements
-      shell: pip3 install -U -r deployment/requirements.txt
-      args:
-        chdir: "{{ robot_dir }}"
-    
-    - name: Start Robot if it wasn't already running
-      shell: CLOUDCIX_SETTINGS_MODULE=settings ROBOT_ENV=alpha python3 robot.py
-      args:
-        chdir: "{{ robot_dir }}"
-      async: 604800
-      poll: 0
-      when: is_running.rc == 1

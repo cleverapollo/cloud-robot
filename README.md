@@ -8,28 +8,19 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-- Some form of Linux (inotify lib doesn't run on Mac or Windows)
-- python3.6 or later
+- Docker
 
 ### Installing
 
-Firstly, install the requirements:
+Download the Alpha container from the registry;
 
 ```bash
-sudo pip3 install -r deployment/requirements.txt
+docker pull gitlab.cloudcix.com:5005/cloudcix/robot:alpha
 ```
 
-Install the alpha settings:
+You can load local code into the container using the `-v` flag.
 
-```bash
-ln -s ./deployment/settings/alpha.py ./settings.py
-```
-
-Run with the following command:
-
-```bash
-CLOUDCIX_SETTINGS_MODULE=settings python3 robot.py
-```
+Robot's code is stored in `/opt/robot` on the container.
 
 ## Running the tests
 

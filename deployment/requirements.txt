@@ -1,6 +1,5 @@
 cloudcix
 influxdb
-inotify_simple
 jinja2
 junos-eznc
 netaddr
