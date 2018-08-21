@@ -190,6 +190,9 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
         f'\n{vm_cmd}',
     )
     try:
+        driver_logger.info(
+            f'Attempting to connect to Server @ {vm["host_ip"]}',
+        )
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         client.connect(
