@@ -29,4 +29,3 @@ CLOUDCIX_INFLUX_DATABASE = 'robot'
 CLOUDCIX_INFLUX_URL = 'influx.cloudcix.com'
 # Port of influx endpoint
 CLOUDCIX_INFLUX_PORT = 80
-
