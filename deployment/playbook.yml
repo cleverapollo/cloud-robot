@@ -40,3 +40,5 @@
         network_mode: host
         env:
           ROBOT_ENV: "{{ env }}"
+        volumes:
+          - "/mnt:/mnt:ro"
