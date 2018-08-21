@@ -1,9 +1,11 @@
 # python
 import logging
-import paramiko
-import winrm
+import time
 from crypt import crypt, mksalt, METHOD_SHA512
 from pathlib import Path
+# lib
+import paramiko
+import winrm
 # local
 import utils
 
@@ -224,6 +226,8 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
             f'Attempting to build VM #{vm["vm_identifier"]}',
         )
         stdin, stdout, stderr = client.exec_command(vm_cmd)
+        # Sleep for 10 seconds to ensure that we get enough stdout
+        time.sleep(10)
         if stdout:
             msg = stdout.read().strip()
             if msg:
