@@ -186,7 +186,7 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
     # make the vm build command
     vm_cmd = utils.jinja_env.get_template(
         'linux_vm_build_cmd.j2',
-    ).render(drive_path=drive_path, **vm)
+    ).render(drive_path=drive_path, SUDO_PASS=password, **vm)
     driver_logger.debug(
         f'Generated VM Build command for VM #{vm["vm_identifier"]}:'
         f'\n{vm_cmd}',
