@@ -191,12 +191,12 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
         f'Generated VM Build command for VM #{vm["vm_identifier"]}:'
         f'\n{vm_cmd}',
     )
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
         driver_logger.info(
             f'Attempting to connect to Server @ {vm["host_ip"]}',
         )
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         client.connect(
             hostname=vm['host_ip'],
             username='administrator',
@@ -249,6 +249,6 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
             f'for the build of VM #{vm["vm_identifier"]}',
             exc_info=True,
         )
-    finally:
+    else:
         client.close()
     return vm_built
