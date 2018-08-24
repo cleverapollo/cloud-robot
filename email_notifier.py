@@ -37,8 +37,8 @@ def vm_email_notifier(subject: str, vm: dict) -> bool:
     message.preamble = 'Your mail reader does not support the report format.'
     # Get the body from template
     body = utils.jinja_env.get_template(
-            'vm_email_notifier.j2',
-        ).render(subject=subject, **vm)
+        'vm_email_notifier.j2',
+    ).render(subject=subject, **vm)
     # Record the MIME type text/html.
     html_body = MIMEText(body, 'html')
     # Attach parts into message container.
@@ -75,7 +75,7 @@ def send_email(
         password: str,
         receiver: str,
         email_smtp: str,
-        message: Optional[MIMEMultipart] = None
+        message: Optional[MIMEMultipart] = None,
 )-> bool:
     """
     With this function we send out our html email
