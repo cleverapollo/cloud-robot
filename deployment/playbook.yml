@@ -1,37 +1,44 @@
 ---
 - hosts: "{{ deployment_host | default('staging') }}"
-  vars:
-    robot_dir: "/home/administrator/robot"
   remote_user: administrator
+  become: yes
   tasks:
-    - name: Check if Robot is already running
-      shell: ps -ef | grep robot.py | grep -v grep
-      register: is_running
+    - name: Check for presence of Docker
+      shell: "docker --version"
+      register: docker_presence
       ignore_errors: yes
-
-    - name: "Deploy Robot to {{ env }} environment"
-      git:
-        repo: "git@gitlab.cloudcix.com:CloudCIX/Robot.git"
-        dest: "{{ robot_dir }}"
-        update: yes
-        clone: no
-        version: "{{ branch }}"
-
-    - name: "Deploy {{ env }} settings"
-      file:
-        src: "{{ robot_dir }}/deployment/settings/{{ env }}.py"
-        dest: "{{ robot_dir }}/settings.py"
-        state: link
-
-    - name: Update requirements
-      shell: pip3 install -U -r deployment/requirements.txt
+    - name: Ensure Docker is installed
+      shell: "curl -sSL https://get.docker.com/ | sh"
       args:
-        chdir: "{{ robot_dir }}"
-    
-    - name: Start Robot if it wasn't already running
-      shell: CLOUDCIX_SETTINGS_MODULE=settings ROBOT_ENV=alpha python3 robot.py
-      args:
-        chdir: "{{ robot_dir }}"
-      async: 604800
-      poll: 0
-      when: is_running.rc == 1
+        warn: no
+      when: docker_presence.rc != 0
+    - name: Ensure pip3 is installed
+      apt:
+        update_cache: yes
+        name: python3-pip
+    - name: Ensure docker is installed so ansible can control docker
+      pip:
+        name: docker
+    - name: Login to the Docker registry
+      docker_login:
+        registry: gitlab.cloudcix.com:5005
+        username: cloudadmin
+        password: C1xacc355
+    - name: Gracefully shut down last container
+      docker_container:
+        name: "robot-{{ env }}"
+        state: stopped
+        stop_timeout: 600
+      ignore_errors: yes
+    - name: Deploy latest Robot image for {{ env }} region
+      docker_container:
+        name: "robot-{{ env }}"
+        image: "gitlab.cloudcix.com:5005/cloudcix/robot:latest"
+        state: started
+        restart_policy: unless-stopped
+        pull: true
+        network_mode: host
+        env:
+          ROBOT_ENV: "{{ env }}"
+        volumes:
+          - "/mnt:/mnt"

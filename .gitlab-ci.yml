@@ -1,20 +1,53 @@
 stages:
     - lint
+    - build
     - deploy
 
 lint:
     image: gitlab.cloudcix.com:5005/utils/ci/lint
     stage: lint
     script:
-        - flake8
+      - flake8
+    except:
+      - master
+      - stable
+
+build-image:
+    stage: build
+    tags:
+      - docker-build
+    before_script:
+      - echo "$GITLAB_KEY" > id_rsa
+    script:
+      - docker build -t gitlab.cloudcix.com:5005/cloudcix/robot:latest --no-cache .
+      - docker push gitlab.cloudcix.com:5005/cloudcix/robot:latest
+    after_script:
+      - docker system prune -f
+    only:
+      - master
 
 deploy_staging:
     image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
     before_script:
-        - cp ~/.ssh/application_framework/stage_key ~/.ssh/id_rsa
-        - cp ~/.ssh/application_framework/stage_key.pub ~/.ssh/id_rsa.pub
+      - cp ~/.ssh/application_framework/stage_key ~/.ssh/id_rsa
+      - cp ~/.ssh/application_framework/stage_key.pub ~/.ssh/id_rsa.pub
     environment: staging
     stage: deploy
     script:
-        - ansible-playbook -i deployment/hosts deployment/playbook.yml
-    only: ["master"]
+      - ansible-playbook -i deployment/hosts deployment/playbook.yml
+    only:
+      - master
+
+deploy_production:
+    image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
+    before_script:
+      - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
+      - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
+    environment: production
+    stage: deploy
+    script:
+      # Deploy all the production stuff
+      # Toronto
+      - ansible-playbook -i deployment/hosts deployment/playbook.yml --extra-vars="deployment_host=toronto01"
+    only:
+      - stable
