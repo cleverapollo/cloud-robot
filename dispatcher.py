@@ -253,7 +253,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
         metrics.vm_success()
         ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 4})
         # Informing the user
-        subject = 'Your requested VM has been build successfully.'
+        subject = 'Your requested VM has been built successfully.'
         email_notifier.vm_email_notifier(subject, vm_json)
     else:
         logger.error(
