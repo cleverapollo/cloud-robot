@@ -29,3 +29,11 @@ CLOUDCIX_INFLUX_DATABASE = 'robot'
 CLOUDCIX_INFLUX_URL = 'influx.cloudcix.com'
 # Port of influx endpoint
 CLOUDCIX_INFLUX_PORT = 80
+
+# Webmail settings
+# Region's email id
+CLOUDCIX_EMAIL_USERNAME = 'alpha@cloudcix.com'
+# Region's email password
+CLOUDCIX_EMAIL_PASSWAORD = 'AlphaC1xacc355'
+# Cloudcix email smtp server id with port
+CLOUDCIX_EMAIL_SMTP = 'webmail.cix.ie:587'
