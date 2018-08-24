@@ -61,7 +61,7 @@ def vm_email_notifier(subject: str, vm: dict) -> bool:
     if sent is True:
         driver_logger.info(
             f'Email is sent successfully to {receiver} '
-            f'from {sender} about #VM {VM["vm_identifier"]} status.',
+            f'from {sender} about #VM {vm["vm_identifier"]} status.',
         )
     else:
         driver_logger.error(
