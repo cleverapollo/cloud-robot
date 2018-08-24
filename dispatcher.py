@@ -242,9 +242,6 @@ def dispatch_vm(vm: dict, password: str) -> None:
         time.sleep(5)
         vm_vrf = ro.service_entity_list('IAAS', 'vrf', vrf_request_data)
     # ----------------------------------------------------------------
-    # Informing the user
-    subject = 'You have requested for a VM'
-    email_notifier.vm_email_notifier(subject, vm_json)
     # Despatching VMBuilder driver
     if vm_builder.vm_build(vm_json, password):
         logger.info(
@@ -256,7 +253,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
         metrics.vm_success()
         ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 4})
         # Informing the user
-        subject = 'Your requested VM built Successfully.'
+        subject = 'Your requested VM has been build successfully.'
         email_notifier.vm_email_notifier(subject, vm_json)
     else:
         logger.error(
@@ -269,7 +266,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
         metrics.vm_failure()
         ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 3})
         # Informing the user
-        subject = 'Failed to build VM, Please contact our NOC team.'
+        subject = 'Failed to build your VM, please contact our NOC team.'
         email_notifier.vm_email_notifier(subject, vm_json)
 
     return

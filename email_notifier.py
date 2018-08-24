@@ -11,11 +11,6 @@ from typing import Optional
 import settings
 import utils
 
-driver_logger = utils.get_logger_for_name(
-    'email_notifier.send_email',
-    logging.DEBUG,
-)
-
 
 def vm_email_notifier(subject: str, vm: dict) -> bool:
     """
@@ -24,6 +19,11 @@ def vm_email_notifier(subject: str, vm: dict) -> bool:
     :param vm: dict, vm details
     :return:
     """
+    driver_logger = utils.get_logger_for_name(
+        'email_notifier.vm_email_notifier',
+        logging.DEBUG,
+    )
+
     receiver = vm['user_email_id']
     sender = settings.CLOUDCIX_EMAIL_USERNAME
     sender_password = settings.CLOUDCIX_EMAIL_PASSWORD
@@ -61,11 +61,12 @@ def vm_email_notifier(subject: str, vm: dict) -> bool:
     if sent is True:
         driver_logger.info(
             f'Email is sent successfully to {receiver} '
-            f'#{vm["vm_identifier"]}',
+            f'from {sender} about #VM {VM["vm_identifier"]} status.',
         )
     else:
         driver_logger.error(
-            f'Failed to send email to {receiver} #{vm["vm_identifier"]}',
+            f'Failed to send email to {receiver} from {sender}'
+            f' about #VM {vm["vm_identifier"]} status.',
         )
     return sent
 
@@ -86,6 +87,10 @@ def send_email(
     :param message: Optional, message can html, simple text etc,.
     :return: boolean, True on success and False on failure.
     """
+    driver_logger = utils.get_logger_for_name(
+        'email_notifier.send_email',
+        logging.DEBUG,
+    )
 
     try:
         server = smtplib.SMTP(email_smtp)
@@ -97,7 +102,7 @@ def send_email(
         return True
     except Exception:
         driver_logger.error(
-            f'Failed to send mail to { receiver }',
+            f'Failed to send mail to {receiver} from {sender}.',
             exc_info=True,
         )
         return False
