@@ -205,7 +205,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
         'IAAS',
         'macaddress',
         {},
-        idServer=vm['idServer'],
+        server_id=vm['idServer'],
     )
     # get the server's ip address from the mac address, there will be only one
     # mac address with its status as True and a valid ipaddress out of many mac
