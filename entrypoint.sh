@@ -1,4 +1,4 @@
-$CHILD_PID=""
+CHILD_PID=""
 # Link the settings file to the correct place
 cp "deployment/settings/$ROBOT_ENV.py" ./settings.py
 install -m 600 "deployment/ssh-keys/$ROBOT_ENV" ~/.ssh/id_rsa
