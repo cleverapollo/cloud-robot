@@ -192,7 +192,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
                 # Subnet->modifiedBy(idPerson)->username
                 user_id = ip_subnet['modifiedBy']
                 user = ro.service_entity_read(
-                    'membership',
+                    'Membership',
                     'user',
                     user_id,
                 )
