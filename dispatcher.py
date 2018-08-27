@@ -79,7 +79,7 @@ def dispatch_vrf(vrf: dict, password: str):
         loc_sub = ro.service_entity_read(
             'IAAS',
             'subnet',
-            vpn['localSubnet'],
+            vpn['vpnLocalSubnet'],
         )
         vpn_tunnel = {
             'preSharedKey': vpn['preSharedKey'],
