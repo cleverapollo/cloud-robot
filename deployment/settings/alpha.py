@@ -34,6 +34,6 @@ CLOUDCIX_INFLUX_PORT = 80
 # Region's email id
 CLOUDCIX_EMAIL_USERNAME = 'alpha@cloudcix.com'
 # Region's email password
-CLOUDCIX_EMAIL_PASSWAORD = 'AlphaC1xacc355'
+CLOUDCIX_EMAIL_PASSWORD = 'AlphaC1xacc355'
 # Cloudcix email smtp server id with port
 CLOUDCIX_EMAIL_SMTP = 'webmail.cix.ie:587'
