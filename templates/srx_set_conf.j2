@@ -6,12 +6,12 @@ set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} routing-opt
 set groups vrf-{{ idProject }} security zones security-zone vrf-{{ idProject }}
 
 {# Create southbound sub interface and gateway for each VLAN and attach them to the VRF #}
-{% for vlan in vLANs %}
-set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} interface ge-0/0/1.{{ vlan['vLAN'] }}
+{% for vlan in vlans %}
+set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} interface ge-0/0/1.{{ vlan['vlan'] }}
 {# Configure sub-interfaces #}
-set groups vrf-{{ idProject }} interfaces ge-0/0/1 unit {{ vlan['vLAN'] }} description vrf-{{ idProject }}-{{ vlan['vLAN'] }} vlan-id {{ vlan['vLAN'] }} family inet address {{ vlan['subnet'] }}
+set groups vrf-{{ idProject }} interfaces ge-0/0/1 unit {{ vlan['vlan'] }} description vrf-{{ idProject }}-{{ vlan['vlan'] }} vlan-id {{ vlan['vlan'] }} family inet address {{ vlan['address_range'] }}
 {# Create private zones #}
-set groups vrf-{{ idProject }} security zones security-zone vrf-{{ idProject }} interfaces ge-0/0/1.{{ vlan['vLAN'] }} host-inbound-traffic system-services ping
+set groups vrf-{{ idProject }} security zones security-zone vrf-{{ idProject }} interfaces ge-0/0/1.{{ vlan['vlan'] }} host-inbound-traffic system-services ping
 {% endfor %}
 
 {# Source (outbound) NAT #}
@@ -20,44 +20,44 @@ set groups vrf-{{ idProject }} security nat source pool vrf-{{ idProject }}-publ
 set groups vrf-{{ idProject }} security nat source pool vrf-{{ idProject }}-public address {{ outBoundIP }}
 set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound from zone vrf-{{ idProject }}
 set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound to zone PUBLIC
-{% for vlan in vLANs %}
-set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound rule {{ vlan['vLAN'] }}-outbound match source-address {{ vlan['subnet'] }}
-set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound rule {{ vlan['vLAN'] }}-outbound then source-nat pool vrf-{{ idProject }}-public
+{% for vlan in vlans %}
+set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound rule {{ vlan['vlan'] }}-outbound match source-address {{ vlan['address_range'] }}
+set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound rule {{ vlan['vlan'] }}-outbound then source-nat pool vrf-{{ idProject }}-public
 {% endfor %}
 
 {# Create static ruleset inbound 1:1 NAT#}
 {% for nat in NATs %}
-{% set rule_name = nat['pIP'].split('/')[0].replace('.', '-') %}
-set groups vrf-{{ idProject }} security nat static rule-set all-inbound-static-nat rule {{ rule_name }} match destination-address {{ nat['fIP'] }}
-set groups vrf-{{ idProject }} security nat static rule-set all-inbound-static-nat rule {{ rule_name }} then static-nat prefix {{ nat['pIP'] }}
+{% set rule_name = nat['private'].split('/')[0].replace('.', '-') %}
+set groups vrf-{{ idProject }} security nat static rule-set all-inbound-static-nat rule {{ rule_name }} match destination-address {{ nat['public'] }}
+set groups vrf-{{ idProject }} security nat static rule-set all-inbound-static-nat rule {{ rule_name }} then static-nat prefix {{ nat['private'] }}
 set groups vrf-{{ idProject }} security nat static rule-set all-inbound-static-nat rule {{ rule_name }} then static-nat prefix routing-instance vrf-{{ idProject }}
 {# Create proxy-arp on specific interface with predefined IP addresses #}
-set security nat proxy-arp interface ge-0/0/0.0 address {{ nat['fIP'] }}
+set security nat proxy-arp interface ge-0/0/0.0 address {{ nat['public'] }}
 {% endfor %}
 
 {% for vpn in VPNs %}
 {# proxy-arp for vrf is required only in case of VPN #}
 set security nat proxy-arp interface ge-0/0/0.0 address {{ outBoundIP }}
 {# add the appropriate interfaces to it #}
-set groups vrf-{{ idProject }} interfaces st0 unit {{ vpn['vLAN'] }} family inet address {{ vpn['remoteSubnet'] }}
+set groups vrf-{{ idProject }} interfaces st0 unit {{ vpn['vlan'] }} family inet address {{ vpn["vpnRemoteSubnetIP"] }}/{{ vpn["vpnRemoteSubnetMask"] }}
 {# set up some VPN parameters #}
 {# Phase 1 #}
-set groups vrf-{{ idProject }} security ike policy vrf-{{ idProject }}-{{ vpn['vLAN'] }}-ikepolicy mode main
-set groups vrf-{{ idProject }} security ike policy vrf-{{ idProject }}-{{ vpn['vLAN'] }}-ikepolicy proposals psk-dh2-aes
-set groups vrf-{{ idProject }} security ike policy vrf-{{ idProject }}-{{ vpn['vLAN'] }}-ikepolicy pre-shared-key ascii-text {{ vpn['preSharedKey'] }}
-set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-{{ vpn['vLAN'] }}-gw ike-policy vrf-{{ idProject }}-{{ vpn['vLAN'] }}-ikepolicy
-set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-{{ vpn['vLAN'] }}-gw address {{ vpn['ipRemoteAddress'] }}
-set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-{{ vpn['vLAN'] }}-gw external-interface ge-0/0/0
-set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-{{ vpn['vLAN'] }}-gw local-address {{ outBoundIP }}
+set groups vrf-{{ idProject }} security ike policy vrf-{{ idProject }}-{{ vpn['vlan'] }}-ikepolicy mode main
+set groups vrf-{{ idProject }} security ike policy vrf-{{ idProject }}-{{ vpn['vlan'] }}-ikepolicy proposals psk-dh2-aes
+set groups vrf-{{ idProject }} security ike policy vrf-{{ idProject }}-{{ vpn['vlan'] }}-ikepolicy pre-shared-key ascii-text {{ vpn['preSharedKey'] }}
+set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-{{ vpn['vlan'] }}-gw ike-policy vrf-{{ idProject }}-{{ vpn['vlan'] }}-ikepolicy
+set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-{{ vpn['vlan'] }}-gw address {{ vpn['ipRemoteAddress'] }}
+set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-{{ vpn['vlan'] }}-gw external-interface ge-0/0/0
+set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-{{ vpn['vlan'] }}-gw local-address {{ outBoundIP }}
 {# Phase 2 #}
-set groups vrf-{{ idProject }} security ipsec vpn vrf-{{ idProject }}-{{ vpn['vLAN'] }}-vpn bind-interface st0.{{ vpn['vLAN'] }}
-set groups vrf-{{ idProject }} security ipsec vpn vrf-{{ idProject }}-{{ vpn['vLAN'] }}-vpn ike gateway vrf-{{ idProject }}-{{ vpn['vLAN'] }}-gw
-set groups vrf-{{ idProject }} security ipsec vpn vrf-{{ idProject }}-{{ vpn['vLAN'] }}-vpn ike ipsec-policy dh2-pfs-esp-md5-aes
+set groups vrf-{{ idProject }} security ipsec vpn vrf-{{ idProject }}-{{ vpn['vlan'] }}-vpn bind-interface st0.{{ vpn['vlan'] }}
+set groups vrf-{{ idProject }} security ipsec vpn vrf-{{ idProject }}-{{ vpn['vlan'] }}-vpn ike gateway vrf-{{ idProject }}-{{ vpn['vlan'] }}-gw
+set groups vrf-{{ idProject }} security ipsec vpn vrf-{{ idProject }}-{{ vpn['vlan'] }}-vpn ike ipsec-policy dh2-pfs-esp-md5-aes
 {# anchor the relevant interfaces in their own security zone #}
-set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} interface st0.{{ vpn['vLAN'] }}
-set groups vrf-{{ idProject }} security zones security-zone vrf-{{ idProject }} interfaces st0.{{ vpn['vLAN'] }}
+set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} interface st0.{{ vpn['vlan'] }}
+set groups vrf-{{ idProject }} security zones security-zone vrf-{{ idProject }} interfaces st0.{{ vpn['vlan'] }}
 {# add a route to the other end of the IPsec tunnel with the tunnel if as the nexthop #}
-set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} routing-options static route {{ vpn['local_subnet'] }} next-hop st0.{{ vpn['vLAN'] }}
+set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} routing-options static route {{ vpn['local_subnet'] }} next-hop st0.{{ vpn['vlan'] }}
 {% endfor %}
 
 set apply-groups vrf-{{ idProject }}
