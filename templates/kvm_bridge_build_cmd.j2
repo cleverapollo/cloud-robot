@@ -1,2 +1,2 @@
-virsh iface-define --file {{ drive_path }}bridge_xmls/br{{ vlan }}.xml
+virsh iface-define --file {{ drive_path }}/bridge_xmls/br{{ vlan }}.xml
 virsh iface-start br{{ vlan }}
