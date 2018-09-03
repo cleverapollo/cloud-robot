@@ -38,7 +38,7 @@ class VRF:
         :param conf: The configuration for the virtual router
         :param ip: The ip of the physical router to deploy to
         :param password: The password to connect to the router with
-        :return: A flag stating whether or not the dpeloyment was successful
+        :return: A flag stating whether or not the deployment was successful
         """
         # Connect to the Router
         VRF.logger.info(f'Attempting to connect to Physical Router @ {ip}')
