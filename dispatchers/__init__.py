@@ -1,8 +1,8 @@
-from .vm import VM
-from .vrf import VRF
+from .vm import Vm
+from .vrf import Vrf
 
 
 __all__ = [
-    'VM',
-    'VRF',
+    'Vm',
+    'Vrf',
 ]

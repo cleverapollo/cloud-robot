@@ -15,4 +15,3 @@ REGION_NAME = 'toronto01'
 CLOUDCIX_EMAIL_USERNAME = 'toronto01@cloudcix.com'
 # Region's email password
 CLOUDCIX_EMAIL_PASSWORD = 'T0ronto01C1xacc355'
-

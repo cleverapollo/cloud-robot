@@ -1,10 +1,4 @@
-# python
-import logging
-import time
-from crypt import crypt, mksalt, METHOD_SHA512
-from pathlib import Path
-# lib
-import paramiko
+# libs
 import winrm
 # local
 import utils

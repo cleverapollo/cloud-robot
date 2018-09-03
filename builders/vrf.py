@@ -10,7 +10,7 @@ from jnpr.junos.utils.config import Config
 import utils
 
 
-class VRF:
+class Vrf:
 
     logger = utils.get_logger_for_name('builders.vrf')
 
@@ -23,12 +23,12 @@ class VRF:
         :param password: The network password for connecting to the router
         :return: A flag stating whether the build succeeded or not
         """
-        VRF.logger.info(f'Generating JunOS setconf for VRF for Project #{vrf["idProject"]}')
+        Vrf.logger.info(f'Generating JunOS setconf for VRF for Project #{vrf["idProject"]}')
         conf = utils.jinja_env.get_template('srx_set_conf.j2').render(**vrf)
         # Log the setconf to Debug
-        VRF.logger.debug(f'Generated setconf for Project #{vrf["idProject"]}\n{conf}')
+        Vrf.logger.debug(f'Generated setconf for Project #{vrf["idProject"]}\n{conf}')
         # Deploy the generated config into the physical router
-        return VRF.deploy(conf, vrf['oob_ip'], password)
+        return Vrf.deploy(conf, vrf['oob_ip'], password)
 
     @staticmethod
     def deploy(conf: str, ip: str, password: str) -> bool:
@@ -41,47 +41,47 @@ class VRF:
         :return: A flag stating whether or not the deployment was successful
         """
         # Connect to the Router
-        VRF.logger.info(f'Attempting to connect to Physical Router @ {ip}')
+        Vrf.logger.info(f'Attempting to connect to Physical Router @ {ip}')
         dev = Device(host=ip, user='robot', password=password, port=22)
         cfg = Config(dev)
         try:
             dev.open()
         except ConnectError:
-            VRF.logger.error(f'Unable to connect to router @ {ip}', exc_info=True)
+            Vrf.logger.error(f'Unable to connect to router @ {ip}', exc_info=True)
             return False
-        VRF.logger.info(f'Successfully connected to router @ {ip}, now attempting to lock router')
+        Vrf.logger.info(f'Successfully connected to router @ {ip}, now attempting to lock router')
         try:
             cfg.lock()
         except LockError:
-            VRF.logger.error(f'Unable to lock configuration in router @ {ip}', exc_info=True)
+            Vrf.logger.error(f'Unable to lock configuration in router @ {ip}', exc_info=True)
             return False
-        VRF.logger.info(f'Successfully locked config in router @ {ip}, now attempting to apply config')
+        Vrf.logger.info(f'Successfully locked config in router @ {ip}, now attempting to apply config')
         try:
             for cmd in conf.split('\n'):
-                VRF.logger.debug(f'Attempting to run "{cmd}" on router @ {ip}')
+                Vrf.logger.debug(f'Attempting to run "{cmd}" on router @ {ip}')
                 cfg.load(cmd, format='set', merge=True)
         except ConfigLoadError:
-            VRF.logger.error(f'Unable to load configuration changes onto router @ {ip}', exc_info=True)
+            Vrf.logger.error(f'Unable to load configuration changes onto router @ {ip}', exc_info=True)
             # Try to unlock after failing to load
-            VRF.logger.info(f'Attempting to unlock configuration after error on router @ {ip}')
+            Vrf.logger.info(f'Attempting to unlock configuration after error on router @ {ip}')
             try:
                 cfg.unlock()
             except UnlockError:
-                VRF.logger.error(f'Unable to unlock configuration after error on router @ {ip}', exc_info=True)
+                Vrf.logger.error(f'Unable to unlock configuration after error on router @ {ip}', exc_info=True)
             dev.close()
             return False
 
         # Attempt to commit
-        VRF.logger.info(f'All commands successfully loaded onto router @ {ip}, now attempting to commit changes')
+        Vrf.logger.info(f'All commands successfully loaded onto router @ {ip}, now attempting to commit changes')
         try:
             cfg.commit(comment=f'Loaded by robot at {time.asctime()}.')
         except CommitError:
-            VRF.logger.error(f'Unable to commit changes onto router @ {ip}')
+            Vrf.logger.error(f'Unable to commit changes onto router @ {ip}')
             return False
-        VRF.logger.info(f'Changes successfully committed onto router @ {ip}, now attempting to unlock config')
+        Vrf.logger.info(f'Changes successfully committed onto router @ {ip}, now attempting to unlock config')
         try:
             cfg.unlock()
         except UnlockError:
-            VRF.logger.error(f'Unable to unlock configuration after successful commit on router @ {ip}', exc_info=True)
+            Vrf.logger.error(f'Unable to unlock configuration after successful commit on router @ {ip}', exc_info=True)
             dev.close()
         return True

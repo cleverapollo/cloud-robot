@@ -15,7 +15,7 @@ EMAIL_SUCCESS_SUBJECT = 'One of your requested VMs has been successfully built.'
 EMAIL_FAILURE_SUBJECT = 'Failed to build one of your requested VMs, please contact our NOC team for more information.'
 
 
-class VM:
+class Vm:
     """
     A class that handles 'dispatching' a VM to various services such as builders, scrubbers, etc.
     """

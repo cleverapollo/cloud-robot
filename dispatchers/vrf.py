@@ -3,14 +3,14 @@ import netaddr
 from collections import deque
 
 # locals
-from builders import VRF as Builder
+from builders import Vrf as Builder
 import metrics
 import ro
 import utils
 from net_builders import is_valid_vlan
 
 
-class VRF:
+class Vrf:
     """
     A class that handles 'dispatching' a VRF to various services such as builders, scrubbers, etc.
     """
@@ -45,7 +45,7 @@ class VRF:
                 ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 3})
                 logger.error(
                     f'VRF {vrf_id} has become Unresourced as it has an invalid '
-                    f'vlan ({vrf_lan["vLAN"]})',
+                    f'vlan ({subnet["vLAN"]})',
                 )
                 return
             vlans.append({'vlan': subnet['vLAN'], 'address_range': subnet['addressRange']})

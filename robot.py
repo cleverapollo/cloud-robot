@@ -29,7 +29,7 @@ def mainloop(process_pool: mp.Pool):
         if len(vrfs) > 0:
             for vrf in vrfs:
                 robot_logger.info(f'Dispatching VRF #{vrf["idVRF"]} for build')
-                dispatchers.VRF.build(vrf, settings.NETWORK_PASSWORD)
+                dispatchers.Vrf.build(vrf, settings.NETWORK_PASSWORD)
         else:
             robot_logger.info('No VRFs in "Requested" state.')
         # ######################## VM BUILD  ################################
@@ -40,16 +40,16 @@ def mainloop(process_pool: mp.Pool):
                 # Call the dispatcher asynchronously
                 try:
                     process_pool.apply_async(
-                        func=dispatchers.VM.build,
+                        func=dispatchers.Vm.build,
                         kwds={
                             'vm': vm,
-                            'password': settings.NETWORK_PASSWORD
-                        }
+                            'password': settings.NETWORK_PASSWORD,
+                        },
                     )
                 except mp.ProcessError:
                     robot_logger.error(
                         f'Error when building VM #{vm["idVM"]}',
-                        exc_info=True
+                        exc_info=True,
                     )
         else:
             robot_logger.info('No VMs in "Requested" state.')
