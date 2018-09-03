@@ -1,6 +1,5 @@
 # python
 import netaddr
-import time
 from collections import deque
 
 # locals
@@ -8,8 +7,6 @@ from builders import VRF as Builder
 import metrics
 import ro
 import utils
-import vm_builder
-import vrf_builders
 from net_builders import is_valid_vlan
 
 
@@ -78,7 +75,7 @@ class VRF:
             metrics.vrf_success()
         else:
             logger.error(
-                f'VRF #{vrf_id} failed to build, so it is being moved to Unresourced state. Check log for details',
+                f'VRF #{vrf_id} failed to build so it is being moved to Unresourced (3). Check log for details.',
             )
             # Change the state to 3 and report a failure to influx
             ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 3})

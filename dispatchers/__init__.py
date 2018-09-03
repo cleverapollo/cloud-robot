@@ -1,4 +1,4 @@
-from vrf import VRF
+from .vrf import VRF
 
 
 __all__ = [
