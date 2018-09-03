@@ -21,7 +21,7 @@ build-base:
   before_script:
     - echo "$GITLAB_KEY" > id_rsa
   script:
-    - docker build -t gitlab.cloudcix.com:5005/cloudcix/robot/base:latest --no-cache .
+    - docker build -f deployment/dockerfiles/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/base:latest --no-cache .
     - docker push gitlab.cloudcix.com:5005/cloudcix/robot/base:latest
   after_script:
     - docker system prune -f
@@ -33,7 +33,7 @@ build-alpha:
   tags:
     - docker-build
   script:
-    - docker build -t gitlab.cloudcix.com:5005/cloudcix/robot/alpha:latest --no-cache .
+    - docker build -f deployment/dockerfiles/alpha.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/alpha:latest --no-cache .
     - docker push gitlab.cloudcix.com:5005/cloudcix/robot/alpha:latest
   after_script:
   - docker system prune -f
@@ -57,7 +57,7 @@ build-toronto01:
   tags:
   - docker-build
   script:
-  - docker build -t gitlab.cloudcix.com:5005/cloudcix/robot/toronto01:latest --no-cache .
+  - docker build -f deployment/dockerfiles/toronto01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/toronto01:latest --no-cache .
   - docker push gitlab.cloudcix.com:5005/cloudcix/robot/toronto01:latest
   after_script:
   - docker system prune -f
