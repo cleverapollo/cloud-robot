@@ -1,9 +1,11 @@
 # python
 import logging
-import paramiko
-import winrm
+import time
 from crypt import crypt, mksalt, METHOD_SHA512
 from pathlib import Path
+# lib
+import paramiko
+import winrm
 # local
 import utils
 
@@ -184,14 +186,17 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
     # make the vm build command
     vm_cmd = utils.jinja_env.get_template(
         'linux_vm_build_cmd.j2',
-    ).render(drive_path=drive_path, **vm)
+    ).render(drive_path=drive_path, SUDO_PASS=password, **vm)
     driver_logger.debug(
         f'Generated VM Build command for VM #{vm["vm_identifier"]}:'
         f'\n{vm_cmd}',
     )
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        driver_logger.info(
+            f'Attempting to connect to Server @ {vm["host_ip"]}',
+        )
         client.connect(
             hostname=vm['host_ip'],
             username='administrator',
@@ -202,7 +207,7 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
             f'Attempting to build bridge network for VM '
             f'#{vm["vm_identifier"]}',
         )
-        stdin, stdout, stderr = client.exec_command(br_cmd)
+        _, stdout, stderr = client.exec_command(br_cmd)
         if stdout:
             msg = stdout.read().decode().strip()
             if msg:
@@ -220,27 +225,30 @@ def _build_linux_vm(vm: dict, password: str) -> bool:
         driver_logger.info(
             f'Attempting to build VM #{vm["vm_identifier"]}',
         )
-        stdin, stdout, stderr = client.exec_command(vm_cmd)
-        if stdout:
-            msg = stdout.read().strip()
+        _, stdout, stderr = client.exec_command(vm_cmd)
+        # Sleep for 10 seconds to ensure that we get enough stdout
+        time.sleep(10)
+        while stdout.channel.recv_ready():
+            msg = stdout.channel.recv(1024).decode()
             if msg:
                 driver_logger.info(
                     f'VM build for VM #{vm["vm_identifier"]} '
                     f'generated stdout: {msg}',
                 )
             vm_built = True
-        elif stderr:
-            msg = stderr.read().strip()
+        while stderr.channel.recv_ready():
+            msg = stderr.channel.recv(1024).decode()
             driver_logger.error(
                 f'VM build for VM #{vm["vm_identifier"]} '
                 f'generated stderr: {msg}',
             )
+            vm_built = False
     except Exception:
         driver_logger.error(
             f'Exception occurred during SSHing into host {vm["host_ip"]} '
             f'for the build of VM #{vm["vm_identifier"]}',
             exc_info=True,
         )
-    finally:
+    else:
         client.close()
     return vm_built

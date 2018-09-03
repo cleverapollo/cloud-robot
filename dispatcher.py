@@ -4,6 +4,7 @@ import time
 from collections import deque
 
 # locals
+import email_notifier
 import metrics
 import net_builders
 import ro
@@ -38,6 +39,7 @@ def dispatch_vrf(vrf: dict, password: str):
         'outBoundIP': vrf['IPVrf'],
         'NATs': deque(),
         'vLANs': deque(),
+        'VPNs': deque(),
     }
     for vrf_lan in vrf_lans:
         vrf_json['vLANs'].append(
@@ -58,22 +60,38 @@ def dispatch_vrf(vrf: dict, password: str):
         for ip in region_ips:
             if (ip['idSubnet'] == vrf_lan['idSubnet'] and
                     ip['idIPAddressFIP'] is not None):
-                pip = ro.service_entity_read(
+                fip = ro.service_entity_read(
                     'IAAS',
                     'ipaddress',
                     ip['idIPAddressFIP'],
                 )
                 vrf_json['NATs'].append({
-                    'fIP': f'{ip["address"]}/32',
-                    'pIP': f'{pip["address"]}/32',
+                    'pIP': f'{ip["address"]}/32',
+                    'fIP': f'{fip["address"]}/32',
                 })
 
-    vrf_json['VPNs'] = ro.service_entity_list(
+    vpns = ro.service_entity_list(
         'IAAS',
         'vpn_tunnel',
         {'vrf': vrf['idVRF']},
     )
-
+    for vpn in vpns:
+        loc_sub = ro.service_entity_read(
+            'IAAS',
+            'subnet',
+            vpn['vpnLocalSubnet'],
+        )
+        vpn_tunnel = {
+            'preSharedKey': vpn['preSharedKey'],
+            'ipRemoteAddress': vpn['ipRemoteAddress'],
+            'remoteSubnet': str(
+                f'{vpn["vpnRemoteSubnetIP"]}'
+                f'/{vpn["vpnRemoteSubnetMask"]}',
+            ),
+            'local_subnet': str(netaddr.IPNetwork(loc_sub['addressRange']).cidr),
+            'vLAN': loc_sub['vLAN'],
+        }
+        vrf_json['VPNs'].append(vpn_tunnel)
     router = ro.service_entity_read('IAAS', 'router', vrf['idRouter'])
     vrf_json['oobIP'] = str(router['ipManagement'])
 
@@ -142,7 +160,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
         'hdd': vm['hdd'],  # in GBytes form
         'flash': vm['flash'],  # in GBytes form
         'cpu': vm['cpu'],
-        'ram': vm['ram']*1024,  # in MBytes form
+        'ram': vm['ram'] * 1024,  # in MBytes form
         'id_image': vm['idImage'],
         'image': str(image['filename']),
         'hypervisor': image['idHypervisor'],
@@ -170,6 +188,15 @@ def dispatch_vm(vm: dict, password: str) -> None:
                     netaddr.IPNetwork(address_range).netmask,
                 )
                 vm_json['vlan'] = ip_subnet['vLAN']
+                # Collecting user email id from
+                # Subnet->modifiedBy(idPerson)->username
+                user_id = ip_subnet['modifiedBy']
+                user = ro.service_entity_read(
+                    'Membership',
+                    'user',
+                    user_id,
+                )
+                vm_json['user_email_id'] = user['username']
     vm_json['lang'] = 'en_IE'  # need to add in db (for kvm and hyperv)
     vm_json['keyboard'] = 'ie'  # need to add in db (for kvm only)
     vm_json['tz'] = 'Ireland/Dublin'  # need to add in db(kvm and hyperv)
@@ -178,7 +205,7 @@ def dispatch_vm(vm: dict, password: str) -> None:
         'IAAS',
         'macaddress',
         {},
-        idServer=vm['idServer'],
+        server_id=vm['idServer'],
     )
     # get the server's ip address from the mac address, there will be only one
     # mac address with its status as True and a valid ipaddress out of many mac
@@ -215,7 +242,6 @@ def dispatch_vm(vm: dict, password: str) -> None:
         time.sleep(5)
         vm_vrf = ro.service_entity_list('IAAS', 'vrf', vrf_request_data)
     # ----------------------------------------------------------------
-
     # Despatching VMBuilder driver
     if vm_builder.vm_build(vm_json, password):
         logger.info(
@@ -226,6 +252,9 @@ def dispatch_vm(vm: dict, password: str) -> None:
         # Log a success in Influx
         metrics.vm_success()
         ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 4})
+        # Informing the user
+        subject = 'Your requested VM has been built successfully.'
+        email_notifier.vm_email_notifier(subject, vm_json)
     else:
         logger.error(
             f'VM #{vm_id} failed to build, so it is being moved to '
@@ -236,5 +265,8 @@ def dispatch_vm(vm: dict, password: str) -> None:
         # Log a failure in Influx
         metrics.vm_failure()
         ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 3})
+        # Informing the user
+        subject = 'Failed to build your VM, please contact our NOC team.'
+        email_notifier.vm_email_notifier(subject, vm_json)
 
     return

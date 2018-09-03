@@ -1,4 +1,5 @@
 from cloudcix_metrics import prepare_metrics, Metric
+from settings import REGION_NAME
 
 
 def heartbeat(value: int = 1):
@@ -7,4 +8,4 @@ def heartbeat(value: int = 1):
     :param value: The value to send to Influx. Defaults to 1
         NOTE: Only send a 0 when Robot has gone down
     """
-    prepare_metrics(lambda: Metric('robot_heartbeat', value, {}))
+    prepare_metrics(lambda: Metric('robot_heartbeat', value, {'region': REGION_NAME}))

@@ -1,2 +1,2 @@
-sudo virsh iface-define --file {{ drive_path }}bridge_xmls/br{{ vlan }}
-sudo virsh iface-start br{{ vlan }}
+virsh iface-define --file {{ drive_path }}bridge_xmls/br{{ vlan }}.xml
+virsh iface-start br{{ vlan }}
