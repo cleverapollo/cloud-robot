@@ -44,15 +44,15 @@ def vm_email_notifier(subject: str, vm: dict) -> bool:
     # Attach parts into message container.
     message.attach(html_body)
     # attach all images or attachments
-    with open('templates/email/CloudCIX_logo.bmp', 'rb') as fp:
+    with open('templates/assets/CloudCIX_logo.bmp', 'rb') as fp:
         msg_image = MIMEImage(fp.read())
     msg_image.add_header('Content-ID', '<CloudCIX_logo.bmp>')
     message.attach(msg_image)
-    with open('templates/email/twitter.png', 'rb') as fp1:
+    with open('templates/assets/twitter.png', 'rb') as fp1:
         msg_image1 = MIMEImage(fp1.read())
     msg_image1.add_header('Content-ID', '<twitter.png>')
     message.attach(msg_image1)
-    with open('templates/email/website.png', 'rb') as fp2:
+    with open('templates/assets/website.png', 'rb') as fp2:
         msg_image2 = MIMEImage(fp2.read())
     msg_image2.add_header('Content-ID', '<website.png>')
     message.attach(msg_image2)

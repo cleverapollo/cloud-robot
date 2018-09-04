@@ -5,7 +5,7 @@ import sys
 import time
 
 # local
-import dispatcher
+import dispatchers
 import metrics
 import ro
 import settings
@@ -28,34 +28,29 @@ def mainloop(process_pool: mp.Pool):
         vrfs = ro.service_entity_list('IAAS', 'vrf', params={'state': 1})
         if len(vrfs) > 0:
             for vrf in vrfs:
-                robot_logger.info(f'Building VRF with ID {vrf["idVRF"]}.')
-                dispatcher.dispatch_vrf(vrf, settings.NETWORK_PASSWORD)
+                robot_logger.info(f'Dispatching VRF #{vrf["idVRF"]} for build')
+                dispatchers.Vrf.build(vrf, settings.NETWORK_PASSWORD)
         else:
             robot_logger.info('No VRFs in "Requested" state.')
         # ######################## VM BUILD  ################################
         vms = ro.service_entity_list('IAAS', 'vm', params={'state': 1})
         if len(vms) > 0:
             for vm in vms:
-                robot_logger.info(f'Building VM with ID {vm["idVM"]}')
-                # Until we know VM dispatch works, keep it synchronous
-                dispatcher.dispatch_vm(
-                    vm,
-                    settings.NETWORK_PASSWORD,
-                )
+                robot_logger.info(f'Dispatching VM #{vm["idVM"]} for build')
                 # Call the dispatcher asynchronously
-                # try:
-                #     process_pool.apply_async(
-                #         func=dispatcher.dispatch_vm,
-                #         kwds={
-                #             'vm': vm,
-                #             'password': settings.NETWORK_PASSWORD
-                #         }
-                #     )
-                # except mp.ProcessError:
-                #     robot_logger.error(
-                #         f'Error when building VM #{vm["idVM"]}',
-                #         exc_info=True
-                #     )
+                try:
+                    process_pool.apply_async(
+                        func=dispatchers.Vm.build,
+                        kwds={
+                            'vm': vm,
+                            'password': settings.NETWORK_PASSWORD,
+                        },
+                    )
+                except mp.ProcessError:
+                    robot_logger.error(
+                        f'Error when building VM #{vm["idVM"]}',
+                        exc_info=True,
+                    )
         else:
             robot_logger.info('No VMs in "Requested" state.')
 

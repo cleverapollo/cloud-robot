@@ -42,7 +42,7 @@
     - name: Deploy latest Robot image for {{ env }} region
       docker_container:
         name: "robot-{{ env }}"
-        image: "gitlab.cloudcix.com:5005/cloudcix/robot:latest"
+        image: "gitlab.cloudcix.com:5005/cloudcix/robot/{{ env }}:latest"
         state: started
         restart_policy: unless-stopped
         pull: true
