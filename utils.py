@@ -138,9 +138,8 @@ def get_logger_for_name(name: str, level=logging.DEBUG) -> logging.Logger:
     Generates logging.logger instance with a given name
 
     :param name: The name to be given to the logger instance
-    :param level: The level of the logger. Defaults to `logging.INFO`
-    :return: A logger than can be used to log out to
-             `/var/log/robot/robot.log`
+    :param level: The level of the logger. Defaults to `logging.DEBUG`
+    :return: A logger than can be used to log out to stdout with multithreaded handling
     """
     global logger
     if logger is not None:
