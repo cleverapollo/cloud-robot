@@ -41,4 +41,3 @@ CLOUDCIX_INFLUX_URL = 'influx.cloudcix.com'
 NETWORK_PASSWORD = 'C1xacc355'
 # Env (used in log messages and other things)
 ROBOT_ENV = os.environ.get('ROBOT_ENV', 'dev')
-
