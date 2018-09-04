@@ -30,8 +30,8 @@ jinja_env = jinja2.Environment(
     loader=jinja2.FileSystemLoader('templates'),
     trim_blocks=True,
 )
-# Maps names to a handler to prevent creating multiple handlers
-handlers_for_name = {}
+
+logger = None
 
 
 class Token:
@@ -142,25 +142,23 @@ def get_logger_for_name(name: str, level=logging.DEBUG) -> logging.Logger:
     :return: A logger than can be used to log out to
              `/var/log/robot/robot.log`
     """
-    global handlers_for_name
+    global logger
+    if logger is not None:
+        return logger
     logger = logging.getLogger(name)
     logger.setLevel(level)
-    # Get a file handler
-    if name not in handlers_for_name:
-        fmt = logging.Formatter(
-            fmt='%(asctime)s - %(name)s: %(levelname)s: %(message)s',
-            datefmt='%d/%m/%y @ %H:%M:%S',
-        )
-        # handler = logging.handlers.RotatingFileHandler(
-        #     f'/var/log/robot/robot.log',
-        #     maxBytes=1024 ** 3,
-        #     backupCount=7,
-        # )
-        handler = MultiprocessingHandler()
-        handler.set_formatter(fmt)
-        handlers_for_name[name] = handler
-    else:
-        handler = handlers_for_name[name]
+    fmt = logging.Formatter(
+        fmt='%(asctime)s - %(name)s: %(levelname)s: %(message)s',
+        datefmt='%d/%m/%y @ %H:%M:%S',
+    )
+    # handler = logging.handlers.RotatingFileHandler(
+    #     f'/var/log/robot/robot.log',
+    #     maxBytes=1024 ** 3,
+    #     backupCount=7,
+    # )
+    handler = MultiprocessingHandler()
+    handler.set_formatter(fmt)
+    handlers_for_name[name] = handler
     logger.addHandler(handler)
     return logger
 
