@@ -74,7 +74,7 @@ class MultiprocessingHandler(logging.Handler):
         thread.daemon = True
         thread.start()
 
-    def setFormatter(self, fmt: logging.Formatter):
+    def set_formatter(self, fmt: logging.Formatter):
         """
         Set the formatter for both this handler and the internal one
         """
@@ -93,7 +93,7 @@ class MultiprocessingHandler(logging.Handler):
                 raise
             except EOFError:
                 break
-            except:
+            except Exception:
                 print_exc(file=sys.stderr)
 
     def send(self, s: logging.LogRecord):
@@ -122,7 +122,7 @@ class MultiprocessingHandler(logging.Handler):
             self.send(self._format_record(record))
         except (KeyboardInterrupt, SystemExit):
             raise
-        except:
+        except Exception:
             self.handleError(record)
 
     def close(self):
@@ -157,7 +157,7 @@ def get_logger_for_name(name: str, level=logging.DEBUG) -> logging.Logger:
         #     backupCount=7,
         # )
         handler = MultiprocessingHandler()
-        handler.setFormatter(fmt)
+        handler.set_formatter(fmt)
         handlers_for_name[name] = handler
     else:
         handler = handlers_for_name[name]
