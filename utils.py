@@ -158,7 +158,6 @@ def get_logger_for_name(name: str, level=logging.DEBUG) -> logging.Logger:
     # )
     handler = MultiprocessingHandler()
     handler.set_formatter(fmt)
-    handlers_for_name[name] = handler
     logger.addHandler(handler)
     return logger
 
