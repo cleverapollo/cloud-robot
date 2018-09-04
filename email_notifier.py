@@ -27,7 +27,7 @@ def vm_email_notifier(subject: str, vm: dict) -> bool:
     receiver = vm['user_email_id']
     sender = settings.CLOUDCIX_EMAIL_USERNAME
     sender_password = settings.CLOUDCIX_EMAIL_PASSWORD
-    email_smtp = settings.CLOUDCIX_EMAIL_SMTP
+    email_smtp = settings.CLOUDCIX_EMAIL_HOST
     # Create message container with the correct MIME
     # type is multipart/alternative here!
     message = MIMEMultipart('alternative')
