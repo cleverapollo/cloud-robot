@@ -42,7 +42,8 @@ def mainloop(process_pool: mp.Pool):
                 robot_logger.info(f'Dispatching VM #{vm["idVM"]} for build')
                 # Call the dispatcher asynchronously
                 try:
-                    process_pool.apply_async(func=vm_dispatch.build, kwds={'vm': vm})
+                    vm_dispatch.build(vm)
+                    #process_pool.apply_async(func=vm_dispatch.build, kwds={'vm': vm})
                 except mp.ProcessError:
                     robot_logger.error(f'Error when building VM #{vm["idVM"]}', exc_info=True)
         else:
