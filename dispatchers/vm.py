@@ -64,7 +64,7 @@ class Vm:
         for mac in ro.service_entity_list('IAAS', 'macaddress', {}, server_id=vm['idServer']):
             if mac['status'] is True and mac['ip'] is not None:
                 try:
-                    vm['host_ip'] = netaddr.IPAddress(mac['ip'])
+                    vm['host_ip'] = str(netaddr.IPAddress(mac['ip']))
                     vm['host_name'] = mac['dnsName']
                     break
                 except netaddr.AddrFormatError:
