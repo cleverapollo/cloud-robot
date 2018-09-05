@@ -53,7 +53,7 @@ class Linux:
             return False
 
         # Create the XML to build the bridge network
-        with open(f'{DRIVE_PATH}/bridge_xmls/{vm["vlan"]}.xml', 'w') as f:
+        with open(f'{DRIVE_PATH}/bridge_xmls/br{vm["vlan"]}.xml', 'w') as f:
             f.write(utils.jinja_env.get_template('kvm_bridge_network.j2').render(**vm))
 
         # Attempt to connect to the host server
