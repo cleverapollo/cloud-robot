@@ -54,7 +54,7 @@ class Vm:
                 vm['netmask_ip'] = netaddr.IPNetwork(subnet['addressRange']).netmask
                 vm['vlan'] = subnet['vLAN']
                 # Get user email to notify the user
-                vm['email'] = ro.service_entity_read('Membership', 'user', subnet['modifiedBy'])['email']
+                vm['email'] = ro.service_entity_read('Membership', 'user', subnet['modifiedBy'])['username']
         vm['lang'] = 'en_IE'
         vm['keyboard'] = 'ie'
         vm['tz'] = 'Ireland/Dublin'
