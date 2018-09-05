@@ -5,14 +5,18 @@ from crypt import crypt, mksalt, METHOD_SHA512
 
 # locals
 from builders import Linux as LinuxBuilder, Windows as WindowsBuilder
+from scrubbers import Linux as LinuxScrubber, Windows as WindowsScrubber
 import email_notifier
 import metrics
 import ro
 import utils
 
-
-EMAIL_SUCCESS_SUBJECT = 'One of your requested VMs has been successfully built.'
-EMAIL_FAILURE_SUBJECT = 'Failed to build one of your requested VMs, please contact our NOC team for more information.'
+EMAIL_BUILD_SUCCESS_SUBJECT = 'One of your requested VMs has been successfully built.'
+EMAIL_BUILD_FAILURE_SUBJECT = f'Failed to build one of your requested VMs, ' \
+                              f'please contact our NOC team for more information.'
+EMAIL_SCRUB_SUCCESS_SUBJECT = 'One of your VMs requested to delete has been successfully deleted.'
+EMAIL_SCRUB_FAILURE_SUBJECT = f'Failed to delete one of your VMs requested to delete, ' \
+                              f'please contact our NOC team for more information.'
 
 
 class Vm:
@@ -72,7 +76,7 @@ class Vm:
                         exc_info=True,
                     )
                     ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 3})
-                    metrics.vm_failure()
+                    metrics.vm_build_failure()
 
         # TODO - Add data/ip validations to vm dispatcher
 
@@ -103,13 +107,46 @@ class Vm:
             logger.info(f'VM #{vm_id} successfully built in Server #{vm["idServer"]}')
             # Change the state of the VM to Built (4) and log a success in Influx
             ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 4})
-            metrics.vm_success()
+            metrics.vm_build_success()
             # Email the user
-            email_notifier.vm_email_notifier(EMAIL_SUCCESS_SUBJECT, vm)
+            email_notifier.vm_email_notifier(EMAIL_BUILD_SUCCESS_SUBJECT, vm)
         else:
             logger.info(f'VM #{vm_id} failed to build so it is being moved to Unresourced (3). Check log for details.')
             # Change the state of the VM to Unresourced (3) and log a failure in Influx
             ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 3})
-            metrics.vm_failure()
+            metrics.vm_build_failure()
             # Email the User
-            email_notifier.vm_email_notifier(EMAIL_FAILURE_SUBJECT, vm)
+            email_notifier.vm_email_notifier(EMAIL_BUILD_FAILURE_SUBJECT, vm)
+
+    def scrub(self, vm: dict):
+        """
+        Takes the VM (to be deleted )data from CloudCix API and sends the request to concern scrubber.
+        :param vm: The VM data from the CloudCIX API
+        """
+        logger = utils.get_logger_for_name('dispatchers.vm.scrub')
+        vm_id = vm['idVM']
+        logger.info(f'Commencing scrub dispatch of VM #{vm_id}')
+        vm['vm_identifier'] = f'{vm["idProject"]}_{vm["idVM"]}'
+
+        # Attempt to scrub the VM
+        success: bool
+        if vm['idHypervisor'] == 1:  # HyperV -> Windows
+            success = WindowsScrubber.scrub(vm, self.password)
+        elif vm['idHypervisor'] == 2:  # KVM -> Linux
+            success = LinuxScrubber.scrub(vm, self.password)
+        else:
+            logger.error(f'Unsupported idHypervisor ({vm["idHypervisor"]}). VM #{vm_id} cannot be scrubbed')
+            success = False
+
+        if success:
+            logger.info(f'VM #{vm_id} successfully deleted from Server #{vm["idServer"]}')
+            # Change the state of the VM to Deleted (9) and log a success in Influx
+            ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 9})
+            metrics.vm_scrub_success()
+            # Email the user
+            email_notifier.vm_email_notifier(EMAIL_SCRUB_SUCCESS_SUBJECT, vm)
+        else:
+            logger.info(f'VM #{vm_id} failed to build so it is being moved to Unresourced (3). Check log for details.')
+            metrics.vm_scrub_failure()
+            # Email the User
+            email_notifier.vm_email_notifier(EMAIL_SCRUB_FAILURE_SUBJECT, vm)
