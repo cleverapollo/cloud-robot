@@ -157,7 +157,7 @@ def get_logger_for_name(name: str, level=logging.DEBUG) -> logging.Logger:
         #     backupCount=7,
         # )
         handler = logging.StreamHandler()
-        handler.set_formatter(fmt)
+        handler.setFormatter(fmt)
         handlers_for_name[name] = handler
     else:
         handler = handlers_for_name[name]
