@@ -156,7 +156,7 @@ def get_logger_for_name(name: str, level=logging.DEBUG) -> logging.Logger:
         #     maxBytes=1024 ** 3,
         #     backupCount=7,
         # )
-        handler = MultiprocessingHandler()
+        handler = logging.StreamHandler()
         handler.set_formatter(fmt)
         handlers_for_name[name] = handler
     else:
