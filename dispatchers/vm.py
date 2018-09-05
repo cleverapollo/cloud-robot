@@ -39,8 +39,10 @@ class Vm:
         ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 2})
 
         # Get the image data and add extra data to the supplied dict
+        image = ro.service_entity_read('IAAS', 'image', vm['idImage'])
         vm['vm_identifier'] = f'{vm["idProject"]}_{vm["idVM"]}'
-        vm['image'] = ro.service_entity_read('IAAS', 'image', vm['idImage'])['filename']
+        vm['image'] = image['filename']
+        vm['idHypervisor'] = image['idHypervisor']
         vm['user_password'] = ro.password_generator(chars='a', size=8)
         vm['root_password'] = ro.password_generator(size=128)
 
