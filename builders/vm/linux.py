@@ -106,7 +106,7 @@ class Linux:
         return built
 
     @staticmethod
-    def get_full_response(channel: paramiko.Channel, wait_time: int = 10, read_size: int = 1024) -> str:
+    def get_full_response(channel: paramiko.Channel, wait_time: int = 15, read_size: int = 64) -> str:
         """
         Get the full response from the specified paramiko channel, waiting a given number of seconds before trying to
         read from it each time.
