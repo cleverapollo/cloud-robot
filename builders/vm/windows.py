@@ -58,7 +58,7 @@ class Windows:
             if run.std_out:
                 msg = run.std_out.strip()
                 Windows.logger.info(f'VM build command for VM #{vm["idVM"]} generated stdout\n{msg}')
-                built = 'VM Successfully Created and Hosted.' in msg
+                built = 'VM Successfully Created and Hosted.' in msg.decode()
             if run.std_err:
                 msg = run.std_err.strip()
                 Windows.logger.warning(f'VM build command for VM #{vm["idVM"]} generated stderr\n{msg}')
