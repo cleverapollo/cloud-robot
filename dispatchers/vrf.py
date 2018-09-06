@@ -62,6 +62,10 @@ class Vrf:
             vpn['local_subnet'] = netaddr.IPNetwork(subnet['addressRange']).cidr
             vpns.append(vpn)
 
+        # adding vlans, nats and vpns to vrf
+        vrf['vlans'] = vlans
+        vrf['nats'] = nats
+        vrf['vpns'] = vpns
         # OOB IP
         vrf['oob_ip'] = ro.service_entity_read('IAAS', 'router', vrf['idRouter'])['ipManagement']
 
