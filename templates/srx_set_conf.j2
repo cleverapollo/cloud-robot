@@ -26,7 +26,7 @@ set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-
 {% endfor %}
 
 {# Create static ruleset inbound 1:1 NAT#}
-{% for nat in NATs %}
+{% for nat in nats %}
 {% set rule_name = nat['private'].split('/')[0].replace('.', '-') %}
 set groups vrf-{{ idProject }} security nat static rule-set all-inbound-static-nat rule {{ rule_name }} match destination-address {{ nat['public'] }}
 set groups vrf-{{ idProject }} security nat static rule-set all-inbound-static-nat rule {{ rule_name }} then static-nat prefix {{ nat['private'] }}
@@ -35,7 +35,7 @@ set groups vrf-{{ idProject }} security nat static rule-set all-inbound-static-n
 set security nat proxy-arp interface ge-0/0/0.0 address {{ nat['public'] }}
 {% endfor %}
 
-{% for vpn in VPNs %}
+{% for vpn in vpns %}
 {# proxy-arp for vrf is required only in case of VPN #}
 set security nat proxy-arp interface ge-0/0/0.0 address {{ IPVrf }}
 {# add the appropriate interfaces to it #}
