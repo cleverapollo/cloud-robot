@@ -42,6 +42,7 @@ class Vm:
         image = ro.service_entity_read('IAAS', 'image', vm['idImage'])
         vm['vm_identifier'] = f'{vm["idProject"]}_{vm["idVM"]}'
         vm['image'] = image['filename']
+        vm['ram'] *= 1024  # ram must be multiple of 1024 as the builders takes in MBytes
         vm['idHypervisor'] = image['idHypervisor']
         vm['user_password'] = ro.password_generator(chars='a', size=8)
         vm['root_password'] = ro.password_generator(size=128)
