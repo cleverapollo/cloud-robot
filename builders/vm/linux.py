@@ -65,7 +65,11 @@ class Linux:
 
             # Generate and execute the command to build the bridge interface
             Linux.logger.info(f'Attempting to build bridge network for VM #{vm["idVM"]}')
-            cmd = utils.jinja_env.get_template('kvm_bridge_build_cmd.j2').render(drive_path=DRIVE_PATH, **vm)
+            cmd = utils.jinja_env.get_template('kvm_bridge_build_cmd.j2').render(
+                drive_path=DRIVE_PATH,
+                SUDO_PASS=password,
+                **vm,
+            )
             Linux.logger.debug(f'Generated command to build bridge network for VM #{vm["idVM"]}\n{cmd}')
 
             # Run the command and log the output and err. For the bridge build we don't care if there's an error
