@@ -43,8 +43,11 @@ class Vm:
         ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 2})
 
         # Get the image data and add extra data to the supplied dict
+        image = ro.service_entity_read('IAAS', 'image', vm['idImage'])
         vm['vm_identifier'] = f'{vm["idProject"]}_{vm["idVM"]}'
-        vm['image'] = ro.service_entity_read('IAAS', 'image', vm['idImage'])['filename']
+        vm['image'] = image['filename']
+        vm['ram'] *= 1024  # ram must be multiple of 1024 as the builders takes in MBytes
+        vm['idHypervisor'] = image['idHypervisor']
         vm['user_password'] = ro.password_generator(chars='a', size=8)
         vm['root_password'] = ro.password_generator(size=128)
 
@@ -58,7 +61,7 @@ class Vm:
                 vm['netmask_ip'] = netaddr.IPNetwork(subnet['addressRange']).netmask
                 vm['vlan'] = subnet['vLAN']
                 # Get user email to notify the user
-                vm['email'] = ro.service_entity_read('Membership', 'user', subnet['modifiedBy'])['email']
+                vm['email'] = ro.service_entity_read('Membership', 'user', subnet['modifiedBy'])['username']
         vm['lang'] = 'en_IE'
         vm['keyboard'] = 'ie'
         vm['tz'] = 'Ireland/Dublin'
@@ -66,7 +69,7 @@ class Vm:
         for mac in ro.service_entity_list('IAAS', 'macaddress', {}, server_id=vm['idServer']):
             if mac['status'] is True and mac['ip'] is not None:
                 try:
-                    vm['host_ip'] = netaddr.IPAddress(mac['ip'])
+                    vm['host_ip'] = str(netaddr.IPAddress(mac['ip']))
                     vm['host_name'] = mac['dnsName']
                     break
                 except netaddr.AddrFormatError:

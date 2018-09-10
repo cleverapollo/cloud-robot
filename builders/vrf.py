@@ -76,7 +76,7 @@ class Vrf:
         try:
             cfg.commit(comment=f'Loaded by robot at {time.asctime()}.')
         except CommitError:
-            Vrf.logger.error(f'Unable to commit changes onto router @ {ip}')
+            Vrf.logger.error(f'Unable to commit changes onto router @ {ip}', exc_info=True)
             return False
         Vrf.logger.info(f'Changes successfully committed onto router @ {ip}, now attempting to unlock config')
         try:

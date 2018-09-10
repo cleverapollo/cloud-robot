@@ -51,7 +51,7 @@ class Vrf:
             vlans.append({'vlan': subnet['vLAN'], 'address_range': subnet['addressRange']})
 
             # Check if there are any nats for this subnet
-            params = {'subnet__idSubnet': subnet['idSubnet'], 'idIPAddressFIP__isnull': False, 'fields': '(*,fip)'}
+            params = {'subnet__idSubnet': subnet['idSubnet'], 'fip_id__isnull': False, 'fields': '(*,fip)'}
             for ip in ro.service_entity_list('IAAS', 'ipaddress', params):
                 nats.append({'private': ip['address'], 'public': ip['fip']['address']})
 
@@ -62,6 +62,10 @@ class Vrf:
             vpn['local_subnet'] = netaddr.IPNetwork(subnet['addressRange']).cidr
             vpns.append(vpn)
 
+        # adding vlans, nats and vpns to vrf
+        vrf['vlans'] = vlans
+        vrf['nats'] = nats
+        vrf['vpns'] = vpns
         # OOB IP
         vrf['oob_ip'] = ro.service_entity_read('IAAS', 'router', vrf['idRouter'])['ipManagement']
 

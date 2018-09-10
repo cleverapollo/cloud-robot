@@ -44,7 +44,6 @@
         name: "robot-{{ env }}"
         image: "gitlab.cloudcix.com:5005/cloudcix/robot/{{ env }}:latest"
         state: started
-        restart_policy: unless-stopped
         pull: true
         network_mode: host
         env:

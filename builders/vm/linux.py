@@ -53,7 +53,7 @@ class Linux:
             return False
 
         # Create the XML to build the bridge network
-        with open(f'{DRIVE_PATH}/bridge_xmls/{vm["vlan"]}.xml', 'w') as f:
+        with open(f'{DRIVE_PATH}/bridge_xmls/br{vm["vlan"]}.xml', 'w') as f:
             f.write(utils.jinja_env.get_template('kvm_bridge_network.j2').render(**vm))
 
         # Attempt to connect to the host server
@@ -65,7 +65,11 @@ class Linux:
 
             # Generate and execute the command to build the bridge interface
             Linux.logger.info(f'Attempting to build bridge network for VM #{vm["idVM"]}')
-            cmd = utils.jinja_env.get_template('kvm_bridge_build_cmd.j2').render(drive_path=DRIVE_PATH, **vm)
+            cmd = utils.jinja_env.get_template('kvm_bridge_build_cmd.j2').render(
+                drive_path=DRIVE_PATH,
+                SUDO_PASS=password,
+                **vm,
+            )
             Linux.logger.debug(f'Generated command to build bridge network for VM #{vm["idVM"]}\n{cmd}')
 
             # Run the command and log the output and err. For the bridge build we don't care if there's an error
@@ -106,7 +110,7 @@ class Linux:
         return built
 
     @staticmethod
-    def get_full_response(channel: paramiko.Channel, wait_time: int = 10, read_size: int = 1024) -> str:
+    def get_full_response(channel: paramiko.Channel, wait_time: int = 15, read_size: int = 64) -> str:
         """
         Get the full response from the specified paramiko channel, waiting a given number of seconds before trying to
         read from it each time.

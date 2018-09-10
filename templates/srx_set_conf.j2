@@ -17,7 +17,7 @@ set groups vrf-{{ idProject }} security zones security-zone vrf-{{ idProject }} 
 {# Source (outbound) NAT #}
 set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound description vrf-{{ idProject }}-outbound-nat
 set groups vrf-{{ idProject }} security nat source pool vrf-{{ idProject }}-public routing-instance PUBLIC
-set groups vrf-{{ idProject }} security nat source pool vrf-{{ idProject }}-public address {{ outBoundIP }}
+set groups vrf-{{ idProject }} security nat source pool vrf-{{ idProject }}-public address {{ IPVrf }}
 set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound from zone vrf-{{ idProject }}
 set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound to zone PUBLIC
 {% for vlan in vlans %}
@@ -26,7 +26,7 @@ set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-
 {% endfor %}
 
 {# Create static ruleset inbound 1:1 NAT#}
-{% for nat in NATs %}
+{% for nat in nats %}
 {% set rule_name = nat['private'].split('/')[0].replace('.', '-') %}
 set groups vrf-{{ idProject }} security nat static rule-set all-inbound-static-nat rule {{ rule_name }} match destination-address {{ nat['public'] }}
 set groups vrf-{{ idProject }} security nat static rule-set all-inbound-static-nat rule {{ rule_name }} then static-nat prefix {{ nat['private'] }}
@@ -35,9 +35,9 @@ set groups vrf-{{ idProject }} security nat static rule-set all-inbound-static-n
 set security nat proxy-arp interface ge-0/0/0.0 address {{ nat['public'] }}
 {% endfor %}
 
-{% for vpn in VPNs %}
+{% for vpn in vpns %}
 {# proxy-arp for vrf is required only in case of VPN #}
-set security nat proxy-arp interface ge-0/0/0.0 address {{ outBoundIP }}
+set security nat proxy-arp interface ge-0/0/0.0 address {{ IPVrf }}
 {# add the appropriate interfaces to it #}
 set groups vrf-{{ idProject }} interfaces st0 unit {{ vpn['vlan'] }} family inet address {{ vpn["vpnRemoteSubnetIP"] }}/{{ vpn["vpnRemoteSubnetMask"] }}
 {# set up some VPN parameters #}
@@ -48,7 +48,7 @@ set groups vrf-{{ idProject }} security ike policy vrf-{{ idProject }}-{{ vpn['v
 set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-{{ vpn['vlan'] }}-gw ike-policy vrf-{{ idProject }}-{{ vpn['vlan'] }}-ikepolicy
 set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-{{ vpn['vlan'] }}-gw address {{ vpn['ipRemoteAddress'] }}
 set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-{{ vpn['vlan'] }}-gw external-interface ge-0/0/0
-set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-{{ vpn['vlan'] }}-gw local-address {{ outBoundIP }}
+set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-{{ vpn['vlan'] }}-gw local-address {{ IPVrf }}
 {# Phase 2 #}
 set groups vrf-{{ idProject }} security ipsec vpn vrf-{{ idProject }}-{{ vpn['vlan'] }}-vpn bind-interface st0.{{ vpn['vlan'] }}
 set groups vrf-{{ idProject }} security ipsec vpn vrf-{{ idProject }}-{{ vpn['vlan'] }}-vpn ike gateway vrf-{{ idProject }}-{{ vpn['vlan'] }}-gw

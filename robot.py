@@ -21,6 +21,9 @@ def mainloop(process_pool: mp.Pool):
     """
     global sigterm_recv
     last = time.time()
+    # Create the dispatcher instances
+    vrf_dispatch = dispatchers.Vrf(settings.NETWORK_PASSWORD)
+    vm_dispatch = dispatchers.Vm(settings.NETWORK_PASSWORD)
     while not sigterm_recv:
         metrics.heartbeat()
         # Now handle the loop events
@@ -29,7 +32,7 @@ def mainloop(process_pool: mp.Pool):
         if len(vrfs) > 0:
             for vrf in vrfs:
                 robot_logger.info(f'Dispatching VRF #{vrf["idVRF"]} for build')
-                dispatchers.Vrf.build(vrf, settings.NETWORK_PASSWORD)
+                vrf_dispatch.build(vrf)
         else:
             robot_logger.info('No VRFs in "Requested" state.')
         # ######################## VM BUILD  ################################
@@ -39,18 +42,10 @@ def mainloop(process_pool: mp.Pool):
                 robot_logger.info(f'Dispatching VM #{vm["idVM"]} for build')
                 # Call the dispatcher asynchronously
                 try:
-                    process_pool.apply_async(
-                        func=dispatchers.Vm.build,
-                        kwds={
-                            'vm': vm,
-                            'password': settings.NETWORK_PASSWORD,
-                        },
-                    )
+                    vm_dispatch.build(vm)
+                    # process_pool.apply_async(func=vm_dispatch.build, kwds={'vm': vm})
                 except mp.ProcessError:
-                    robot_logger.error(
-                        f'Error when building VM #{vm["idVM"]}',
-                        exc_info=True,
-                    )
+                    robot_logger.error(f'Error when building VM #{vm["idVM"]}', exc_info=True)
         else:
             robot_logger.info('No VMs in "Requested" state.')
 
@@ -69,9 +64,7 @@ def handle_sigterm(*args):
     without the chances of interrupting anything
     """
     global sigterm_recv
-    robot_logger.info(
-        'SIGTERM received. Gracefully shutting down after current loop.',
-    )
+    robot_logger.info('SIGTERM received. Gracefully shutting down after current loop.')
     sigterm_recv = True
 
 
@@ -79,10 +72,7 @@ if __name__ == '__main__':
     # When the script is run as the main
     current_commit = utils.get_current_git_sha()
     # Log the current commit to both the file and InfluxDB
-    robot_logger.info(
-        f'Robot starting. Current Commit >> {current_commit}. '
-        f'ROBOT_ENV={settings.ROBOT_ENV}',
-    )
+    robot_logger.info(f'Robot starting. Current Commit >> {current_commit}. ROBOT_ENV={settings.ROBOT_ENV}')
     if settings.ROBOT_ENV != 'dev':
         metrics.current_commit(current_commit)
     # Create a pool of workers equal in size to the number of cpu cores on the
@@ -92,16 +82,10 @@ if __name__ == '__main__':
     except RuntimeError:
         # Runtime errors thrown when this line is run more than once
         pass
-    pool = mp.Pool(
-        processes=None,
-        maxtasksperchild=1,
-    )
+    pool = mp.Pool(processes=None, maxtasksperchild=1)
     rc = 0
     # Set up a SIGTERM listener
-    signal.signal(
-        signal.SIGTERM,
-        handle_sigterm,
-    )
+    signal.signal(signal.SIGTERM, handle_sigterm)
     try:
         mainloop(pool)
     except KeyboardInterrupt:
