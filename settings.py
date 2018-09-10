@@ -34,7 +34,7 @@ CLOUDCIX_EMAIL_HOST = 'webmail.cix.ie:587'
 # Database in influx to send to
 CLOUDCIX_INFLUX_DATABASE = 'robot'
 # Port of influx endpoint
-CLOUDCIX_INFLUX_PORT = 80
+CLOUDCIX_INFLUX_PORT = 443
 # Hostname of influx endpoint
 CLOUDCIX_INFLUX_URL = 'influx.cloudcix.com'
 # Password for connecting to routers and servers
