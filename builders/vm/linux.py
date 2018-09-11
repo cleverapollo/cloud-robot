@@ -98,7 +98,9 @@ class Linux:
             err = Linux.get_full_response(stderr.channel)
             if err:
                 Linux.logger.warning(f'VM build command for VM #{vm["idVM"]} generated stderr.\n{err}')
-            built = 'Restarting guest' in output
+            built = 'Creating domain' in output
+            if built:
+                time.sleep(30)
 
         except paramiko.SSHException:
             Linux.logger.error(
