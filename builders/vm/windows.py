@@ -16,7 +16,7 @@ class Windows:
     Builder class for building Windows VMs
     """
 
-    logger = utils.get_logger_for_name('builders.vm.linux')
+    logger = utils.get_logger_for_name('builders.vm.windows')
 
     @staticmethod
     def build(vm: dict, password: str) -> bool:
