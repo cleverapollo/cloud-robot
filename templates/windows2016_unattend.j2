@@ -76,8 +76,8 @@
 			</UserAccounts>
 			<TimeZone>{{ tz }}</TimeZone>
 			<FirstLogonCommands>
-                <SynchronousCommand wcm:action="add">
-					<Order>1</Order>
+			    <SynchronousCommand wcm:action="add">
+				    <Order>1</Order>
 					<RequiresUserInput>false</RequiresUserInput>
 					<Description>Enable Remote Desktop Firewall</Description>
 					<CommandLine>Netsh advfirewall firewall set rule group="remote desktop" new enable=yes</CommandLine>
