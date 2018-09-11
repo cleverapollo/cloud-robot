@@ -33,7 +33,7 @@ autopart --type=lvm
 {# Root password #}
 rootpw --iscrypted {{ crypted_root_password }}
 {# Username / Password #}
-user --name "administrator" --password={{ crypted_user_password }} --iscrypted
+user --name "administrator" --password={{ crypted_admin_password }} --iscrypted
 {# SELinux configuration #}
 selinux --disabled
 {# Do not configure the X Window System #}

@@ -16,13 +16,13 @@ class Windows:
     Builder class for building Windows VMs
     """
 
-    logger = utils.get_logger_for_name('builders.vm.linux')
+    logger = utils.get_logger_for_name('builders.vm.windows')
 
     @staticmethod
     def build(vm: dict, password: str) -> bool:
         """
-        Given data from the VM dispatcher, request for a Windows VM to be built in the specified KVM host and return a
-        flag indicating whether or not the build was successful.
+        Given data from the VM dispatcher, request for a Windows VM to be built in the specified HyperV host and
+        return a flag indicating whether or not the build was successful.
         :param vm: The data about the VM from the dispatcher
         :param password: The password used to log in to the host to build the VM
         :return: A flag stating whether or not the build was successful

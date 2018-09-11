@@ -49,6 +49,28 @@ def mainloop(process_pool: mp.Pool):
         else:
             robot_logger.info('No VMs in "Requested" state.')
 
+        # ######################## VRF SCRUB  ################################
+        vrfs = ro.service_entity_list('IAAS', 'vrf', params={'state': 8})
+        if len(vrfs) > 0:
+            for vrf in vrfs:
+                robot_logger.info(f'Dispatching VRF #{vrf["idVRF"]} for scrub')
+                vrf_dispatch.scrub(vrf)
+        else:
+            robot_logger.info('No VRFs in "Scrubbing" state.')
+        # ######################## VM SCRUB  ################################
+        vms = ro.service_entity_list('IAAS', 'vm', params={'state': 8})
+        if len(vms) > 0:
+            for vm in vms:
+                robot_logger.info(f'Dispatching VM #{vm["idVM"]} for scrub')
+                # Call the dispatcher asynchronously
+                try:
+                    vm_dispatch.scrub(vm)
+                    # process_pool.apply_async(func=vm_dispatch.scrub, kwds={'vm': vm})
+                except mp.ProcessError:
+                    robot_logger.error(f'Error when Scrubbing VM #{vm["idVM"]}', exc_info=True)
+        else:
+            robot_logger.info('No VMs in "Scrubbing" state.')
+
         while last > time.time() - 20:
             time.sleep(1)
         last = time.time()

@@ -2,6 +2,7 @@
 import netaddr
 import time
 from crypt import crypt, mksalt, METHOD_SHA512
+from datetime import datetime
 
 # locals
 from builders import Linux as LinuxBuilder, Windows as WindowsBuilder
@@ -48,8 +49,7 @@ class Vm:
         vm['image'] = image['filename']
         vm['ram'] *= 1024  # ram must be multiple of 1024 as the builders takes in MBytes
         vm['idHypervisor'] = image['idHypervisor']
-        vm['user_password'] = ro.password_generator(chars='a', size=8)
-        vm['root_password'] = ro.password_generator(size=128)
+        vm['admin_password'] = ro.password_generator(chars='a', size=8)
 
         # Get ip address and subnet details
         for ip in ro.service_entity_list('IAAS', 'ipaddress', {'vm': vm['idVM']}):
@@ -80,6 +80,7 @@ class Vm:
                     )
                     ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 3})
                     metrics.vm_build_failure()
+                    return
 
         # TODO - Add data/ip validations to vm dispatcher
 
@@ -98,9 +99,8 @@ class Vm:
             vm['tz'] = 'GMT Standard Time'
             success = WindowsBuilder.build(vm, self.password)
         elif vm['idHypervisor'] == 2:  # KVM -> Linux
-            # Encrypt the passwords
-            vm['crypted_root_password'] = str(crypt(vm['root_password'], mksalt(METHOD_SHA512)))
-            vm['crypted_user_password'] = str(crypt(vm['user_password'], mksalt(METHOD_SHA512)))
+            # Encrypt the password
+            vm['crypted_admin_password'] = str(crypt(vm['admin_password'], mksalt(METHOD_SHA512)))
             success = LinuxBuilder.build(vm, self.password)
         else:
             logger.error(f'Unsupported idHypervisor ({vm["idHypervisor"]}). VM #{vm_id} cannot be built')
@@ -130,6 +130,31 @@ class Vm:
         vm_id = vm['idVM']
         logger.info(f'Commencing scrub dispatch of VM #{vm_id}')
         vm['vm_identifier'] = f'{vm["idProject"]}_{vm["idVM"]}'
+        # Get the type of VM ie idHypervisor
+        vm['idHypervisor'] = ro.service_entity_read('IAAS', 'image', vm['idImage'])['idHypervisor']
+        # Get the server details for sshing into the host
+        for mac in ro.service_entity_list('IAAS', 'macaddress', {}, server_id=vm['idServer']):
+            if mac['status'] is True and mac['ip'] is not None:
+                try:
+                    vm['host_ip'] = str(netaddr.IPAddress(mac['ip']))
+                    vm['host_name'] = mac['dnsName']
+                    break
+                except netaddr.AddrFormatError:
+                    logger.error(
+                        f'Error occurred when trying to read host ip address from mac record '
+                        f'#{mac["idMacAddress"]}.',
+                        exc_info=True,
+                    )
+                    metrics.vm_scrub_failure()
+                    return
+        # Get vlan and email id of user via ip address and subnet details
+        for ip in ro.service_entity_list('IAAS', 'ipaddress', {'vm': vm['idVM']}):
+            if netaddr.IPAddress(ip['address']).is_private():
+                # Get the subnet of this IP
+                subnet = ro.service_entity_read('IAAS', 'subnet', ip['idSubnet'])
+                vm['vlan'] = subnet['vLAN']
+                # Get user email to notify the user
+                vm['email'] = ro.service_entity_read('Membership', 'user', subnet['modifiedBy'])['username']
 
         # Attempt to scrub the VM
         success: bool
@@ -144,12 +169,12 @@ class Vm:
         if success:
             logger.info(f'VM #{vm_id} successfully deleted from Server #{vm["idServer"]}')
             # Change the state of the VM to Deleted (9) and log a success in Influx
-            ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 9})
+            ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 9, 'deleted': datetime.utcnow()})
             metrics.vm_scrub_success()
             # Email the user
             email_notifier.vm_email_notifier(EMAIL_SCRUB_SUCCESS_SUBJECT, vm)
         else:
-            logger.info(f'VM #{vm_id} failed to build so it is being moved to Unresourced (3). Check log for details.')
+            logger.info(f'VM #{vm_id} failed to scrub . Check log for details.')
             metrics.vm_scrub_failure()
             # Email the User
             email_notifier.vm_email_notifier(EMAIL_SCRUB_FAILURE_SUBJECT, vm)
