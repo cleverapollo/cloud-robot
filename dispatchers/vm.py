@@ -85,7 +85,7 @@ class Vm:
         vm_vrf = ro.service_entity_list('IAAS', 'vrf', vrf_request_data)
         while vm_vrf[0]['state'] != 4:
             logger.warn(
-                f'VM #{vm_id} waiting on VRF #{vm_vrf[0]["idVRF"] to be state 4. '
+                f'VM #{vm_id} waiting on VRF #{vm_vrf[0]["idVRF"]} to be state 4. '
                 f'Currently: {vm_vrf[0]["state"]}',
             )
             if vm_vrf[0]['state'] == 3:
