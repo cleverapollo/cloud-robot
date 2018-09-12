@@ -14,6 +14,7 @@ TEMPLATE_MAP = {
     9: 'ubuntu',
     10: 'centos',
     11: 'centos',
+    12: 'ubuntu',
 }
 
 
