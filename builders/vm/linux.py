@@ -76,7 +76,7 @@ class Linux:
             # Run the command and log the output and err. For the bridge build we don't care if there's an error
             _, stdout, stderr = client.exec_command(cmd)
             # Block until command finishes
-            stdout.channel.recv_status_code()
+            stdout.channel.recv_exit_status()
             output = Linux.get_full_response(stdout.channel)
             if output:
                 Linux.logger.info(f'Bridge build command for VM #{vm["idVM"]} generated stdout.\n{output}')
@@ -96,7 +96,7 @@ class Linux:
             # Run the command and log the output and err. Check if the string "Restarting guest" is in the output
             _, stdout, stderr = client.exec_command(cmd)
             # Block until command finishes
-            stdout.channel.recv_status_code()
+            stdout.channel.recv_exit_status()
             output = Linux.get_full_response(stdout.channel)
             if output:
                 Linux.logger.info(f'VM build command for VM #{vm["idVM"]} generated stdout.\n{output}')
