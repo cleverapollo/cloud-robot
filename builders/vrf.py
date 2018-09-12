@@ -47,7 +47,7 @@ class Vrf:
         try:
             dev.open()
             # Set the RPC timeout to be 2 minutes
-        dev.timeout = 60 * 2
+            dev.timeout = 60 * 2
         except ConnectError:
             Vrf.logger.error(f'Unable to connect to router @ {ip}', exc_info=True)
             return False
