@@ -44,7 +44,7 @@ class Vm:
         vm['image'] = image['filename']
         vm['ram'] *= 1024  # ram must be multiple of 1024 as the builders takes in MBytes
         vm['idHypervisor'] = image['idHypervisor']
-        vm['user_password'] = ro.password_generator(chars='a', size=8)
+        vm['user_password'] = ro.password_generator(size=16)
         vm['root_password'] = ro.password_generator(size=128)
 
         # Get ip address and subnet details
