@@ -43,6 +43,8 @@ class Vrf:
         # Connect to the Router
         Vrf.logger.info(f'Attempting to connect to Physical Router @ {ip}')
         dev = Device(host=ip, user='robot', password=password, port=22)
+        # Set the RPC timeout to be 2 minutes
+        dev.timeout = 60 * 2
         cfg = Config(dev)
         try:
             dev.open()
