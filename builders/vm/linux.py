@@ -14,6 +14,7 @@ TEMPLATE_MAP = {
     9: 'ubuntu',
     10: 'centos',
     11: 'centos',
+    12: 'ubuntu',
 }
 
 
@@ -74,6 +75,8 @@ class Linux:
 
             # Run the command and log the output and err. For the bridge build we don't care if there's an error
             _, stdout, stderr = client.exec_command(cmd)
+            # Block until command finishes
+            stdout.channel.recv_exit_status()
             output = Linux.get_full_response(stdout.channel)
             if output:
                 Linux.logger.info(f'Bridge build command for VM #{vm["idVM"]} generated stdout.\n{output}')
@@ -92,13 +95,17 @@ class Linux:
 
             # Run the command and log the output and err. Check if the string "Restarting guest" is in the output
             _, stdout, stderr = client.exec_command(cmd)
+            # Block until command finishes
+            stdout.channel.recv_exit_status()
             output = Linux.get_full_response(stdout.channel)
             if output:
                 Linux.logger.info(f'VM build command for VM #{vm["idVM"]} generated stdout.\n{output}')
             err = Linux.get_full_response(stderr.channel)
             if err:
                 Linux.logger.warning(f'VM build command for VM #{vm["idVM"]} generated stderr.\n{err}')
-            built = 'Restarting guest' in output
+            built = 'Creating domain' in output
+            if built:
+                time.sleep(30)
 
         except paramiko.SSHException:
             Linux.logger.error(
@@ -110,18 +117,14 @@ class Linux:
         return built
 
     @staticmethod
-    def get_full_response(channel: paramiko.Channel, wait_time: int = 15, read_size: int = 64) -> str:
+    def get_full_response(channel: paramiko.Channel, read_size: int = 1024) -> str:
         """
-        Get the full response from the specified paramiko channel, waiting a given number of seconds before trying to
-        read from it each time.
+        Get the full response from the specified paramiko channel
         :param channel: The channel to be read from
-        :param wait_time: How long in seconds between each read
         :param read_size: How many bytes to be read from the channel each time
         :return: The full output from the channel, or as much as can be read given the parameters.
         """
         msg = ''
-        time.sleep(wait_time)
         while channel.recv_ready():
             msg += channel.recv(read_size).decode()
-            time.sleep(wait_time)
         return msg

@@ -46,6 +46,8 @@ class Vrf:
         cfg = Config(dev)
         try:
             dev.open()
+            # Set the RPC timeout to be 2 minutes
+            dev.timeout = 60 * 2
         except ConnectError:
             Vrf.logger.error(f'Unable to connect to router @ {ip}', exc_info=True)
             return False
@@ -78,6 +80,11 @@ class Vrf:
         except CommitError:
             Vrf.logger.error(f'Unable to commit changes onto router @ {ip}', exc_info=True)
             return False
+        except Exception:
+            Vrf.logger.error(
+                f'There is an non-critical exception arose during committing changes onto router @ {ip}',
+                exc_info=True,
+            )
         Vrf.logger.info(f'Changes successfully committed onto router @ {ip}, now attempting to unlock config')
         try:
             cfg.unlock()

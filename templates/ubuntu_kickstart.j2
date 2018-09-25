@@ -12,7 +12,7 @@ timezone {{ tz }}
 {# Root Password #}
 rootpw --disabled
 {# Username / Password #}
-user administrator --password {{ crypted_admin_password }} --iscrypted
+user administrator --fullname "Administrator" --password {{ crypted_user_password }} --iscrypted
 {# Reboot After Installation #}
 reboot
 {# Use text mode install #}

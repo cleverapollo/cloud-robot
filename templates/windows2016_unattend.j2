@@ -74,10 +74,19 @@
 					<PlainText>true</PlainText>
 				</AdministratorPassword>
 			</UserAccounts>
+			<AutoLogon>
+			    <Password>
+			        <Value>{{ user_password }}</Value>
+			        <PlainText>true</PlainText>
+			    </Password>
+			    <Username>Administrator</Username>
+			    <LogonCount>1</LogonCount>
+			    <Enabled>true</Enabled>
+			</AutoLogon>
 			<TimeZone>{{ tz }}</TimeZone>
 			<FirstLogonCommands>
-                <SynchronousCommand wcm:action="add">
-					<Order>1</Order>
+			    <SynchronousCommand wcm:action="add">
+				    <Order>1</Order>
 					<RequiresUserInput>false</RequiresUserInput>
 					<Description>Enable Remote Desktop Firewall</Description>
 					<CommandLine>Netsh advfirewall firewall set rule group="remote desktop" new enable=yes</CommandLine>
