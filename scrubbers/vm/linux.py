@@ -81,7 +81,7 @@ class Linux:
                 except IOError:
                     Linux.logger.error(
                         f'Failed to delete bridge file br{vm["vlan"]}.xml of VM #{vm["idVM"]}',
-                        exc_info=True
+                        exc_info=True,
                     )
         except paramiko.SSHException:
             Linux.logger.error(

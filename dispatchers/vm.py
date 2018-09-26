@@ -185,7 +185,7 @@ class Vm:
                     vlan_vm['idHypervisor'] = ro.service_entity_read(
                         'IAAS',
                         'image',
-                        vlan_vm['idImage']
+                        vlan_vm['idImage'],
                     )['idHypervisor']
                     if vlan_vm['idVM'] != vm['idVM'] and vlan_vm['idHypervisor'] == 2:
                         for ip in ro.service_entity_list('IAAS', 'ipaddress', {'vm': vlan_vm['idVM']}):

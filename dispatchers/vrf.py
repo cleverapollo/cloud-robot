@@ -108,4 +108,3 @@ class Vrf:
                 f'VRF #{vrf_id} failed to scrub. Check log for details.',
             )
             metrics.vrf_scrub_failure()
-
