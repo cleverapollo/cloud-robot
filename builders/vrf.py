@@ -82,7 +82,7 @@ class Vrf:
             return False
         except Exception:
             Vrf.logger.error(
-                f'There is an non-critical exception arose during committing changes onto router @ {ip}',
+                f'There is a non-critical exception arose during committing changes onto router @ {ip}',
                 exc_info=True,
             )
         Vrf.logger.info(f'Changes successfully committed onto router @ {ip}, now attempting to unlock config')

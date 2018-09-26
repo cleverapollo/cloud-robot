@@ -27,20 +27,12 @@ class Linux:
         :return: A flag stating whether or not the scrub was successful
         """
         scrubbed = False
-        try:
-            if os.path.exists(f'{DRIVE_PATH}/kickstarts/{vm["vm_identifier"]}.cfg'):
-                os.remove(f'{DRIVE_PATH}/kickstarts/{vm["vm_identifier"]}.cfg')
-            Linux.logger.debug(f'Removed {vm["vm_identifier"]}.cfg file for FreeNas drive')
-        except IOError:
-            Linux.logger.error(f'Failed to delete kickstart conf of VM #{vm["idVM"]}', exc_info=True)
-
         # Attempt to connect to the host server
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
             Linux.logger.info(f'Attempting to connect to host server @ {vm["host_ip"]}')
             client.connect(hostname=vm['host_ip'], username='administrator', password=password)
-
             # Generate and execute the command to scrub the actual VM
             Linux.logger.info(f'Attempting to scrub VM #{vm["idVM"]}')
             cmd = utils.jinja_env.get_template('linux_vm_scrub_cmd.j2').render(
@@ -50,16 +42,47 @@ class Linux:
             )
             Linux.logger.debug(f'Generated VM scrub command for VM #{vm["idVM"]}\n{cmd}')
 
-            # Run the command and log the output and err. Check if the string "Deleting guest" is in the output
+            # Run the command and log the output and err.
             _, stdout, stderr = client.exec_command(cmd)
             output = Linux.get_full_response(stdout.channel)
             if output:
                 Linux.logger.info(f'VM scrub command for VM #{vm["idVM"]} generated stdout.\n{output}')
+                scrubbed = True
             err = Linux.get_full_response(stderr.channel)
             if err:
                 Linux.logger.warning(f'VM scrub command for VM #{vm["idVM"]} generated stderr.\n{err}')
-            scrubbed = 'Deleting guest' in output  # TODO
 
+            if scrubbed:
+                try:
+                    if os.path.exists(f'{DRIVE_PATH}/kickstarts/{vm["vm_identifier"]}.cfg'):
+                        os.remove(f'{DRIVE_PATH}/kickstarts/{vm["vm_identifier"]}.cfg')
+                    Linux.logger.debug(f'Removed {vm["vm_identifier"]}.cfg file for FreeNas drive')
+                except IOError:
+                    Linux.logger.error(f'Failed to delete kickstart conf of VM #{vm["idVM"]}', exc_info=True)
+
+            if vm['bridge_delete'] is True:
+                # Generate and execute the command to delete the bridge
+                bridge_delete_cmd = utils.jinja_env.get_template('kvm_bridge_scrub_cmd.j2').render(vlan=vm['vlan'])
+                Linux.logger.debug(f'Generated bridge delete command for vlan #br{vm["vlan"]}\n{bridge_delete_cmd}')
+
+                # Run the command and log the output and err.
+                _, stdout, stderr = client.exec_command(bridge_delete_cmd)
+                output = Linux.get_full_response(stdout.channel)
+                if output:
+                    Linux.logger.info(f'Bridge delete command for vlan #br{vm["vlan"]} generated stdout.\n{output}')
+                err = Linux.get_full_response(stderr.channel)
+                if err:
+                    Linux.logger.warning(f'Bridge delete command for vlan #br{vm["vlan"]} generated stderr.\n{err}')
+                # Delete the bridge xml file
+                try:
+                    if os.path.exists(f'{DRIVE_PATH}/bridge_xmls/br{vm["vlan"]}.xml'):
+                        os.remove(f'{DRIVE_PATH}/bridge_xmls/br{vm["vlan"]}.xml')
+                    Linux.logger.debug(f'Removed br{vm["vlan"]}.xml file for FreeNas drive')
+                except IOError:
+                    Linux.logger.error(
+                        f'Failed to delete bridge file br{vm["vlan"]}.xml of VM #{vm["idVM"]}',
+                        exc_info=True
+                    )
         except paramiko.SSHException:
             Linux.logger.error(
                 f'Exception occurred while connected to host server @ {vm["host_ip"]} for the scrub of VM '

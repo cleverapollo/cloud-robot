@@ -167,6 +167,37 @@ class Vm:
         if vm['idHypervisor'] == 1:  # HyperV -> Windows
             success = WindowsScrubber.scrub(vm, self.password)
         elif vm['idHypervisor'] == 2:  # KVM -> Linux
+            # ---------------------------------------------------------------------------------------------
+            # To delete the bridge interface on host, there must be no VM connected to the bridge
+            # So get all the VMs with state not equal to 9 (deleted), and the list of VMs must be only one in
+            # number as current VM yet to be deleted. otherwise do not delete the bridge.
+            vm['brigde_delete'] = False
+            params = {
+                'project': vm['idProject'],
+                'exclude__state': 9,
+            }
+            vlan_vms = ro.service_entity_list('IAAS', 'vm', params=params)
+            existing_vms_count = 0
+            if len(vlan_vms) == 1 and vlan_vms[0]['idVM'] == vm['idVM']:
+                vm['brigde_delete'] = True
+            else:
+                for vlan_vm in vlan_vms:
+                    vlan_vm['idHypervisor'] = ro.service_entity_read(
+                        'IAAS',
+                        'image',
+                        vlan_vm['idImage']
+                    )['idHypervisor']
+                    if vlan_vm['idVM'] != vm['idVM'] and vlan_vm['idHypervisor'] == 2:
+                        for ip in ro.service_entity_list('IAAS', 'ipaddress', {'vm': vlan_vm['idVM']}):
+                            if netaddr.IPAddress(ip['address']).is_private():
+                                # Get the subnet of this IP
+                                subnet = ro.service_entity_read('IAAS', 'subnet', ip['idSubnet'])
+                                # check if the VM is in the same subnet of current scubbing VM
+                                if subnet['vLAN'] == vm['vlan']:
+                                    existing_vms_count += 1
+                if not existing_vms_count > 0:
+                    vm['brigde_delete'] = True
+            # ---------------------------------------------------------------------------------------------
             success = LinuxScrubber.scrub(vm, self.password)
         else:
             logger.error(f'Unsupported idHypervisor ({vm["idHypervisor"]}). VM #{vm_id} cannot be scrubbed')
