@@ -13,11 +13,13 @@ import ro
 import utils
 
 EMAIL_BUILD_SUCCESS_SUBJECT = 'One of your requested VMs has been successfully built.'
-EMAIL_BUILD_FAILURE_SUBJECT = f'Failed to build one of your requested VMs, ' \
-                              f'please contact our NOC team for more information.'
+EMAIL_BUILD_FAILURE_SUBJECT = (
+    f'Failed to build one of your requested VMs, please contact our NOC team for more information.'
+)
 EMAIL_SCRUB_SUCCESS_SUBJECT = 'One of your VMs requested to delete has been successfully deleted.'
-EMAIL_SCRUB_FAILURE_SUBJECT = f'Failed to delete one of your VMs requested to delete, ' \
-                              f'please contact our NOC team for more information.'
+EMAIL_SCRUB_FAILURE_SUBJECT = (
+    f'Failed to delete one of your VMs requested to delete, please contact our NOC team for more information.'
+)
 
 
 class Vm:
