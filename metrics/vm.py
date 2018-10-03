@@ -6,11 +6,25 @@ def build_success():
     """
     Sends a data packet to Influx reporting a successful build
     """
-    prepare_metrics(lambda: Metric('vm_success', 1, {'region': REGION_NAME}))
+    prepare_metrics(lambda: Metric('vm_build_success', 1, {'region': REGION_NAME}))
 
 
 def build_failure():
     """
     Sends a data packet to Influx reporting a failed build
     """
-    prepare_metrics(lambda: Metric('vm_failure', 1, {'region': REGION_NAME}))
+    prepare_metrics(lambda: Metric('vm_build_failure', 1, {'region': REGION_NAME}))
+
+
+def scrub_success():
+    """
+    Sends a data packet to Influx reporting a successful scrub
+    """
+    prepare_metrics(lambda: Metric('vm_scrub_success', 1, {'region': REGION_NAME}))
+
+
+def scrub_failure():
+    """
+    Sends a data packet to Influx reporting a failed scrub
+    """
+    prepare_metrics(lambda: Metric('vm_scrub_failure', 1, {'region': REGION_NAME}))

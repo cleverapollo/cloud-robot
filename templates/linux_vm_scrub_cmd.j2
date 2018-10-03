@@ -1,0 +1,6 @@
+{# 1. First shutdown the VM #}
+virsh shutdown {{ vm_identifier }}
+{# 2. Then delete the VM instance #}
+virsh undefine {{ vm_identifier }}
+{# 3. There is no shortcut to delete the vm drive so using direct command#}
+echo {{ SUDO_PASS }} | sudo -S rm -rf /var/lib/libvirt/images/{{ vm_identifier }}.qcow2

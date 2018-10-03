@@ -4,6 +4,7 @@ from collections import deque
 
 # locals
 from builders import Vrf as Builder
+from scrubbers import Vrf as Scubber
 import metrics
 import ro
 import utils
@@ -76,11 +77,34 @@ class Vrf:
             logger.info(f'Successfully built VRF #{vrf_id} in router {vrf["idRouter"]}')
             # Change the state to 4 and report a success to influx
             ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 4})
-            metrics.vrf_success()
+            metrics.vrf_build_success()
         else:
             logger.error(
                 f'VRF #{vrf_id} failed to build so it is being moved to Unresourced (3). Check log for details.',
             )
             # Change the state to 3 and report a failure to influx
             ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 3})
-            metrics.vrf_failure()
+            metrics.vrf_build_failure()
+
+    def scrub(self, vrf: dict):
+        """
+        Takes VRF data from the CloudCIX API, it and requests to scrub the Vrf
+        in the assigned physical Router.
+        :param vrf: The VRF data from the CloudCIX API
+        """
+        logger = utils.get_logger_for_name('dispatchers.vrf.scrub')
+        vrf_id = vrf['idVRF']
+        logger.info(f'Commencing scrub dispatch of VRF #{vrf_id}')
+        # OOB IP
+        vrf['oob_ip'] = ro.service_entity_read('IAAS', 'router', vrf['idRouter'])['ipManagement']
+        # Attempt to scrub the VRF
+        if Scubber.scrub(vrf, self.password):
+            logger.info(f'Successfully scrubbed VRF #{vrf_id} in router {vrf["idRouter"]}')
+            # Change the state to 9 and report a success to influx
+            ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 9})
+            metrics.vrf_scrub_success()
+        else:
+            logger.error(
+                f'VRF #{vrf_id} failed to scrub. Check log for details.',
+            )
+            metrics.vrf_scrub_failure()
