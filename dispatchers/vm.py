@@ -173,7 +173,7 @@ class Vm:
             # To delete the bridge interface on host, there must be no VM connected to the bridge
             # So get all the VMs with state not equal to 9 (deleted), and the list of VMs must be only one in
             # number as current VM yet to be deleted. otherwise do not delete the bridge.
-            vm['brigde_delete'] = False
+            vm['bridge_delete'] = False
             params = {
                 'project': vm['idProject'],
                 'exclude__state': 9,
@@ -181,7 +181,7 @@ class Vm:
             vlan_vms = ro.service_entity_list('IAAS', 'vm', params=params)
             existing_vms_count = 0
             if len(vlan_vms) == 1 and vlan_vms[0]['idVM'] == vm['idVM']:
-                vm['brigde_delete'] = True
+                vm['bridge_delete'] = True
             else:
                 for vlan_vm in vlan_vms:
                     vlan_vm['idHypervisor'] = ro.service_entity_read(
@@ -198,7 +198,7 @@ class Vm:
                                 if subnet['vLAN'] == vm['vlan']:
                                     existing_vms_count += 1
                 if not existing_vms_count > 0:
-                    vm['brigde_delete'] = True
+                    vm['bridge_delete'] = True
             # ---------------------------------------------------------------------------------------------
             success = LinuxScrubber.scrub(vm, self.password)
         else:
