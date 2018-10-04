@@ -1,1 +1,1 @@
-mount {{ freenas_url }} Z: -o nolock & powershell -file Z:\HyperV\scripts\VMScrubber.ps1 -VMName {{ vm_identifier }} -Verbose
+mount {{ freenas_url }} Z: -o fileaccess=750 & powershell -file Z:\HyperV\scripts\VMScrubber.ps1 -VMName {{ vm_identifier }} -Verbose
