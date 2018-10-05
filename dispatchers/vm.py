@@ -2,7 +2,6 @@
 import netaddr
 import time
 from crypt import crypt, mksalt, METHOD_SHA512
-from datetime import datetime
 
 # locals
 from builders import Linux as LinuxBuilder, Windows as WindowsBuilder
