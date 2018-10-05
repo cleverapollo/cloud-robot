@@ -2,7 +2,6 @@
 import netaddr
 import time
 from crypt import crypt, mksalt, METHOD_SHA512
-from datetime import datetime
 
 # locals
 from builders import Linux as LinuxBuilder, Windows as WindowsBuilder
@@ -208,7 +207,7 @@ class Vm:
         if success:
             logger.info(f'VM #{vm_id} successfully deleted from Server #{vm["idServer"]}')
             # Change the state of the VM to Deleted (9) and log a success in Influx
-            ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 9, 'deleted': datetime.utcnow()})
+            ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 9})
             metrics.vm_scrub_success()
             # Email the user
             email_notifier.vm_email_notifier(EMAIL_SCRUB_SUCCESS_SUBJECT, vm)
