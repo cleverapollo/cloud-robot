@@ -62,11 +62,11 @@ class Windows:
                 command_id=command_id,
             )
             if std_out:
-                msg = std_out.strip()
+                msg = std_out.strip().decode()
                 Windows.logger.info(f'VM build command for VM #{vm["idVM"]} generated stdout\n{msg}')
-                built = 'VM Successfully Created and Hosted' in msg.decode()
+                built = 'VM Successfully Created' in msg
             if std_err:
-                msg = std_err.strip()
+                msg = std_err.strip().decode()
                 Windows.logger.warning(f'VM build command for VM #{vm["idVM"]} generated stderr\n{msg}')
             session.protocol.cleanup_command(shell_id=shell_id, command_id=command_id)
             session.protocol.close_shell(shell_id=shell_id)

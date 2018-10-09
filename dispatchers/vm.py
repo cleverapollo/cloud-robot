@@ -108,6 +108,10 @@ class Vm:
         elif vm['idHypervisor'] == 2:  # KVM -> Linux
             # Encrypt the password
             vm['crypted_admin_password'] = str(crypt(vm['admin_password'], mksalt(METHOD_SHA512)))
+            # Create a crypted root password for CentOS
+            vm['crypted_root_password'] = str(
+                crypt(ro.password_generator(chars=128), mksalt(METHOD_SHA512)),
+            )
             success = LinuxBuilder.build(vm, self.password)
         else:
             logger.error(f'Unsupported idHypervisor ({vm["idHypervisor"]}). VM #{vm_id} cannot be built')

@@ -31,7 +31,7 @@ bootloader --location=mbr
 clearpart --all --initlabel
 autopart --type=lvm
 {# Root password #}
-{# rootpw --iscrypted {{ crypted_root_password }} #}
+rootpw --iscrypted {{ crypted_root_password }}
 {# Username / Password #}
 user --name "administrator" --password={{ crypted_admin_password }} --iscrypted
 {# SELinux configuration #}
