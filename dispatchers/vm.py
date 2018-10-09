@@ -50,7 +50,7 @@ class Vm:
         vm['image'] = image['filename']
         vm['ram'] *= 1024  # ram must be multiple of 1024 as the builders takes in MBytes
         vm['idHypervisor'] = image['idHypervisor']
-        vm['admin_password'] = ro.password_generator(chars='a', size=8)
+        vm['admin_password'] = ro.password_generator(size=8)
 
         # Get ip address and subnet details
         for ip in ro.service_entity_list('IAAS', 'ipaddress', {'vm': vm['idVM']}):
