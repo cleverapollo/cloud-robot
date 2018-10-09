@@ -1,10 +1,10 @@
 {# Create VRF #}
 set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} instance-type virtual-router
-
+{# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Create a northbound route #}
 set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} routing-options static route 0.0.0.0/0 next-table PUBLIC.inet.0
 set groups vrf-{{ idProject }} security zones security-zone vrf-{{ idProject }}
-
+{# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Create southbound sub interface and gateway for each VLAN and attach them to the VRF #}
 {% for vlan in vlans %}
 set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} interface ge-0/0/1.{{ vlan['vlan'] }}
@@ -13,7 +13,7 @@ set groups vrf-{{ idProject }} interfaces ge-0/0/1 unit {{ vlan['vlan'] }} descr
 {# Create private zones #}
 set groups vrf-{{ idProject }} security zones security-zone vrf-{{ idProject }} interfaces ge-0/0/1.{{ vlan['vlan'] }} host-inbound-traffic system-services ping
 {% endfor %}
-
+{# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Source (outbound) NAT #}
 set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound description vrf-{{ idProject }}-outbound-nat
 set groups vrf-{{ idProject }} security nat source pool vrf-{{ idProject }}-public routing-instance PUBLIC
@@ -24,7 +24,7 @@ set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-
 set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound rule {{ vlan['vlan'] }}-outbound match source-address {{ vlan['address_range'] }}
 set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound rule {{ vlan['vlan'] }}-outbound then source-nat pool vrf-{{ idProject }}-public
 {% endfor %}
-
+{# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Create static ruleset inbound 1:1 NAT#}
 {% for nat in nats %}
 {% set rule_name = nat['private'].split('/')[0].replace('.', '-') %}
@@ -32,12 +32,12 @@ set groups vrf-{{ idProject }} security nat static rule-set all-inbound-static-n
 set groups vrf-{{ idProject }} security nat static rule-set all-inbound-static-nat rule {{ rule_name }} then static-nat prefix {{ nat['private'] }}
 set groups vrf-{{ idProject }} security nat static rule-set all-inbound-static-nat rule {{ rule_name }} then static-nat prefix routing-instance vrf-{{ idProject }}
 {# Create proxy-arp on specific interface with predefined IP addresses #}
-set security nat proxy-arp interface ge-0/0/0.0 address {{ nat['public'] }}
+set groups vrf-{{ idProject }} security nat proxy-arp interface ge-0/0/0.0 address {{ nat['public'] }}
 {% endfor %}
-
+{# --------------------------------------------------------------------------------------------------------------------------------- #}
 {% for vpn in vpns %}
 {# proxy-arp for vrf is required only in case of VPN #}
-set security nat proxy-arp interface ge-0/0/0.0 address {{ IPVrf }}
+set groups vrf-{{ idProject }} security nat proxy-arp interface ge-0/0/0.0 address {{ IPVrf }}
 {# add the appropriate interfaces to it #}
 set groups vrf-{{ idProject }} interfaces st0 unit {{ vpn['vlan'] }} family inet address {{ vpn["vpnRemoteSubnetIP"] }}/{{ vpn["vpnRemoteSubnetMask"] }}
 {# set up some VPN parameters #}
@@ -59,5 +59,5 @@ set groups vrf-{{ idProject }} security zones security-zone vrf-{{ idProject }} 
 {# add a route to the other end of the IPsec tunnel with the tunnel if as the nexthop #}
 set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} routing-options static route {{ vpn['local_subnet'] }} next-hop st0.{{ vpn['vlan'] }}
 {% endfor %}
-
+{# --------------------------------------------------------------------------------------------------------------------------------- #}
 set apply-groups vrf-{{ idProject }}
