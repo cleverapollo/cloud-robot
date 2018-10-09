@@ -110,7 +110,7 @@ class Vm:
             vm['crypted_admin_password'] = str(crypt(vm['admin_password'], mksalt(METHOD_SHA512)))
             # Create a crypted root password for CentOS
             vm['crypted_root_password'] = str(
-                crypt(ro.password_generator(chars=128), mksalt(METHOD_SHA512)),
+                crypt(ro.password_generator(size=128), mksalt(METHOD_SHA512)),
             )
             success = LinuxBuilder.build(vm, self.password)
         else:
