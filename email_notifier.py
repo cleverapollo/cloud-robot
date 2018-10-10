@@ -1,11 +1,9 @@
 # python
 import logging
 import smtplib
-
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
-from typing import Optional
 
 # local
 import settings
