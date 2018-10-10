@@ -11,9 +11,9 @@ import metrics
 import ro
 import utils
 
-EMAIL_BUILD_SUCCESS_SUBJECT = 'One of your VMs has been built successfully!'
-EMAIL_BUILD_FAILURE_SUBJECT = 'One of your requested VMs has failed to build!'
-EMAIL_SCRUB_SUCCESS_SUBJECT = 'One of your VMs was deleted!'
+EMAIL_BUILD_SUCCESS_SUBJECT = 'Your VM {name} has been built successfully!'
+EMAIL_BUILD_FAILURE_SUBJECT = 'Your VM {name} has failed to build!'
+EMAIL_SCRUB_SUCCESS_SUBJECT = 'Your VM {name} has been deleted successfully!'
 
 
 class Vm:
@@ -116,14 +116,22 @@ class Vm:
             ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 4})
             metrics.vm_build_success()
             # Email the user
-            email_notifier.vm_email_notifier(EMAIL_BUILD_SUCCESS_SUBJECT, vm, 'emails/build_success.j2')
+            email_notifier.vm_email_notifier(
+                EMAIL_BUILD_SUCCESS_SUBJECT.format(name=vm['name']),
+                vm,
+                'emails/build_success.j2',
+            )
         else:
             logger.info(f'VM #{vm_id} failed to build so it is being moved to Unresourced (3). Check log for details.')
             # Change the state of the VM to Unresourced (3) and log a failure in Influx
             ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 3})
             metrics.vm_build_failure()
             # Email the User
-            email_notifier.vm_email_notifier(EMAIL_BUILD_FAILURE_SUBJECT, vm, 'emails/build_failure.j2')
+            email_notifier.vm_email_notifier(
+                EMAIL_BUILD_FAILURE_SUBJECT.format(name=vm['name']),
+                vm,
+                'emails/build_failure.j2',
+            )
 
     def scrub(self, vm: dict):
         """
@@ -207,7 +215,11 @@ class Vm:
             ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 9})
             metrics.vm_scrub_success()
             # Email the user
-            email_notifier.vm_email_notifier(EMAIL_SCRUB_SUCCESS_SUBJECT, vm, 'emails/scrub_success.j2')
+            email_notifier.vm_email_notifier(
+                EMAIL_SCRUB_SUCCESS_SUBJECT.format(name=vm['name']),
+                vm,
+                'emails/scrub_success.j2',
+            )
         else:
             logger.info(f'VM #{vm_id} failed to scrub . Check log for details.')
             metrics.vm_scrub_failure()
