@@ -1,0 +1,30 @@
+{% extends "base.j2" %}
+{% block content %}
+<div>
+  <div class="title-cell">
+    <div class="title">
+      <span class="font-calibri">
+        <h1 class="title">One of your VMs was successfully deleted!</h1>
+      </span>
+    </div>
+  </div>
+</div>
+
+<div>
+  <div class="title-cell">
+    <hr class="divider" />
+  </div>
+</div>
+
+<div>
+  <div class="title-cell">
+    <h3 class="vm-name">
+      <span class="font-futura">
+        <strong>
+          VM Name: {{ name }}
+        </strong>
+      </span>
+    </h3>
+  </div>
+</div>
+{% endblock %}
