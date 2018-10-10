@@ -1,28 +1,24 @@
 # python
 import logging
 import smtplib
-
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
-from typing import Optional
 
 # local
 import settings
 import utils
 
 
-def vm_email_notifier(subject: str, vm: dict) -> bool:
+def vm_email_notifier(subject: str, vm: dict, template: str) -> bool:
     """
     This method is dedicated to send mails once a VM is built.
-    :param subject: string, context of the mail
-    :param vm: dict, vm details
+    :param subject: The text to use for the subject of the email
+    :param vm: Details about the VM for which the notification is being sent
+    :param template: The name of the template to be used to generate the message
     :return:
     """
-    driver_logger = utils.get_logger_for_name(
-        'email_notifier.vm_email_notifier',
-        logging.DEBUG,
-    )
+    logger = utils.get_logger_for_name('email_notifier.vm_email_notifier', logging.DEBUG)
 
     receiver = vm['email']
     sender = settings.CLOUDCIX_EMAIL_USERNAME
@@ -31,14 +27,12 @@ def vm_email_notifier(subject: str, vm: dict) -> bool:
     # Create message container with the correct MIME
     # type is multipart/alternative here!
     message = MIMEMultipart('alternative')
-    message['subject'] = subject
+    message['subject'] = f'[CloudCIX] {subject}'
     message['To'] = receiver
     message['From'] = sender
     message.preamble = 'Your mail reader does not support the report format.'
     # Get the body from template
-    body = utils.jinja_env.get_template(
-        'vm_email_notifier.j2',
-    ).render(subject=subject, **vm)
+    body = utils.jinja_env.get_template(template).render(subject=subject, **vm)
     # Record the MIME type text/html.
     html_body = MIMEText(body, 'html')
     # Attach parts into message container.
@@ -57,27 +51,15 @@ def vm_email_notifier(subject: str, vm: dict) -> bool:
     msg_image2.add_header('Content-ID', '<website.png>')
     message.attach(msg_image2)
     # call for sending mail
-    sent = send_email(sender, sender_password, receiver, email_smtp, message)
+    sent = _send_email(sender, sender_password, receiver, email_smtp, message)
     if sent is True:
-        driver_logger.info(
-            f'Email is sent successfully to {receiver} '
-            f'from {sender} about #VM {vm["vm_identifier"]} status.',
-        )
+        logger.info(f'Email is sent successfully to {receiver} from {sender} about #VM {vm["vm_identifier"]} status.')
     else:
-        driver_logger.error(
-            f'Failed to send email to {receiver} from {sender}'
-            f' about #VM {vm["vm_identifier"]} status.',
-        )
+        logger.error(f'Failed to send email to {receiver} from {sender} about #VM {vm["vm_identifier"]} status.')
     return sent
 
 
-def send_email(
-        sender: str,
-        password: str,
-        receiver: str,
-        email_smtp: str,
-        message: Optional[MIMEMultipart] = None,
-)-> bool:
+def _send_email(sender: str, password: str, receiver: str, email_smtp: str, message: MIMEMultipart = None) -> bool:
     """
     With this function we send out our html email
     :param sender: string, sender's email id
@@ -87,10 +69,7 @@ def send_email(
     :param message: Optional, message can html, simple text etc,.
     :return: boolean, True on success and False on failure.
     """
-    driver_logger = utils.get_logger_for_name(
-        'email_notifier.send_email',
-        logging.DEBUG,
-    )
+    logger = utils.get_logger_for_name('email_notifier.send_email', logging.DEBUG)
 
     try:
         server = smtplib.SMTP(email_smtp)
@@ -101,8 +80,5 @@ def send_email(
         server.quit()
         return True
     except Exception:
-        driver_logger.error(
-            f'Failed to send mail to {receiver} from {sender}.',
-            exc_info=True,
-        )
+        logger.error(f'Failed to send mail to {receiver} from {sender}.', exc_info=True)
         return False
