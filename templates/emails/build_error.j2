@@ -4,28 +4,10 @@
   <div class="title-cell">
     <div class="title">
       <span class="font-calibri">
-        <h1 class="title">One of your requested VMs has failed to build!</h1>
-        <h4 class="subtitle">Please contact the NOC, quoting the name below.</h4>
+        <h1 class="title">Your VM {{ name }} has failed to build!</h1>
+        <h4 class="subtitle">Please contact the NOC, quoting the name of the VM.</h4>
       </span>
     </div>
-  </div>
-</div>
-
-<div>
-  <div class="title-cell">
-    <hr class="divider" />
-  </div>
-</div>
-
-<div>
-  <div class="title-cell">
-    <h3 class="vm-name">
-      <span class="font-futura">
-        <strong>
-          VM Name: {{ name }}
-        </strong>
-      </span>
-    </h3>
   </div>
 </div>
 {% endblock %}
