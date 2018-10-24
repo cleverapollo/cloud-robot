@@ -60,15 +60,20 @@ class Vrf:
         for vpn in ro.service_entity_list('IAAS', 'vpn_tunnel', {'vrf': vrf_id}):
             subnet = ro.service_entity_read('IAAS', 'subnet', vpn['vpnLocalSubnet'])
             vpn['vlan'] = subnet['vLAN']
-            vpn['local_subnet'] = netaddr.IPNetwork(subnet['addressRange']).cidr
+            vpn['remote_subnet_cidr'] = netaddr.IPNetwork(
+                f'{vpn["vpnRemoteSubnetIP"]}/{vpn["vpnRemoteSubnetMask"]}',
+            ).cidr
             vpns.append(vpn)
 
         # adding vlans, nats and vpns to vrf
         vrf['vlans'] = vlans
         vrf['nats'] = nats
         vrf['vpns'] = vpns
-        # OOB IP
-        vrf['oob_ip'] = ro.service_entity_read('IAAS', 'router', vrf['idRouter'])['ipManagement']
+
+        # Router data: maskVPN and OOB IP
+        router_data = ro.service_entity_read('IAAS', 'router', vrf['idRouter'])
+        vrf['oob_ip'] = router_data['ipManagement']
+        vrf['mask_vpn'] = router_data['maskVPN']
 
         # TODO - Add data/ip validations to vrf dispatcher
 
