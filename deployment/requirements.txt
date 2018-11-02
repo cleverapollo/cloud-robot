@@ -5,4 +5,4 @@ junos-eznc
 netaddr
 paramiko
 pywinrm
-ssh://git@gitlab.cloudcix.com/CloudCIX/Tools/metrics.git
+git+ssh://git@gitlab.cloudcix.com/CloudCIX/Tools/metrics.git
