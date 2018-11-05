@@ -60,7 +60,7 @@ set groups vrf-{{ idProject }} security ipsec vpn vrf-{{ idProject }}-vpn-{{ vpn
 set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} interface st0.{{ vpn['vlan'] }}
 set groups vrf-{{ idProject }} security zones security-zone vrf-{{ idProject }} interfaces st0.{{ vpn['vlan'] }}
 {# add a route to the other end of the IPSec tunnel with the tunnel if as the nexthop #}
-set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} routing-options static route {{ vpn['remote_subnet_cidr'] }}/{{ vpn["vpnRemoteSubnetMask"] }} next-hop st0.{{ vpn['vlan'] }}
+set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} routing-options static route {{ vpn['remote_subnet_cidr'] }} next-hop st0.{{ vpn['vlan'] }}
 {% endfor %}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 set apply-groups vrf-{{ idProject }}
