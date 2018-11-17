@@ -130,7 +130,7 @@ class Vm:
             email_notifier.vm_email_notifier(
                 EMAIL_BUILD_FAILURE_SUBJECT.format(name=vm['name']),
                 vm,
-                'emails/build_failure.j2',
+                'emails/build_error.j2',
             )
 
     def scrub(self, vm: dict):
