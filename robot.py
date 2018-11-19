@@ -3,7 +3,7 @@ import multiprocessing as mp
 import signal
 import sys
 import time
-
+from datetime import datetime, timedelta
 # local
 import dispatchers
 import metrics
@@ -49,6 +49,29 @@ def mainloop(process_pool: mp.Pool):
         else:
             robot_logger.info('No VMs in "Requested" state.')
 
+        # ######################## VRF QUIESCE  ################################
+        vrfs = ro.service_entity_list('IAAS', 'vrf', params={'state': 5})
+        if len(vrfs) > 0:
+            for vrf in vrfs:
+                robot_logger.info(f'Dispatching VRF #{vrf["idVRF"]} for quiesce')
+                vrf_dispatch.quiesce(vrf)
+        else:
+            robot_logger.info('No VRFs in "Quiescing" state.')
+
+        # ######################## VM QUIESCE  ################################
+        vms = ro.service_entity_list('IAAS', 'vm', params={'state': [5, 8]})
+        if len(vms) > 0:
+            for vm in vms:
+                robot_logger.info(f'Dispatching VM #{vm["idVM"]} for quiesce')
+                # Call the dispatcher asynchronously
+                try:
+                    vm_dispatch.quiesce(vm)
+                    # process_pool.apply_async(func=vm_dispatch.quiesce, kwds={'vm': vm})
+                except mp.ProcessError:
+                    robot_logger.error(f'Error when Quiescing VM #{vm["idVM"]}', exc_info=True)
+        else:
+            robot_logger.info('No VM for "Shutdown/Quiesce" state.')
+
         # ######################## VRF SCRUB  ################################
         vrfs = ro.service_entity_list('IAAS', 'vrf', params={'state': 8})
         if len(vrfs) > 0:
@@ -57,8 +80,13 @@ def mainloop(process_pool: mp.Pool):
                 vrf_dispatch.scrub(vrf)
         else:
             robot_logger.info('No VRFs in "Scrubbing" state.')
+
         # ######################## VM SCRUB  ################################
-        vms = ro.service_entity_list('IAAS', 'vm', params={'state': 8})
+        params_scrub = {
+            'state': 9,
+            'updated__gte': (datetime.now() + timedelta(days=30)).isoformat(),
+        }
+        vms = ro.service_entity_list('IAAS', 'vm', params=params_scrub)
         if len(vms) > 0:
             for vm in vms:
                 robot_logger.info(f'Dispatching VM #{vm["idVM"]} for scrub')
@@ -69,7 +97,8 @@ def mainloop(process_pool: mp.Pool):
                 except mp.ProcessError:
                     robot_logger.error(f'Error when Scrubbing VM #{vm["idVM"]}', exc_info=True)
         else:
-            robot_logger.info('No VMs in "Scrubbing" state.')
+            robot_logger.info('No VM is ready for Scrubbing.')
+        # ############################################################################################
 
         while last > time.time() - 20:
             time.sleep(1)

@@ -4,6 +4,7 @@ from collections import deque
 
 # locals
 from builders import Vrf as Builder
+from quiescers import Vrf as Quiescer
 from scrubbers import Vrf as Scubber
 import metrics
 import ro
@@ -91,6 +92,29 @@ class Vrf:
             ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 3})
             metrics.vrf_build_failure()
 
+    def quiesce(self, vrf: dict):
+        """
+        Takes VRF data from the CloudCIX API, it and requests to quiesce the Vrf
+        in the assigned physical Router.
+        :param vrf: The VRF data from the CloudCIX API
+        """
+        logger = utils.get_logger_for_name('dispatchers.vrf.quiesce')
+        vrf_id = vrf['idVRF']
+        logger.info(f'Commencing quiesce dispatch of VRF #{vrf_id}')
+        # OOB IP
+        vrf['oob_ip'] = ro.service_entity_read('IAAS', 'router', vrf['idRouter'])['ipManagement']
+        # Attempt to quiesce the VRF
+        if Quiescer.quiesce(vrf, self.password):
+            logger.info(f'Successfully quiesced VRF #{vrf_id} in router {vrf["idRouter"]}')
+            # Change the state of the VRF to Quiesced (6) and report a success to influx
+            ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 6})
+            metrics.vrf_quiesce_success()
+        else:
+            logger.error(
+                f'VRF #{vrf_id} failed to quiesce. Check log for details.',
+            )
+            metrics.vrf_quiesce_failure()
+
     def scrub(self, vrf: dict):
         """
         Takes VRF data from the CloudCIX API, it and requests to scrub the Vrf
@@ -105,7 +129,7 @@ class Vrf:
         # Attempt to scrub the VRF
         if Scubber.scrub(vrf, self.password):
             logger.info(f'Successfully scrubbed VRF #{vrf_id} in router {vrf["idRouter"]}')
-            # Change the state to 9 and report a success to influx
+            # Change the state of the VRF to 9(Deleted) and report a success to influx
             ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 9})
             metrics.vrf_scrub_success()
         else:

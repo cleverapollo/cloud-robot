@@ -4,16 +4,18 @@ import time
 from crypt import crypt, mksalt, METHOD_SHA512
 
 # locals
-from builders import Linux as LinuxBuilder, Windows as WindowsBuilder
-from scrubbers import Linux as LinuxScrubber, Windows as WindowsScrubber
 import email_notifier
 import metrics
 import ro
 import utils
+from builders import Linux as LinuxBuilder, Windows as WindowsBuilder
+from scrubbers import Linux as LinuxScrubber, Windows as WindowsScrubber
+from quiescers import Linux as LinuxQuiescer, Windows as WindowsQuiescer
 
 EMAIL_BUILD_SUCCESS_SUBJECT = 'Your VM {name} has been built successfully!'
 EMAIL_BUILD_FAILURE_SUBJECT = 'Your VM {name} has failed to build!'
 EMAIL_SCRUB_SUCCESS_SUBJECT = 'Your VM {name} has been deleted successfully!'
+EMAIL_QUIESCE_SUCCESS_SUBJECT = 'Your VM {name} has been shutdown successfully!'
 
 
 class Vm:
@@ -133,6 +135,75 @@ class Vm:
                 'emails/build_error.j2',
             )
 
+    def quiesce(self, vm: dict):
+        """
+        Takes the VM (to be quiesced )data from CloudCix API and sends the request to concern quiescer.
+        :param vm: The VM data from the CloudCIX API
+        """
+        logger = utils.get_logger_for_name('dispatchers.vm.quiesce')
+        vm_id = vm['idVM']
+        logger.info(f'Commencing quiesce dispatch of VM #{vm_id}')
+        vm['vm_identifier'] = f'{vm["idProject"]}_{vm["idVM"]}'
+        # Get the type of VM ie idHypervisor
+        vm['idHypervisor'] = ro.service_entity_read('IAAS', 'image', vm['idImage'])['idHypervisor']
+        # Get the server details for sshing into the host
+        for mac in ro.service_entity_list('IAAS', 'macaddress', {}, server_id=vm['idServer']):
+            if mac['status'] is True and mac['ip'] is not None:
+                try:
+                    vm['host_ip'] = str(netaddr.IPAddress(mac['ip']))
+                    vm['host_name'] = mac['dnsName']
+                    break
+                except netaddr.AddrFormatError:
+                    logger.error(
+                        f'Error occurred when trying to read host ip address from mac record '
+                        f'#{mac["idMacAddress"]}.',
+                        exc_info=True,
+                    )
+                    metrics.vm_quiesce_failure()
+                    return
+        # Get vlan and email id of user via ip address and subnet details
+        for ip in ro.service_entity_list('IAAS', 'ipaddress', {'vm': vm['idVM']}):
+            if netaddr.IPAddress(ip['address']).is_private():
+                # Get the subnet of this IP
+                subnet = ro.service_entity_read('IAAS', 'subnet', ip['idSubnet'])
+                vm['vlan'] = subnet['vLAN']
+                # Get user email to notify the user
+                vm['email'] = ro.service_entity_read('Membership', 'user', subnet['modifiedBy'])['username']
+
+        # Attempt to shutdown/quiesce the VM
+        success: bool
+        if vm['idHypervisor'] == 1:  # HyperV -> Windows
+            success = WindowsQuiescer.quiesce(vm, self.password)
+        elif vm['idHypervisor'] == 2:  # KVM -> Linux
+            success = LinuxQuiescer.quiesce(vm, self.password)
+        else:
+            logger.error(
+                f'Unsupported idHypervisor ({vm["idHypervisor"]}). VM #{vm_id} cannot be shutdown',
+            )
+            success = False
+
+        if success:
+            logger.info(f'VM #{vm_id} successfully quiesced from Server #{vm["idServer"]}')
+            # Change the state of the VM to:
+            #  1. Quiesced (6) if the existing state is Quiescing (5)
+            #  2. Deleted (9) if the existing state is Scheduled for Deletion (8)
+            # And log a success in Influx
+            if vm['state'] == 5:
+                ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 6})
+            if vm['state'] == 8:
+                ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 9})
+            metrics.vm_quiesce_success()
+            # Email the user
+            email_notifier.vm_email_notifier(
+                EMAIL_QUIESCE_SUCCESS_SUBJECT.format(name=vm['name']),
+                vm,
+                'emails/scrub_success.j2',
+            )
+        else:
+            logger.info(f'VM #{vm_id} failed to shutdown . Check log for details.')
+            metrics.vm_quiesce_failure()
+            # We don't need to email the user if it failed to shutdown
+
     def scrub(self, vm: dict):
         """
         Takes the VM (to be deleted )data from CloudCix API and sends the request to concern scrubber.
@@ -198,7 +269,7 @@ class Vm:
                             if netaddr.IPAddress(ip['address']).is_private():
                                 # Get the subnet of this IP
                                 subnet = ro.service_entity_read('IAAS', 'subnet', ip['idSubnet'])
-                                # check if the VM is in the same subnet of current scubbing VM
+                                # check if the VM is in the same subnet of current scrubbing VM
                                 if subnet['vLAN'] == vm['vlan']:
                                     existing_vms_count += 1
                 if not existing_vms_count > 0:
@@ -210,17 +281,8 @@ class Vm:
             success = False
 
         if success:
-            logger.info(f'VM #{vm_id} successfully deleted from Server #{vm["idServer"]}')
-            # Change the state of the VM to Deleted (9) and log a success in Influx
-            ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 9})
+            logger.info(f'VM #{vm_id} successfully scrubbed from Server #{vm["idServer"]}')
             metrics.vm_scrub_success()
-            # Email the user
-            email_notifier.vm_email_notifier(
-                EMAIL_SCRUB_SUCCESS_SUBJECT.format(name=vm['name']),
-                vm,
-                'emails/scrub_success.j2',
-            )
         else:
             logger.info(f'VM #{vm_id} failed to scrub . Check log for details.')
             metrics.vm_scrub_failure()
-            # We don't need to email the user if it failed to scrub

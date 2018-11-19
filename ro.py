@@ -7,12 +7,12 @@
 # python
 import random
 import string
-
+import time
 from typing import Optional, Tuple
-
 # libs
+import paramiko
+import winrm
 from cloudcix import api
-
 # locals
 import utils
 
@@ -283,3 +283,37 @@ def password_generator(size: int = 8, chars: Optional[str] = None) -> str:
     if chars is None:
         chars = string.ascii_letters + string.digits
     return ''.join(random.choice(chars) for _ in range(size))
+
+
+def get_full_response(channel: paramiko.Channel, wait_time: int = 15, read_size: int = 64) -> str:
+    """
+    Get the full response from the specified paramiko channel, waiting a given number of seconds before trying to
+    read from it each time.
+    :param channel: The channel to be read from
+    :param wait_time: How long in seconds between each read
+    :param read_size: How many bytes to be read from the channel each time
+    :return: The full output from the channel, or as much as can be read given the parameters.
+    """
+    msg = ''
+    time.sleep(wait_time)
+    while channel.recv_ready():
+        msg += channel.recv(read_size).decode()
+        time.sleep(wait_time)
+    return msg
+
+
+def fix_run_ps(self: winrm.Session, script: str) -> winrm.Response:
+    """
+    winrm supporting function, dont make anychanges
+    Powershell scripts will be base64 UTF16 little-endian encoded prior to sending to the Windows host.
+    Error messages are converted from the Powershell CLIXML format to a human readable format as a convenience.
+    :param self: winrm session instance
+    :param script: the powershell script to execute on remote host
+    :return: A winrm Response from the remote host result of above script.
+    """
+    from base64 import b64encode
+    encoded_ps = b64encode(script.encode('utf_16_le')).decode('ascii')
+    rs = self.run_cmd('powershell -encodedcommand {0}'.format(encoded_ps))
+    if len(rs.std_err):
+        rs.std_err = self._clean_error_msg(rs.std_err.decode('utf-8'))
+    return rs
