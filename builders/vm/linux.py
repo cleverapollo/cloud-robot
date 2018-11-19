@@ -4,6 +4,7 @@ import time
 import paramiko
 # local
 import utils
+from ro import get_full_response
 
 
 DRIVE_PATH = '/mnt/images/KVM'
@@ -77,10 +78,10 @@ class Linux:
             _, stdout, stderr = client.exec_command(cmd)
             # Block until command finishes
             stdout.channel.recv_exit_status()
-            output = Linux.get_full_response(stdout.channel)
+            output = get_full_response(stdout.channel)
             if output:
                 Linux.logger.info(f'Bridge build command for VM #{vm["idVM"]} generated stdout.\n{output}')
-            err = Linux.get_full_response(stderr.channel)
+            err = get_full_response(stderr.channel)
             if err:
                 Linux.logger.warning(f'Bridge build command for VM #{vm["idVM"]} generated stderr.\n{err}')
 
@@ -97,10 +98,10 @@ class Linux:
             _, stdout, stderr = client.exec_command(cmd)
             # Block until command finishes
             stdout.channel.recv_exit_status()
-            output = Linux.get_full_response(stdout.channel)
+            output = get_full_response(stdout.channel)
             if output:
                 Linux.logger.info(f'VM build command for VM #{vm["idVM"]} generated stdout.\n{output}')
-            err = Linux.get_full_response(stderr.channel)
+            err = get_full_response(stderr.channel)
             if err:
                 Linux.logger.warning(f'VM build command for VM #{vm["idVM"]} generated stderr.\n{err}')
             built = 'Creating domain' in output
@@ -115,16 +116,3 @@ class Linux:
             )
         client.close()
         return built
-
-    @staticmethod
-    def get_full_response(channel: paramiko.Channel, read_size: int = 1024) -> str:
-        """
-        Get the full response from the specified paramiko channel
-        :param channel: The channel to be read from
-        :param read_size: How many bytes to be read from the channel each time
-        :return: The full output from the channel, or as much as can be read given the parameters.
-        """
-        msg = ''
-        while channel.recv_ready():
-            msg += channel.recv(read_size).decode()
-        return msg

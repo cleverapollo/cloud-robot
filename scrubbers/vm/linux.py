@@ -1,10 +1,10 @@
 # python
 import os
-import time
 # lib
 import paramiko
 # local
 import utils
+from ro import get_full_response
 
 
 DRIVE_PATH = '/mnt/images/KVM'
@@ -12,9 +12,9 @@ DRIVE_PATH = '/mnt/images/KVM'
 
 class Linux:
     """
-    Scrubber class for scrubbing Linux VMs
+    Scrubber class for Linux VMs
+    Scrubber: Deletes the VM completely from host server
     """
-
     logger = utils.get_logger_for_name('scrubbers.vm.linux')
 
     @staticmethod
@@ -33,7 +33,7 @@ class Linux:
         try:
             Linux.logger.info(f'Attempting to connect to host server @ {vm["host_ip"]}')
             client.connect(hostname=vm['host_ip'], username='administrator', password=password)
-            # Generate and execute the command to scrub the actual VM
+            # Generate and execute the command to scrub the VM
             Linux.logger.info(f'Attempting to scrub VM #{vm["idVM"]}')
             cmd = utils.jinja_env.get_template('linux_vm_scrub_cmd.j2').render(
                 drive_path=DRIVE_PATH,
@@ -44,11 +44,11 @@ class Linux:
 
             # Run the command and log the output and err.
             _, stdout, stderr = client.exec_command(cmd)
-            output = Linux.get_full_response(stdout.channel)
+            output = get_full_response(stdout.channel)
             if output:
                 Linux.logger.info(f'VM scrub command for VM #{vm["idVM"]} generated stdout.\n{output}')
                 scrubbed = True
-            err = Linux.get_full_response(stderr.channel)
+            err = get_full_response(stderr.channel)
             if err:
                 Linux.logger.warning(f'VM scrub command for VM #{vm["idVM"]} generated stderr.\n{err}')
 
@@ -56,7 +56,7 @@ class Linux:
                 try:
                     if os.path.exists(f'{DRIVE_PATH}/kickstarts/{vm["vm_identifier"]}.cfg'):
                         os.remove(f'{DRIVE_PATH}/kickstarts/{vm["vm_identifier"]}.cfg')
-                    Linux.logger.debug(f'Removed {vm["vm_identifier"]}.cfg file for FreeNas drive')
+                    Linux.logger.debug(f'Deleted {vm["vm_identifier"]}.cfg file for FreeNas drive')
                 except IOError:
                     Linux.logger.error(f'Failed to delete kickstart conf of VM #{vm["idVM"]}', exc_info=True)
 
@@ -67,10 +67,10 @@ class Linux:
 
                 # Run the command and log the output and err.
                 _, stdout, stderr = client.exec_command(bridge_delete_cmd)
-                output = Linux.get_full_response(stdout.channel)
+                output = get_full_response(stdout.channel)
                 if output:
                     Linux.logger.info(f'Bridge delete command for vlan #br{vm["vlan"]} generated stdout.\n{output}')
-                err = Linux.get_full_response(stderr.channel)
+                err = get_full_response(stderr.channel)
                 if err:
                     Linux.logger.warning(f'Bridge delete command for vlan #br{vm["vlan"]} generated stderr.\n{err}')
                 # Delete the bridge xml file
@@ -85,26 +85,9 @@ class Linux:
                     )
         except paramiko.SSHException:
             Linux.logger.error(
-                f'Exception occurred while connected to host server @ {vm["host_ip"]} for the scrub of VM '
+                f'Exception occurred while connected to host server @ {vm["host_ip"]} for the remove of VM '
                 f'#{vm["idVM"]}',
                 exc_info=True,
             )
         client.close()
         return scrubbed
-
-    @staticmethod
-    def get_full_response(channel: paramiko.Channel, wait_time: int = 15, read_size: int = 64) -> str:
-        """
-        Get the full response from the specified paramiko channel, waiting a given number of seconds before trying to
-        read from it each time.
-        :param channel: The channel to be read from
-        :param wait_time: How long in seconds between each read
-        :param read_size: How many bytes to be read from the channel each time
-        :return: The full output from the channel, or as much as can be read given the parameters.
-        """
-        msg = ''
-        time.sleep(wait_time)
-        while channel.recv_ready():
-            msg += channel.recv(read_size).decode()
-            time.sleep(wait_time)
-        return msg
