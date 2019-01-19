@@ -12,7 +12,7 @@ from traceback import print_exc
 
 # libs
 import jinja2
-from cloudcix.utils import get_admin_session
+from cloudcix.auth import get_admin_token
 
 
 __all__ = [
@@ -40,7 +40,7 @@ class Token:
     THRESHOLD = 40  # Minutes a token has lived until we get a new one
 
     def __init__(self):
-        self._token = get_admin_session().get_token()
+        self._token = get_admin_token()
         self._created = datetime.now()
 
     @property
@@ -49,7 +49,7 @@ class Token:
         if (datetime.now() - self._created).seconds / 60 > self.THRESHOLD:
             # We need to regenerate the token
             old_token = self._token
-            self._token = get_admin_session().get_token()
+            self._token = get_admin_token()
             self._created = datetime.now()
             get_logger_for_name('utils.Token').info(
                 f'Generated new token: {old_token} -> {self._token}',
