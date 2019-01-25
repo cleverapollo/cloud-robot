@@ -1,4 +1,4 @@
-cloudcix==0.7.1
+cloudcix
 influxdb
 jinja2
 junos-eznc
