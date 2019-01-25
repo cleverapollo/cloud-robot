@@ -48,7 +48,30 @@ class Vm:
         vm['ram'] *= 1024  # ram must be multiple of 1024 as the builders takes in MBytes
         vm['idHypervisor'] = image['idHypervisor']
         vm['admin_password'] = ro.password_generator(size=8)
-
+        # Considering only primary as hdd/ssd drives and rest as drives
+        # Get the storage type and storage
+        storages = ro.service_entity_list('IAAS', 'storage', {}, idVM=vm['idVM'])
+        vm['drives'] = list()
+        for storage in storages:
+            st_type = ro.service_entity_read(
+                'IAAS',
+                'storage_type',
+                {'pk': storage['idStorageType']},
+            )
+            if storage['primary'] is True:
+                if st_type['storage_type'] == 'HDD':
+                    vm['hdd'] = storage['gb']
+                    vm['flash'] = 0
+                elif st_type['storage_type'] == 'SSD':
+                    vm['hdd'] = 0
+                    vm['flash'] = storage['gb']
+            else:
+                vm['drives'].append(
+                    {'type': st_type['storage_type'],
+                     'size': storage['gb'],
+                     'primary': storage['primary'],
+                     },
+                )
         # Get ip address and subnet details
         for ip in ro.service_entity_list('IAAS', 'ipaddress', {'vm': vm['idVM']}):
             if netaddr.IPAddress(ip['address']).is_private():
@@ -99,6 +122,12 @@ class Vm:
         # Attempt to build the VM
         success: bool
         if vm['idHypervisor'] == 1:  # HyperV -> Windows
+            # sending multiple drives as string format ie 'gb1,gb2,gb3,...' only sizes
+            md = ','.join(str(drive['size']) for drive in vm['drives'])
+            if md:
+                vm['mul_drives'] = md
+            else:
+                vm['mul_drives'] = 0
             vm['dns'] = vm['dns'].split(',')
             vm['tz'] = 'GMT Standard Time'
             success = WindowsBuilder.build(vm, self.password)
