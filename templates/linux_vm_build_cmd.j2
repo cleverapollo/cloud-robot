@@ -1,1 +1,20 @@
-echo {{ SUDO_PASS }} | sudo -S virt-install --name {{ vm_identifier }} --memory {{ ram }} --vcpus {{ cpu }} --disk path=/var/lib/libvirt/images/{{ vm_identifier }}.qcow2,size={{ hdd }} --graphics vnc --location {{ drive_path }}/ISOs/{{ image }} --os-variant rhel6 --initrd-inject={{ drive_path }}/kickstarts/{{ vm_identifier }}.cfg -x "ks=file:/{{ vm_identifier }}.cfg" --network bridge=br{{ vlan }}
+{% if hdd %}
+echo {{ SUDO_PASS }} | sudo -S qemu-img create -f qcow2 /var/lib/libvirt/images/{{ vm_identifier }}_0.img {{ hdd }}G
+{% elif flash %}
+echo {{ SUDO_PASS }} | sudo -S qemu-img create -f qcow2 /var/lib/libvirt/images/{{ vm_identifier }}_0.img {{ flash }}G
+{% endif %}
+{% for i, drive in enumerate(drives) %}
+sudo qemu-img create -f qcow2 /var/lib/libvirt/images/{{ vm_identifier }}_{i+1}.img {{ drive["size"] }}G
+{% endfor %}
+echo {{ SUDO_PASS }} | sudo -S virt-install --name {{ vm_identifier }} \
+--memory {{ ram }} \
+--vcpus {{ cpu }} \
+--disk path="/var/lib/libvirt/images/{{ vm_identifier }}_0.img,device=disk,bus=virtio" \
+{% for i in len(drives) %}
+--disk path="/var/lib/libvirt/images/{{ vm_identifier }}_{i+1}.img,device=disk,bus=virtio" \
+{% endfor %}
+--graphics vnc \
+--location {{ drive_path }}/ISOs/{{ image }} \
+--os-variant rhel6 \
+--initrd-inject={{ drive_path }}/kickstarts/{{ vm_identifier }}.cfg -x "ks=file:/{{ vm_identifier }}.cfg" \
+--network bridge=br{{ vlan }}
