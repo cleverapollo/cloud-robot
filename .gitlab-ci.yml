@@ -14,7 +14,7 @@ lint:
     - master
     - stable
 
-build-base:
+build_base:
   stage: base
   tags:
     - docker-build
@@ -28,19 +28,17 @@ build-base:
   only:
     - master
 
-build-alpha:
+build_alpha:
   stage: build
   tags:
     - docker-build
   script:
     - docker build -f deployment/dockerfiles/alpha.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/alpha:latest --no-cache .
     - docker push gitlab.cloudcix.com:5005/cloudcix/robot/alpha:latest
-  after_script:
-  - docker system prune -f
   only:
   - master
 
-deploy-alpha:
+deploy_alpha:
   image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
   before_script:
     - cp ~/.ssh/application_framework/stage_key ~/.ssh/id_rsa
@@ -52,19 +50,27 @@ deploy-alpha:
   only:
     - master
 
-build-toronto01:
+build_toronto01:
   stage: build
   tags:
   - docker-build
   script:
   - docker build -f deployment/dockerfiles/toronto01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/toronto01:latest --no-cache .
   - docker push gitlab.cloudcix.com:5005/cloudcix/robot/toronto01:latest
-  after_script:
-  - docker system prune -f
   only:
   - stable
 
-deploy-production:
+build_gov_cork:
+  stage: build
+  tags:
+  - docker-build
+  script:
+  - docker build -f deployment/dockerfiles/gov_cork.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/gov_cork:latest --no-cache .
+  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/gov_cork:latest
+  only:
+  - stable
+
+deploy_production:
   image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
   before_script:
     - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
@@ -75,5 +81,7 @@ deploy-production:
     # Deploy all the production stuff
     # Toronto
     - ansible-playbook -i deployment/hosts deployment/playbook.yml --extra-vars="deployment_host=toronto01"
+    # GovCork
+    - ansible-playbook -i deployment/hosts deployment/playbook.yml --extra-vars="deployment_host=gov_cork"
   only:
     - stable
