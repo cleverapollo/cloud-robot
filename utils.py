@@ -1,6 +1,5 @@
 """File containing some utility functions such as generating our logger"""
 # python
-import influxdb
 import logging
 import logging.handlers
 import subprocess
@@ -16,15 +15,11 @@ from cloudcix.auth import get_admin_token
 
 
 __all__ = [
+    'get_current_git_sha',
+    'get_logger_for_name',
     'jinja_env',
     'Token',
-    'get_logger_for_name',
-    'get_current_git_sha',
-    'get_influx_client',
 ]
-
-
-INFLUX_CLIENT = None
 
 jinja_env = jinja2.Environment(
     loader=jinja2.FileSystemLoader('templates'),
@@ -175,18 +170,3 @@ def get_current_git_sha() -> str:
         'describe',
         '--always',
     ]).strip().decode()
-
-
-def get_influx_client() -> influxdb.InfluxDBClient:
-    """
-    Lazy creates a client for connecting to our InfluxDB instance
-    :return: An InfluxDBClient that can log metrics to our instance of Influx
-    """
-    global INFLUX_CLIENT
-    if INFLUX_CLIENT is None:
-        INFLUX_CLIENT = influxdb.InfluxDBClient(
-            host='influx.cloudcix.com',
-            port=80,
-            database='robot',
-        )
-    return INFLUX_CLIENT

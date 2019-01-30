@@ -22,7 +22,10 @@ def mainloop(process_pool: mp.Pool):
     global sigterm_recv
     last = time.time()
     # Create the dispatcher instances
-    vrf_dispatch = dispatchers.Vrf(settings.NETWORK_PASSWORD)
+    if settings.VRFS_ENABLED:
+        vrf_dispatch = dispatchers.Vrf(settings.NETWORK_PASSWORD)
+    else:
+        vrf_dispatch = dispatchers.DummyVrf()
     vm_dispatch = dispatchers.Vm(settings.NETWORK_PASSWORD)
     while not sigterm_recv:
         metrics.heartbeat()
