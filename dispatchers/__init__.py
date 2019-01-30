@@ -4,6 +4,7 @@ from .vrf import Vrf
 
 
 __all__ = [
+    'DummyVrf',
     'Vm',
     'Vrf',
 ]

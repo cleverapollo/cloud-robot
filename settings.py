@@ -26,7 +26,7 @@ __all__ = [
 # Member ID
 CLOUDCIX_API_KEY = '3bc7cc2bddb34d78b31f1223d0a7408e'
 # URL of the API
-CLOUDCIX_API_URL= 'https://api.cloudcix.com/'
+CLOUDCIX_API_URL = 'https://api.cloudcix.com/'
 # Cloudcix email smtp server id with port
 CLOUDCIX_EMAIL_HOST = 'webmail.cix.ie:587'
 # Database in influx to send to

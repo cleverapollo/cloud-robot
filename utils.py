@@ -15,11 +15,10 @@ from cloudcix.auth import get_admin_token
 
 
 __all__ = [
+    'get_current_git_sha',
+    'get_logger_for_name',
     'jinja_env',
     'Token',
-    'get_logger_for_name',
-    'get_current_git_sha',
-    'get_influx_client',
 ]
 
 jinja_env = jinja2.Environment(
