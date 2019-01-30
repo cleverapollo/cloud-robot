@@ -20,6 +20,7 @@ __all__ = [
     'NETWORK_PASSWORD',
     'REGION_NAME',
     'ROBOT_ENV',
+    'VRFS_ENABLED',
 ]
 
 # Member ID
@@ -38,3 +39,5 @@ CLOUDCIX_INFLUX_URL = 'influx.cloudcix.com'
 NETWORK_PASSWORD = 'C1xacc355'
 # Env (used in log messages and other things)
 ROBOT_ENV = os.environ.get('ROBOT_ENV', 'dev')
+# Flag to state whether VRFs are enabled or not
+VRFS_ENABLED = True
