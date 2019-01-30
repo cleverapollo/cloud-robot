@@ -29,7 +29,7 @@ class Vrf:
         # Log the delete conf to Debug
         Vrf.logger.debug(f'Generated delete conf for Project #{vrf["idProject"]}\n{conf}')
         # Deploy the generated config into the physical router
-        return Vrf.deploy(conf, vrf['oob_ip'], password)
+        return Vrf.deploy(conf, vrf['manage_ip'], password)
 
     @staticmethod
     def deploy(conf: str, ip: str, password: str) -> bool:
