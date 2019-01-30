@@ -3,12 +3,12 @@ import netaddr
 from collections import deque
 
 # locals
-from builders import Vrf as Builder
-from quiescers import Vrf as Quiescer
-from scrubbers import Vrf as Scubber
 import metrics
 import ro
 import utils
+from builders import Vrf as Builder
+from quiescers import Vrf as Quiescer
+from scrubbers import Vrf as Scubber
 from net_builders import is_valid_vlan
 
 
