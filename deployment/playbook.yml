@@ -33,9 +33,6 @@
         registry: gitlab.cloudcix.com:5005
         username: cloudadmin
         password: C1xacc355
-    - name: Delete previous images
-      shell: "docker rmi $(docker images -q)"
-      ignore_errors: yes
     - name: Gracefully shut down last container
       docker_container:
         name: "robot-{{ env }}"
