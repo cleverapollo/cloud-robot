@@ -49,8 +49,9 @@ class Vm:
         vm['idHypervisor'] = image['idHypervisor']
         vm['admin_password'] = ro.password_generator(size=8)
         # Considering only primary as hdd/ssd drives and rest as drives
+
         # Get the storage type and storage
-        storages = ro.service_entity_list('IAAS', 'storage', {}, idVM=vm['idVM'])
+        storages = ro.service_entity_list('IAAS', 'storage', {}, vm_id=vm['idVM'])
         vm['drives'] = list()
         for storage in storages:
             st_type = ro.service_entity_read(
