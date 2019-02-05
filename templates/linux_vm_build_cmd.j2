@@ -3,15 +3,15 @@ echo {{ SUDO_PASS }} | sudo -S qemu-img create -f qcow2 /var/lib/libvirt/images/
 {% elif flash %}
 echo {{ SUDO_PASS }} | sudo -S qemu-img create -f qcow2 /var/lib/libvirt/images/{{ vm_identifier }}_0.img {{ flash }}G
 {% endif %}
-{% for i, drive in enumerate(drives) %}
-sudo qemu-img create -f qcow2 /var/lib/libvirt/images/{{ vm_identifier }}_{i+1}.img {{ drive["size"] }}G
+{% for drive in drives %}
+sudo qemu-img create -f qcow2 /var/lib/libvirt/images/{{ vm_identifier }}_{{ loop.index }}.img {{ drive["size"] }}G
 {% endfor %}
 echo {{ SUDO_PASS }} | sudo -S virt-install --name {{ vm_identifier }} \
 --memory {{ ram }} \
 --vcpus {{ cpu }} \
 --disk path="/var/lib/libvirt/images/{{ vm_identifier }}_0.img,device=disk,bus=virtio" \
-{% for i in len(drives) %}
---disk path="/var/lib/libvirt/images/{{ vm_identifier }}_{i+1}.img,device=disk,bus=virtio" \
+{% for drive in drives %}
+--disk path="/var/lib/libvirt/images/{{ vm_identifier }}_{{ loop.index }}.img,device=disk,bus=virtio" \
 {% endfor %}
 --graphics vnc \
 --location {{ drive_path }}/ISOs/{{ image }} \
