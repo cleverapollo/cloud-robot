@@ -25,7 +25,7 @@ class Vrf:
 
     def router_ip(self, router_id):
         manage_ip = None
-        ports = ro.service_entity_list('IAAS', 'port', {}, idRouter=router_id)
+        ports = ro.service_entity_list('IAAS', 'port', {}, router_id=router_id)
         for port in ports:
             # Get the Port names ie xe-0/0/0 etc
             rmpf = ro.service_entity_read(
