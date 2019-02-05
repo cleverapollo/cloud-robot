@@ -107,7 +107,7 @@ class Vrf:
         vrf['vpns'] = vpns
 
         # vrf_ip and maskVPN
-        vrf_ip = ro.service_entity_read('IAAS', 'ipaddress', pk=vrf['IdIpVRF'])
+        vrf_ip = ro.service_entity_read('IAAS', 'ipaddress', pk=vrf['idIPVrf'])
         vrf_ip_subnet = ro.service_entity_read('IAAS', 'subnet', pk=vrf_ip['idSubnet'])
         vrf['vrf_ip'] = vrf_ip['address']
         vrf['mask_vpn'] = vrf_ip_subnet['addressRange'].split('/')[1]
