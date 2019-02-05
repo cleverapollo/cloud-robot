@@ -62,7 +62,7 @@ def mainloop(process_pool: mp.Pool):
             robot_logger.info('No VRFs in "Quiescing" state.')
 
         # ######################## VM QUIESCE  ################################
-        vms = ro.service_entity_list('IAAS', 'vm', params={'state': [5, 8]})
+        vms = ro.service_entity_list('IAAS', 'vm', params={'state__in': [5, 8]})
         if len(vms) > 0:
             for vm in vms:
                 robot_logger.info(f'Dispatching VM #{vm["idVM"]} for quiesce')
