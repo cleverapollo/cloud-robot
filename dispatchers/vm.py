@@ -57,7 +57,7 @@ class Vm:
             st_type = ro.service_entity_read(
                 'IAAS',
                 'storage_type',
-                {'pk': storage['idStorageType']},
+                storage['idStorageType'],
             )
             if storage['primary'] is True:
                 if st_type['storage_type'] == 'HDD':
