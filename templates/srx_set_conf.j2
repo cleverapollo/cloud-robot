@@ -6,7 +6,7 @@ set groups vrf-{{ idProject }} security zones security-zone vrf-{{ idProject }}
 set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} routing-options static route 0.0.0.0/0 next-table PUBLIC.inet.0
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Define VRF public IP on ge-0/0/0.0 interface #}
-set groups vrf-{{ idProject }} interfaces ge-0/0/0 unit 0 family inet address {{ IPVrf }}/{{ mask_vpn }}
+set groups vrf-{{ idProject }} interfaces ge-0/0/0 unit 0 family inet address {{ vrf_ip }}/{{ mask_vpn }}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Create southbound sub interface and gateway for each VLAN and attach them to the VRF #}
 {% for vlan in vlans %}
@@ -20,7 +20,7 @@ set groups vrf-{{ idProject }} security zones security-zone vrf-{{ idProject }} 
 {# Source (outbound) NAT #}
 set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound description vrf-{{ idProject }}-outbound-nat
 set groups vrf-{{ idProject }} security nat source pool vrf-{{ idProject }}-public routing-instance PUBLIC
-set groups vrf-{{ idProject }} security nat source pool vrf-{{ idProject }}-public address {{ IPVrf }}
+set groups vrf-{{ idProject }} security nat source pool vrf-{{ idProject }}-public address {{ vrf_ip }}
 set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound from zone vrf-{{ idProject }}
 set groups vrf-{{ idProject }} security nat source rule-set vrf-{{ idProject }}-outbound to zone PUBLIC
 {% for vlan in vlans %}
@@ -49,7 +49,7 @@ set groups vrf-{{ idProject }} security ike policy vrf-{{ idProject }}-vpn-{{ vp
 set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-vpn-{{ vpn['vlan'] }}-gw ike-policy vrf-{{ idProject }}-vpn-{{ vpn['vlan'] }}-ikepolicy
 set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-vpn-{{ vpn['vlan'] }}-gw address {{ vpn['ipRemoteAddress'] }}
 set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-vpn-{{ vpn['vlan'] }}-gw external-interface ge-0/0/0.0
-set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-vpn-{{ vpn['vlan'] }}-gw local-address {{ IPVrf }}
+set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-vpn-{{ vpn['vlan'] }}-gw local-address {{ vrf_ip }}
 set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-vpn-{{ vpn['vlan'] }}-gw version v1-only
 {# Phase 2 #}
 set groups vrf-{{ idProject }} security ipsec vpn vrf-{{ idProject }}-vpn-{{ vpn['vlan'] }}-ipsec bind-interface st0.{{ vpn['vlan'] }}

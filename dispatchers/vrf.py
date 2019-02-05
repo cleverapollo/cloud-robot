@@ -23,6 +23,41 @@ class Vrf:
     def __init__(self, password: str):
         self.password = password
 
+    def router_ip(self, router_id):
+        manage_ip = None
+        ports = ro.service_entity_list('IAAS', 'port', {}, idRouter=router_id)
+        for port in ports:
+            # Get the Port names ie xe-0/0/0 etc
+            rmpf = ro.service_entity_read(
+                'IAAS',
+                'router_model_port_function',
+                pk=port['model_port_id'],
+            )
+            # Get the function names ie 'Management' etc
+            port_fun = ro.service_entity_read(
+                'IAAS',
+                'port_function',
+                pk=rmpf['port_function_id'],
+            )
+            if port_fun['function'] == 'Management':
+                port_configs = ro.service_entity_list(
+                    'IAAS',
+                    'port_config',
+                    {},
+                    port_id=port['port_id'],
+                )
+                for port_config in port_configs:
+                    # Get the ip address details
+                    ip = ro.service_entity_read(
+                        'IAAS',
+                        'ipaddress',
+                        pk=port_config['port_ip_id'],
+                    )
+                    manage_ip = ip['address']
+                    break
+                break
+        return manage_ip
+
     def build(self, vrf: dict):
         """
         Takes VRF data from the CloudCIX API, adds any additional data needed for building it and requests to build it
@@ -71,10 +106,14 @@ class Vrf:
         vrf['nats'] = nats
         vrf['vpns'] = vpns
 
-        # Router data: maskVPN and OOB IP
-        router_data = ro.service_entity_read('IAAS', 'router', vrf['idRouter'])
-        vrf['oob_ip'] = router_data['ipManagement']
-        vrf['mask_vpn'] = router_data['maskVPN']
+        # vrf_ip and maskVPN
+        vrf_ip = ro.service_entity_read('IAAS', 'ipaddress', pk=vrf['IdIpVRF'])
+        vrf_ip_subnet = ro.service_entity_read('IAAS', 'subnet', pk=vrf_ip['idSubnet'])
+        vrf['vrf_ip'] = vrf_ip['address']
+        vrf['mask_vpn'] = vrf_ip_subnet['addressRange'].split('/')[1]
+
+        # Management IP
+        vrf['manage_ip'] = self.router_ip(vrf['idRouter'])
 
         # TODO - Add data/ip validations to vrf dispatcher
 
@@ -101,8 +140,8 @@ class Vrf:
         logger = utils.get_logger_for_name('dispatchers.vrf.quiesce')
         vrf_id = vrf['idVRF']
         logger.info(f'Commencing quiesce dispatch of VRF #{vrf_id}')
-        # OOB IP
-        vrf['oob_ip'] = ro.service_entity_read('IAAS', 'router', vrf['idRouter'])['ipManagement']
+        # Mangement IP
+        vrf['manage_ip'] = self.router_ip(vrf['idRouter'])
         # Attempt to quiesce the VRF
         if Quiescer.quiesce(vrf, self.password):
             logger.info(f'Successfully quiesced VRF #{vrf_id} in router {vrf["idRouter"]}')
@@ -124,8 +163,8 @@ class Vrf:
         logger = utils.get_logger_for_name('dispatchers.vrf.scrub')
         vrf_id = vrf['idVRF']
         logger.info(f'Commencing scrub dispatch of VRF #{vrf_id}')
-        # OOB IP
-        vrf['oob_ip'] = ro.service_entity_read('IAAS', 'router', vrf['idRouter'])['ipManagement']
+        # Management IP
+        vrf['manage_ip'] = self.router_ip(vrf['idRouter'])
         # Attempt to scrub the VRF
         if Scubber.scrub(vrf, self.password):
             logger.info(f'Successfully scrubbed VRF #{vrf_id} in router {vrf["idRouter"]}')
