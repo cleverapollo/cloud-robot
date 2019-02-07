@@ -69,6 +69,8 @@ class Vrf:
         logger.info(f'Commencing build dispatch of VRF #{vrf_id}')
         # Change the state of the vrf to be 'Building' (2)
         ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 2})
+        # Read the project to get the customer idAddress for vxlan
+        vrf['vxlan'] = ro.service_entity_read('IAAS', 'project', vrf['idProject'])['idAddCust']
 
         # Get other necessary information about the VRF
         nats = deque()
@@ -90,7 +92,7 @@ class Vrf:
             # Check if there are any nats for this subnet
             params = {'subnet__idSubnet': subnet['idSubnet'], 'fip_id__isnull': False, 'fields': '(*,fip)'}
             for ip in ro.service_entity_list('IAAS', 'ipaddress', params):
-                nats.append({'private': ip['address'], 'public': ip['fip']['address']})
+                nats.append({'private': ip['address'], 'public': ip['fip']['address'], 'vlan': subnet['vLAN']})
 
         # VPNs
         for vpn in ro.service_entity_list('IAAS', 'vpn_tunnel', {'vrf': vrf_id}):
