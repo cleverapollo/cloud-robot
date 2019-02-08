@@ -141,6 +141,8 @@ def handle_sigterm(*args):
 
 
 if __name__ == '__main__':
+    # Setup the root logger
+    utils.setup_root_logger()
     # When the script is run as the main
     current_commit = utils.get_current_git_sha()
     # Log the current commit to both the file and InfluxDB
