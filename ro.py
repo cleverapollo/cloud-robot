@@ -56,8 +56,7 @@ def service_entity_create(service: str, entity: str, data: dict) -> Optional[dic
 
 def service_entity_list(service: str, entity: str, params: dict, **kwargs) -> list:
     """
-    Retrieves a list of instances of a given entity in a service, which can
-    be filtered
+    Retrieves a list of instances of a given entity in a service, which can be filtered
     :param service: The api service the entity belongs to
     :param entity: The entity type to list instances of
     :param params: Search parameters to be passed to the list call
@@ -94,10 +93,9 @@ def service_entity_list(service: str, entity: str, params: dict, **kwargs) -> li
     return response.json()['content']
 
 
-def service_entity_update(service: str, entity: str, pk: int, data: dict) -> bool:
+def service_entity_update(service: str, entity: str, pk: int, data: dict, **kwargs) -> bool:
     """
-    Update an instance of service.entity with the specified pk using the
-    supplied data
+    Update an instance of service.entity with the specified pk using the supplied data
     :param service: The api service the entity belongs to
     :param entity: The entity type to update
     :param pk: The id of the entity to update
@@ -117,6 +115,7 @@ def service_entity_update(service: str, entity: str, pk: int, data: dict) -> boo
         pk=pk,
         token=TOKEN_WRAPPER.token,
         data=data,
+        **kwargs,
     )
     # Checking just updation no return of data so 204 No content
     if response.status_code == 204:
@@ -134,10 +133,9 @@ def service_entity_update(service: str, entity: str, pk: int, data: dict) -> boo
         return False
 
 
-def service_entity_read(service: str, entity: str, pk: int) -> Optional[dict]:
+def service_entity_read(service: str, entity: str, pk: int, **kwargs) -> Optional[dict]:
     """
-    Read an instance of service.entity with the specified pk and return it,
-    using params to filter if necessary
+    Read an instance of service.entity with the specified pk and return it
     :param service: The api service the entity belongs to
     :param entity: The entity type to read
     :param pk: The id of the entity to read
@@ -150,7 +148,7 @@ def service_entity_read(service: str, entity: str, pk: int) -> Optional[dict]:
     # service_to_call = api.IAAS  (e.g service = 'iaas')
     entity_to_call = getattr(service_to_call, entity)
     # entity_to_call = api.IAAS.image (e.g entity = 'image')
-    response = entity_to_call.read(pk=pk, token=TOKEN_WRAPPER.token)
+    response = entity_to_call.read(pk=pk, token=TOKEN_WRAPPER.token, **kwargs)
     if response.status_code == 200:
         logger.info(f'Successfully read {service}.{entity} instance #{pk}')
         return response.json()['content']
@@ -161,6 +159,34 @@ def service_entity_read(service: str, entity: str, pk: int) -> Optional[dict]:
             f'{response.content.decode()}',
         )
         return None
+
+
+def service_entity_delete(service: str, entity: str, pk: int, **kwargs) -> bool:
+    """
+    Delete an instance of service.entity with the specified pk and return a flag stating if it was a success
+    :param service: The api service the entity belongs to
+    :param entity: The entity type to read
+    :param pk: The id of the entity to read
+    :return: A dict containing the data of the read instance, or None if an
+             error occurs
+    """
+    logger = utils.get_logger_for_name('ro.service_entity_delete')
+    logger.info(f'Attempting to delete the {service}.{entity} instance #{pk}')
+    service_to_call = getattr(api, service)
+    # service_to_call = api.IAAS  (e.g service = 'iaas')
+    entity_to_call = getattr(service_to_call, entity)
+    # entity_to_call = api.IAAS.image (e.g entity = 'image')
+    response = entity_to_call.delete(pk=pk, token=TOKEN_WRAPPER.token, **kwargs)
+    if response.status_code == 204:
+        logger.info(f'Successfully deleted {service}.{entity} instance #{pk}')
+        return True
+    else:
+        logger.error(
+            f'HTTP Error {response.status_code} returned when attempting to '
+            f'delete {service}.{entity} instance #{pk}\nResponse from API: '
+            f'{response.content.decode()}',
+        )
+        return False
 
 
 def get_idrac_details(location: str) -> Optional[Tuple[str, str]]:
