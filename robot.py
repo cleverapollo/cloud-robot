@@ -100,11 +100,11 @@ def mainloop(process_pool: mp.Pool):
             robot_logger.info('No VRFs in "Scrubbing" state.')
 
         # ######################## VM SCRUB  ################################
-        params_scrub = {
+        scrub_list_params = {
             'state': 9,
-            'updated__gte': (datetime.now() - timedelta(days=30)).isoformat(),
+            'updated__lte': (datetime.now() - timedelta(days=30)).isoformat(),
         }
-        vms = ro.service_entity_list('IAAS', 'vm', params=params_scrub)
+        vms = ro.service_entity_list('IAAS', 'vm', params=scrub_list_params)
         if len(vms) > 0:
             for vm in vms:
                 # Stop looping if we receive a sigterm
