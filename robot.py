@@ -102,7 +102,7 @@ def mainloop(process_pool: mp.Pool):
         # ######################## VM SCRUB  ################################
         params_scrub = {
             'state': 9,
-            'updated__gte': (datetime.now() + timedelta(days=30)).isoformat(),
+            'updated__gte': (datetime.now() - timedelta(days=30)).isoformat(),
         }
         vms = ro.service_entity_list('IAAS', 'vm', params=params_scrub)
         if len(vms) > 0:
