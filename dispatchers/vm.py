@@ -260,6 +260,11 @@ class Vm:
                     )
                     metrics.vm_scrub_failure()
                     return
+
+        # Get the number of storages
+        storages = ro.service_entity_list('IAAS', 'storage', {}, vm_id=vm['idVM'])
+        vm['st_number'] = len(storages)
+
         # Get vlan and email id of user via ip address and subnet details
         for ip in ro.service_entity_list('IAAS', 'ipaddress', {'vm': vm['idVM']}):
             if netaddr.IPAddress(ip['address']).is_private():
