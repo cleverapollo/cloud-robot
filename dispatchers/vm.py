@@ -313,6 +313,14 @@ class Vm:
         if success:
             logger.info(f'VM #{vm_id} successfully scrubbed from Server #{vm["idServer"]}')
             metrics.vm_scrub_success()
+
+            # Delete the VM from the DB
+            if ro.service_entity_delete('IAAS', 'vm', vm_id):
+                logger.info(f'VM #{vm_id} successfully deleted from the API')
+            else:
+                logger.error(f'VM #{vm_id} API deletion failed. Check log for details')
+
+            # TODO - Check if the project is empty and if so delete that too
         else:
-            logger.info(f'VM #{vm_id} failed to scrub . Check log for details.')
+            logger.info(f'VM #{vm_id} failed to scrub. Check log for details.')
             metrics.vm_scrub_failure()
