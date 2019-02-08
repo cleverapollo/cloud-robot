@@ -227,7 +227,7 @@ class Vm:
             email_notifier.vm_email_notifier(
                 EMAIL_QUIESCE_SUCCESS_SUBJECT.format(name=vm['name']),
                 vm,
-                'emails/scrub_success.j2',
+                'emails/quiesce_success.j2',
             )
         else:
             logger.info(f'VM #{vm_id} failed to shutdown . Check log for details.')
