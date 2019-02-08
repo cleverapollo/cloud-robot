@@ -70,7 +70,7 @@ class Windows:
                 Windows.logger.warning(f'VM build command for VM #{vm["idVM"]} generated stderr\n{msg}')
             session.protocol.cleanup_command(shell_id=shell_id, command_id=command_id)
             session.protocol.close_shell(shell_id=shell_id)
-        except winrm.WinRMError:
+        except winrm.exceptions.WinRMError:
             Windows.logger.error(
                 f'Exception occurred while connected to host server @ {vm["host_ip"]} for the build of VM '
                 f'#{vm["idVM"]}',
