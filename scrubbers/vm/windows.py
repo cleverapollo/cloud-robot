@@ -50,7 +50,7 @@ class Windows:
             else:
                 msg = response.std_err.strip()
                 Windows.logger.warning(f'VM scrub command for VM #{vm["idVM"]} generated stderr\n{msg}')
-        except winrm.WinRMError:
+        except winrm.exceptions.WinRMError:
             Windows.logger.error(
                 f'Exception occurred while connected to host server @ {vm["host_ip"]} for the scrub of VM '
                 f'#{vm["idVM"]}',
