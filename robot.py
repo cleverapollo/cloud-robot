@@ -34,6 +34,9 @@ def mainloop(process_pool: mp.Pool):
         vrfs = ro.service_entity_list('IAAS', 'vrf', params={'state': 1})
         if len(vrfs) > 0:
             for vrf in vrfs:
+                # Stop looping if we receive a sigterm
+                if sigterm_recv:
+                    break
                 robot_logger.info(f'Dispatching VRF #{vrf["idVRF"]} for build')
                 vrf_dispatch.build(vrf)
         else:
@@ -42,6 +45,9 @@ def mainloop(process_pool: mp.Pool):
         vms = ro.service_entity_list('IAAS', 'vm', params={'state': 1})
         if len(vms) > 0:
             for vm in vms:
+                # Stop looping if we receive a sigterm
+                if sigterm_recv:
+                    break
                 robot_logger.info(f'Dispatching VM #{vm["idVM"]} for build')
                 # Call the dispatcher asynchronously
                 try:
@@ -56,6 +62,9 @@ def mainloop(process_pool: mp.Pool):
         vrfs = ro.service_entity_list('IAAS', 'vrf', params={'state': 5})
         if len(vrfs) > 0:
             for vrf in vrfs:
+                # Stop looping if we receive a sigterm
+                if sigterm_recv:
+                    break
                 robot_logger.info(f'Dispatching VRF #{vrf["idVRF"]} for quiesce')
                 vrf_dispatch.quiesce(vrf)
         else:
@@ -65,6 +74,9 @@ def mainloop(process_pool: mp.Pool):
         vms = ro.service_entity_list('IAAS', 'vm', params={'state__in': [5, 8]})
         if len(vms) > 0:
             for vm in vms:
+                # Stop looping if we receive a sigterm
+                if sigterm_recv:
+                    break
                 robot_logger.info(f'Dispatching VM #{vm["idVM"]} for quiesce')
                 # Call the dispatcher asynchronously
                 try:
@@ -79,6 +91,9 @@ def mainloop(process_pool: mp.Pool):
         vrfs = ro.service_entity_list('IAAS', 'vrf', params={'state': 8})
         if len(vrfs) > 0:
             for vrf in vrfs:
+                # Stop looping if we receive a sigterm
+                if sigterm_recv:
+                    break
                 robot_logger.info(f'Dispatching VRF #{vrf["idVRF"]} for scrub')
                 vrf_dispatch.scrub(vrf)
         else:
@@ -92,6 +107,9 @@ def mainloop(process_pool: mp.Pool):
         vms = ro.service_entity_list('IAAS', 'vm', params=params_scrub)
         if len(vms) > 0:
             for vm in vms:
+                # Stop looping if we receive a sigterm
+                if sigterm_recv:
+                    break
                 robot_logger.info(f'Dispatching VM #{vm["idVM"]} for scrub')
                 # Call the dispatcher asynchronously
                 try:
