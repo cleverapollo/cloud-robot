@@ -46,7 +46,10 @@ class Windows:
             if std_out:
                 msg = std_out.strip()
                 Windows.logger.info(f'VM quiesce command for VM #{vm["idVM"]} generated stdout\n{msg}')
-                quiesced = f'{vm["vm_identifier"]} Off' in msg.decode()
+                quiesced = (
+                    f'{vm["vm_identifier"]} Off' in msg.decode() or
+                    'already in the specified state' in msg.decode()
+                )
             if std_err:
                 msg = std_err.strip()
                 Windows.logger.warning(f'VM quiesce command for VM #{vm["idVM"]} generated stderr\n{msg}')
