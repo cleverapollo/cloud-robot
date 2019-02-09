@@ -7,7 +7,10 @@ from datetime import datetime
 # libs
 import jinja2
 from cloudcix.auth import get_admin_token
+from logstash_async.formatter import LogstashFormatter
 from logstash_async.handler import AsynchronousLogstashHandler
+# local
+from .settings import REGION_NAME
 
 
 __all__ = [
@@ -54,15 +57,17 @@ def setup_root_logger():
     instead of having that old bad system
     """
     logger = logging.getLogger()
-    fmt = logging.Formatter(
-        fmt='%(asctime)s - %(name)s: %(levelname)s: %(message)s',
-        datefmt='%d/%m/%y @ %H:%M:%S',
-    )
+
+    # Stream Handler
+    fmt = logging.Formatter(fmt='%(asctime)s - %(name)s: %(levelname)s: %(message)s', datefmt='%d/%m/%y @ %H:%M:%S')
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(fmt)
     logger.addHandler(stream_handler)
-    logstash_handler = AsynchronousLogstashHandler('logstash.cloudcix.com', 5959, ':memory:')
+
+    # Logstash Handler
+    logstash_fmt = LogstashFormatter(extra={'index': 'robot', 'region': REGION_NAME})
     logstash_handler.setFormatter(fmt)
+    logstash_handler = AsynchronousLogstashHandler('logstash.cloudcix.com', 5959, ':memory:')
     logger.addHandler(logstash_handler)
 
 
@@ -76,8 +81,7 @@ def get_logger_for_name(name: str, level=logging.DEBUG) -> logging.Logger:
     """
     logger = logging.getLogger(name)
     logger.setLevel(level)
-    # Create a loggeradapter that always has the index extra parameter
-    return logging.LoggerAdapter(logger, {'index': 'robot'})
+    return logger
 
 
 def get_current_git_sha() -> str:
