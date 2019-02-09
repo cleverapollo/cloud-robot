@@ -5,5 +5,5 @@ jinja2
 junos-eznc
 netaddr
 paramiko
-python-logstash
+python3-logstash
 pywinrm
