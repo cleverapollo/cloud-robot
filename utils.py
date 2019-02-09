@@ -6,6 +6,7 @@ import subprocess
 from datetime import datetime
 # libs
 import jinja2
+import logstash
 from cloudcix.auth import get_admin_token
 
 
@@ -57,9 +58,12 @@ def setup_root_logger():
         fmt='%(asctime)s - %(name)s: %(levelname)s: %(message)s',
         datefmt='%d/%m/%y @ %H:%M:%S',
     )
-    handler = logging.StreamHandler()
-    handler.setFormatter(fmt)
-    logger.addHandler(handler)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(fmt)
+    logger.addHandler(stream_handler)
+    logstash_handler = logstash.TCPLogstashHandler('logstash.cloudcix.com', 5959)
+    logstash_handler.setFormatter(fmt)
+    logger.addHandler(logstash_handler)
 
 
 def get_logger_for_name(name: str, level=logging.DEBUG) -> logging.Logger:
