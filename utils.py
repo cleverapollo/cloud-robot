@@ -76,7 +76,8 @@ def get_logger_for_name(name: str, level=logging.DEBUG) -> logging.Logger:
     """
     logger = logging.getLogger(name)
     logger.setLevel(level)
-    return logger
+    # Create a loggeradapter that always has the index extra parameter
+    return logging.LoggerAdapter(logger, {'index': 'robot'})
 
 
 def get_current_git_sha() -> str:
