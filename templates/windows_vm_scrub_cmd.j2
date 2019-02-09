@@ -1,1 +1,2 @@
 mount {{ freenas_url }} Z: -o nolock & powershell -file Z:\HyperV\scripts\VMScrubber.ps1 -VMName {{ vm_identifier }} -Verbose
+umount Z:
