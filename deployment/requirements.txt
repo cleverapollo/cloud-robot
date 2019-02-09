@@ -1,8 +1,9 @@
 cloudcix
+git+ssh://git@gitlab.cloudcix.com/CloudCIX/Tools/metrics.git
 influxdb
 jinja2
 junos-eznc
 netaddr
 paramiko
+python-logstash
 pywinrm
-git+ssh://git@gitlab.cloudcix.com/CloudCIX/Tools/metrics.git
