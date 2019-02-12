@@ -4,6 +4,7 @@ import winrm
 # local
 import settings
 import utils
+from ro import fix_run_ps
 
 DRIVE_PATH = '/mnt/images/HyperV'
 FREENAS_URL = f'\\\\{settings.REGION_NAME}-freenas.cloudcix.com\\mnt\\volume\\{settings.REGION_NAME}'
@@ -41,22 +42,14 @@ class Windows:
             Windows.logger.info(f'Attempting to execute the command to scrub VM #{vm["idVM"]}')
             # Connecting HyperV host with session
             session = winrm.Session(vm['host_name'], auth=('administrator', password))
-            shell_id = session.protocol.open_shell()
-            command_id = session.protocol.run_command(shell_id=shell_id, command=cmd)
-            std_out, std_err, status_code = session.protocol.get_command_output(
-                shell_id=shell_id,
-                command_id=command_id,
-            )
-            if std_out:
-                msg = std_out.strip().decode()
+            response = fix_run_ps(self=session, script=cmd)
+            if response.status_code == 0:
+                msg = response.std_out.strip()
                 Windows.logger.info(f'VM scrub command for VM #{vm["idVM"]} generated stdout\n{msg}')
                 scrubbed = 'VM Successfully Deleted.' in msg.decode()
-            if std_err:
-                msg = std_err.strip().decode()
+            else:
+                msg = response.std_err.strip()
                 Windows.logger.warning(f'VM scrub command for VM #{vm["idVM"]} generated stderr\n{msg}')
-
-            session.protocol.cleanup_command(shell_id=shell_id, command_id=command_id)
-            session.protocol.close_shell(shell_id=shell_id)
         except winrm.exceptions.WinRMError:
             Windows.logger.error(
                 f'Exception occurred while connected to host server @ {vm["host_ip"]} for the scrub of VM '
