@@ -1,4 +1,2 @@
-Get-VM -Name {vm_identifier} | Get-VMHardDiskDrive -VMName {vm_identifier} | foreach { Remove-Item -Path $_.Path -Recurse -Force -Confirm:$false}
-Remove {vm_identifier}
-Remove-Item -Recurse D:\HyperV\{vm_identifier}
-Write-Host 'VM Successfully Deleted.'
+mount {{ freenas_url }} Z: -o nolock & powershell -file Z:\HyperV\scripts\VMScrubber.ps1 -VMName {{ vm_identifier }} -Verbose
+umount Z:
