@@ -7,10 +7,10 @@ from datetime import datetime
 # libs
 import jinja2
 from cloudcix.auth import get_admin_token
-from logstash_async.formatter import LogstashFormatter
-from logstash_async.handler import AsynchronousLogstashHandler
+# from logstash_async.formatter import LogstashFormatter
+# from logstash_async.handler import AsynchronousLogstashHandler
 # local
-from settings import REGION_NAME
+# from settings import REGION_NAME
 
 
 __all__ = [
