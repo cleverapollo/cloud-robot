@@ -66,7 +66,7 @@ def setup_root_logger():
 
     # Logstash Handler
     logstash_fmt = LogstashFormatter(extra={'_index': 'robot', 'region': REGION_NAME})
-    logstash_handler = AsynchronousLogstashHandler('logstash.cloudcix.com', 5959, 'log.db')
+    logstash_handler = AsynchronousLogstashHandler('2a02:2078:0:cb00::f12', 5959, 'log.db')
     logstash_handler.setFormatter(logstash_fmt)
     logger.addHandler(logstash_handler)
 
