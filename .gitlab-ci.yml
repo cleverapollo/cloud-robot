@@ -46,9 +46,13 @@ deploy_alpha:
   environment: staging
   stage: deploy
   script:
-    - ansible-playbook -i deployment/hosts deployment/playbook.yml
+    - ansible-playbook -i deployment/hosts.yml deployment/playbook.yml
   only:
     - master
+
+###############################################################################
+#                         Production Build Jobs Start                         #
+###############################################################################
 
 build_toronto01:
   stage: build
@@ -70,6 +74,20 @@ build_gov_cork:
   only:
   - stable
 
+build_cork01:
+  stage: build
+  tags:
+  - docker-build
+  script:
+  - docker build -f deployment/dockerfiles/cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/cork01:latest --no-cache .
+  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/cork01:latest
+  only:
+  - stable
+
+###############################################################################
+#                          Production Build Jobs End                          #
+###############################################################################
+
 deploy_production:
   image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
   before_script:
@@ -78,10 +96,6 @@ deploy_production:
   environment: production
   stage: deploy
   script:
-    # Deploy all the production stuff
-    # Toronto
-    - ansible-playbook -i deployment/hosts deployment/playbook.yml --extra-vars="deployment_host=toronto01"
-    # GovCork
-    - ansible-playbook -i deployment/hosts deployment/playbook.yml --extra-vars="deployment_host=gov_cork"
+    - ansible-playbook -i deployment/hosts.yml deployment/playbook.yml --extra-vars="deployment_host=production"
   only:
     - stable
