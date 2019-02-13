@@ -10,6 +10,7 @@ __all__ = [
     'CLOUDCIX_EMAIL_HOST',
     'CLOUDCIX_EMAIL_PASSWORD',
     'CLOUDCIX_EMAIL_USERNAME',
+    'LOGSTASH_IP',
     'NETWORK_PASSWORD',
     'REGION_NAME',
     'ROBOT_ENV',
@@ -45,6 +46,9 @@ CLOUDCIX_INFLUX_DATABASE = 'robot'
 CLOUDCIX_INFLUX_PORT = 443
 # Hostname of influx endpoint
 CLOUDCIX_INFLUX_URL = 'influx.cloudcix.com'
+
+# IP Address of logstash for centralised logging
+LOGSTASH_IP = '10.1.1.7'
 
 # Password for connecting to routers and servers
 NETWORK_PASSWORD = 'C1xacc355'
