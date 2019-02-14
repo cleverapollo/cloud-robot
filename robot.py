@@ -119,7 +119,31 @@ def mainloop(process_pool: mp.Pool):
                     robot_logger.error(f'Error when Scrubbing VM #{vm["idVM"]}', exc_info=True)
         else:
             robot_logger.info('No VM is ready for Scrubbing.')
-        # ############################################################################################
+
+        # ######################## VRF UPDATE  ################################
+        vrfs = ro.service_entity_list('IAAS', 'vrf', params={'state': 10})
+        if len(vrfs) > 0:
+            for vrf in vrfs:
+                robot_logger.info(f'Dispatching VRF #{vrf["idVRF"]} for update')
+                vrf_dispatch.update(vrf)
+        else:
+            robot_logger.info('No VRFs in "Update" state.')
+
+        # ######################## VM UPDATE  ################################
+        vms = ro.service_entity_list('IAAS', 'vm', params={'state': 10})
+        if len(vms) > 0:
+            for vm in vms:
+                robot_logger.info(f'Dispatching VM #{vm["idVM"]} for update')
+                # Call the dispatcher asynchronously
+                try:
+                    vm_dispatch.update(vm)
+                    # process_pool.apply_async(func=vm_dispatch.update, kwds={'vm': vm})
+                except mp.ProcessError:
+                    robot_logger.error(f'Error when updating VM #{vm["idVM"]}', exc_info=True)
+        else:
+            robot_logger.info('No VMs is found for updating.')
+
+        # #############################################################################
 
         while last > time.time() - 20:
             time.sleep(1)

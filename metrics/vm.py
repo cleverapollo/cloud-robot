@@ -30,6 +30,20 @@ def scrub_failure():
     prepare_metrics(lambda: Metric('vm_scrub_failure', 1, {'region': REGION_NAME}))
 
 
+def update_success():
+    """
+    Sends a data packet to Influx reporting a successful update
+    """
+    prepare_metrics(lambda: Metric('vm_update_success', 1, {'region': REGION_NAME}))
+
+
+def update_failure():
+    """
+    Sends a data packet to Influx reporting a failed update
+    """
+    prepare_metrics(lambda: Metric('vm_update_failure', 1, {'region': REGION_NAME}))
+
+
 def quiesce_success():
     """
     Sends a data packet to Influx reporting a successful quiesce

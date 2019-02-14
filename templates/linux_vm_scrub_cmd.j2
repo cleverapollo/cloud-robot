@@ -3,6 +3,11 @@ virsh shutdown {{ vm_identifier }}
 {# 2. Delete the VM instance #}
 virsh undefine {{ vm_identifier }}
 {# 3. There is no shortcut to delete the vm drive so using direct command#}
-{% for i in range(st_number) %}
-echo {{ SUDO_PASS }} | sudo -S rm -rf /var/lib/libvirt/images/{{ vm_identifier }}_{{ i }}.img
+{% if hdd %}
+echo {{ SUDO_PASS }} | sudo -S rm -rf /var/lib/libvirt/images/{{ vm_identifier }}_HDD_{{ hdd.split(':')[0] }}.img
+{% elif ssd %}
+echo {{ SUDO_PASS }} | sudo -S rm -rf /var/lib/libvirt/images/{{ vm_identifier }}_SSD_{{ ssd.split(':')[0] }}.img
+{% endif %}
+{% for drive in drives %}
+echo {{ SUDO_PASS }} | sudo -S rm -rf /var/lib/libvirt/images/{{ vm_identifier }}_{{ drive["type"] }}_{{ drive["st_id"] }}.img
 {% endfor %}
