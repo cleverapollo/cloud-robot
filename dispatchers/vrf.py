@@ -66,7 +66,7 @@ class Vrf:
         :return ty: string
         """
         # find the ip type
-        response = ro.api.iaas.ip_validator.list(
+        response = ro.api.IAAS.ip_validator.list(
             token=ro.TOKEN_WRAPPER.token,
             params={'ipAddresses': ip},
         )
