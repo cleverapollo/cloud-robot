@@ -10,15 +10,15 @@ set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} routing-opt
 {% endif %}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Define VRF public IP on ge-0/0/0.0 interface #}
-set groups vrf-{{ idProject }} interfaces {{port_data['public_port']}} unit 0 family {{port_data['type']}} address {{ vrf_ip }}/{{ mask_vpn }}
+set groups vrf-{{ idProject }} interfaces {{ port_data['public_port'] }} unit 0 family {{ port_data['type'] }} address {{ vrf_ip }}/{{ mask_vpn }}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Create southbound sub interface and gateway for each VLAN and attach them to the VRF #}
 {% for vlan in vlans %}
-set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} interface {{port_data['private_port']}}.{{ vlan['vlan'] }}
+set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} interface {{ port_data['private_port'] }}.{{ vlan['vlan'] }}
 {# Configure sub-interfaces #}
-set groups vrf-{{ idProject }} interfaces {{port_data['private_port']}} unit {{ vlan['vlan'] }} description vrf-{{ idProject }}-{{ vlan['vlan'] }} vlan-id {{ vlan['vlan'] }} family {{vlan['type']}} address {{ vlan['address_range'] }}
+set groups vrf-{{ idProject }} interfaces {{ port_data['private_port'] }} unit {{ vlan['vlan'] }} description vrf-{{ idProject }}-{{ vlan['vlan'] }} vlan-id {{ vlan['vlan'] }} family {{ vlan['type'] }} address {{ vlan['address_range'] }}
 {# Create private zones #}
-set groups vrf-{{ idProject }} security zones security-zone vrf-{{ idProject }} interfaces {port_data['private_port']}}.{{ vlan['vlan'] }} host-inbound-traffic system-services ping
+set groups vrf-{{ idProject }} security zones security-zone vrf-{{ idProject }} interfaces {{ port_data['private_port'] }}.{{ vlan['vlan'] }} host-inbound-traffic system-services ping
 {% endfor %}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Source (outbound) NAT #}
