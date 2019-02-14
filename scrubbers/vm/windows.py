@@ -2,12 +2,10 @@
 import os
 import winrm
 # local
-import settings
 import utils
 from ro import fix_run_ps
 
 DRIVE_PATH = '/mnt/images/HyperV'
-FREENAS_URL = f'\\\\{settings.REGION_NAME}-freenas.cloudcix.com\\mnt\\volume\\{settings.REGION_NAME}'
 
 
 class Windows:
@@ -22,7 +20,7 @@ class Windows:
         Given data from the VM dispatcher, request for a Windows VM to be deleted in the specified HyperV host and
         return a flag indicating whether or not the scrub was successful.
         :param vm: The data about the VM from the dispatcher
-        :param password: The password used to log in to the host to build the VM
+        :param password: The password used to log in to the host to scrub the VM
         :return: A flag stating whether or not the scrub was successful
         """
         scrubbed = False
@@ -37,7 +35,7 @@ class Windows:
         Windows.logger.info(f'Attempting to connect to host @ {vm["host_name"]} to scrub VM #{vm["idVM"]}')
         try:
             # Generate the command that actually scrubs the VM
-            cmd = utils.jinja_env.get_template('windows_vm_scrub_cmd.j2').render(freenas_url=FREENAS_URL, **vm)
+            cmd = utils.jinja_env.get_template('windows_vm_scrub_cmd.j2').render(**vm)
             Windows.logger.debug(f'Generated scrub command for VM #{vm["idVM"]}\n{cmd}')
             Windows.logger.info(f'Attempting to execute the command to scrub VM #{vm["idVM"]}')
             # Connecting HyperV host with session

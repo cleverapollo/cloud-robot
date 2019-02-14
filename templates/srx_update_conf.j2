@@ -1,3 +1,6 @@
+{# First delete everything and then re-do everything #}
+delete groups vrf-{{ idProject }}
+{# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Create VRF #}
 set groups vrf-{{ idProject }} routing-instances vrf-{{ idProject }} instance-type virtual-router
 set groups vrf-{{ idProject }} security zones security-zone vrf-{{ idProject }}
