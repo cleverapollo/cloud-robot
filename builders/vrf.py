@@ -24,7 +24,14 @@ class Vrf:
         :return: A flag stating whether the build succeeded or not
         """
         Vrf.logger.info(f'Generating JunOS setconf for VRF for Project #{vrf["idProject"]}')
-        conf = utils.jinja_env.get_template('srx_set_conf.j2').render(**vrf)
+        try:
+            template = f'srx_{vrf["router_model"]}_set_conf.j2'
+            conf = utils.jinja_env.get_template(template).render(**vrf)
+        except Exception as err:
+            Vrf.logger.error(
+                f'Unable to find the srx set conf template #{template}, details: {err}',
+            )
+            return 0
         # Log the setconf to Debug
         Vrf.logger.debug(f'Generated setconf for Project #{vrf["idProject"]}\n{conf}')
         # Deploy the generated config into the physical router

@@ -24,7 +24,15 @@ class Vrf:
         :return: A flag stating whether the update succeeded or not
         """
         Vrf.logger.info(f'Generating SRX JunOS update conf for VRF for Project #{vrf["idProject"]}')
-        conf = utils.jinja_env.get_template('srx_update_conf.j2').render(**vrf)
+        try:
+            delete_conf = f'delete groups vrf-{ vrf["idProject"] }\n'
+            template = f'srx_{vrf["router_model"]}_set_conf.j2'
+            conf = delete_conf + utils.jinja_env.get_template(template).render(**vrf)
+        except Exception as err:
+            Vrf.logger.error(
+                f'Unable to find the srx set conf template #{template}, details: {err}',
+            )
+            return 0
         # Log the update conf to Debug
         Vrf.logger.debug(f'Generated update conf for Project #{vrf["idProject"]}\n{conf}')
         # Deploy the generated config into the physical router
