@@ -143,6 +143,19 @@ def mainloop(process_pool: mp.Pool):
         else:
             robot_logger.info('No VMs is found for updating.')
 
+        # ######################## VM RESTART  ################################
+        vms = ro.service_entity_list('IAAS', 'vm', params={'state': 7})
+        if len(vms) > 0:
+            for vm in vms:
+                robot_logger.info(f'Dispatching VM #{vm["idVM"]} for restart')
+                # Call the dispatcher asynchronously
+                try:
+                    vm_dispatch.restart(vm)
+                    # process_pool.apply_async(func=vm_dispatch.restart, kwds={'vm': vm})
+                except mp.ProcessError:
+                    robot_logger.error(f'Error when Restarting VM #{vm["idVM"]}', exc_info=True)
+        else:
+            robot_logger.info('No VMs is found for Restarting.')
         # #############################################################################
 
         while last > time.time() - 20:

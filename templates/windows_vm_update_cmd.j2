@@ -1,5 +1,6 @@
 """
 {# 0. Update the IPAddress if any #}
+try{
 $vmName = '{{ vm_identifier }}'
 $Msvm_VirtualSystemManagementService = Get-WmiObject -Namespace root\virtualization\v2 -Class Msvm_VirtualSystemManagementService
 $Msvm_ComputerSystem = Get-WmiObject -Namespace root\virtualization\v2 -Class Msvm_ComputerSystem -Filter "ElementName='$vmName'"
@@ -41,4 +42,5 @@ Add-VMHardDiskDrive -VMName $vmName -Path D:\HyperV\$vmName\{$vmName}_{{ drive['
 {# 5. Restart the VM back. #}
 Start-VM -Name $vmName
 Write-Host "VM Successfully Shutdown, Updated and Rebooted."
+} catch {Write-Error 'VM failed to update, details: $_'}
 """
