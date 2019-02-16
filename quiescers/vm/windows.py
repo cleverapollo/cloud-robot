@@ -21,7 +21,7 @@ class Windows:
         Given data from the VM dispatcher, request for a Windows VM to be shutdown in the specified HyperV host and
         return a flag indicating whether or not the quiesce was successful.
         :param vm: The data about the VM from the dispatcher
-        :param password: The password used to log in to the host to build the VM
+        :param password: The password used to log in to the host to quiesce the VM
         :return: A flag stating whether or not the quiesce was successful
         """
         quiesced = False

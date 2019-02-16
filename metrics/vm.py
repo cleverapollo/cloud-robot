@@ -56,3 +56,17 @@ def quiesce_failure():
     Sends a data packet to Influx reporting a failed quiesce
     """
     prepare_metrics(lambda: Metric('vm_quiesce_failure', 1, {'region': REGION_NAME}))
+
+
+def restart_success():
+    """
+    Sends a data packet to Influx reporting a successful restart
+    """
+    prepare_metrics(lambda: Metric('vm_restart_success', 1, {'region': REGION_NAME}))
+
+
+def restart_failure():
+    """
+    Sends a data packet to Influx reporting a failed restart
+    """
+    prepare_metrics(lambda: Metric('vm_restart_failure', 1, {'region': REGION_NAME}))

@@ -21,6 +21,8 @@ from .vm import (
     update_success as vm_update_success,
     quiesce_failure as vm_quiesce_failure,
     quiesce_success as vm_quiesce_success,
+    restart_failure as vm_restart_failure,
+    restart_success as vm_restart_success,
 )
 
 __all__ = [
@@ -43,4 +45,6 @@ __all__ = [
     'vm_update_success',
     'vm_quiesce_failure',
     'vm_quiesce_success',
+    'vm_restart_failure',
+    'vm_restart_success',
 ]

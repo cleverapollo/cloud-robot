@@ -44,7 +44,7 @@ class Windows:
             if response.status_code == 0:
                 msg = response.std_out.strip()
                 Windows.logger.info(f'VM scrub command for VM #{vm["idVM"]} generated stdout\n{msg}')
-                scrubbed = 'VM Successfully Deleted.' in msg.decode()
+                scrubbed = f'VM={vm["vm_identifier"]} Successfully Deleted.' in msg.decode()
             else:
                 msg = response.std_err.strip()
                 Windows.logger.warning(f'VM scrub command for VM #{vm["idVM"]} generated stderr\n{msg}')

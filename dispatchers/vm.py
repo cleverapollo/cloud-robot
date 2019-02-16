@@ -12,6 +12,7 @@ from builders import Linux as LinuxBuilder, Windows as WindowsBuilder
 from scrubbers import Linux as LinuxScrubber, Windows as WindowsScrubber
 from quiescers import Linux as LinuxQuiescer, Windows as WindowsQuiescer
 from updaters import Linux as LinuxUpdater, Windows as WindowsUpdater
+from restarters import Linux as LinuxRestarter, Windows as WindowsRestarter
 
 EMAIL_BUILD_SUCCESS_SUBJECT = 'Your VM {name} has been built successfully!'
 EMAIL_BUILD_FAILURE_SUBJECT = 'Your VM {name} has failed to build!'
@@ -19,6 +20,8 @@ EMAIL_SCRUB_SUCCESS_SUBJECT = 'Your VM {name} has been deleted successfully!'
 EMAIL_QUIESCE_SUCCESS_SUBJECT = 'Your VM {name} has been shutdown successfully!'
 EMAIL_UPDATE_SUCCESS_SUBJECT = 'Your VM {name} has been updated successfully!'
 EMAIL_UPDATE_FAILURE_SUBJECT = 'Your VM {name} has been failed to update!'
+EMAIL_RESTART_SUCCESS_SUBJECT = 'Your VM {name} has been restarted successfully!'
+EMAIL_RESTART_FAILURE_SUBJECT = 'Your VM {name} has been failed to restart!'
 
 
 class Vm:
@@ -238,12 +241,6 @@ class Vm:
                     'emails/scheduled_delete_success.j2',
                 )
             metrics.vm_quiesce_success()
-            # Email the user
-            email_notifier.vm_email_notifier(
-                EMAIL_QUIESCE_SUCCESS_SUBJECT.format(name=vm['name']),
-                vm,
-                'emails/quiesce_success.j2',
-            )
         else:
             logger.info(f'VM #{vm_id} failed to shutdown . Check log for details.')
             metrics.vm_quiesce_failure()
@@ -493,3 +490,71 @@ class Vm:
                 vm,
                 'emails/update_error.j2',
             )
+
+    def restart(self, vm: dict):
+        """
+        Takes the VM (to be restarted )data from CloudCix API and sends the request to concern restarter.
+        :param vm: The VM data from the CloudCIX API
+        """
+        logger = utils.get_logger_for_name('dispatchers.vm.restart')
+        vm_id = vm['idVM']
+        logger.info(f'Commencing restart dispatch of VM #{vm_id}')
+        vm['vm_identifier'] = f'{vm["idProject"]}_{vm["idVM"]}'
+        # Get the type of VM ie idHypervisor
+        vm['idHypervisor'] = ro.service_entity_read('IAAS', 'image', vm['idImage'])['idHypervisor']
+        # Get the server details for sshing into the host
+        for mac in ro.service_entity_list('IAAS', 'macaddress', {}, server_id=vm['idServer']):
+            if mac['status'] is True and mac['ip'] is not None:
+                try:
+                    vm['host_ip'] = str(netaddr.IPAddress(mac['ip']))
+                    vm['host_name'] = mac['dnsName']
+                    break
+                except netaddr.AddrFormatError:
+                    logger.error(
+                        f'Error occurred when trying to read host ip address from mac record '
+                        f'#{mac["idMacAddress"]}.',
+                        exc_info=True,
+                    )
+                    metrics.vm_restart_failure()
+                    return
+        # Get email id of user via ip address and subnet details
+        for ip in ro.service_entity_list('IAAS', 'ipaddress', {'vm': vm['idVM']}):
+            if netaddr.IPAddress(ip['address']).is_private():
+                # Get the subnet of this IP
+                subnet = ro.service_entity_read('IAAS', 'subnet', ip['idSubnet'])
+                # Get user email to notify the user
+                vm['email'] = ro.service_entity_read('Membership', 'user', subnet['modifiedBy'])['username']
+
+        # Attempt to restart the VM
+        success: bool
+        if vm['idHypervisor'] == 1:  # HyperV -> Windows
+            success = WindowsRestarter.restart(vm, self.password)
+        elif vm['idHypervisor'] == 2:  # KVM -> Linux
+            success = LinuxRestarter.restart(vm, self.password)
+        else:
+            logger.error(
+                f'Unsupported idHypervisor ({vm["idHypervisor"]}). VM #{vm_id} cannot be restarted',
+            )
+            success = False
+
+        if success:
+            logger.info(f'VM #{vm_id} successfully restarted from Server #{vm["idServer"]}')
+            # Change the state of the VM to 4
+            ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 4})
+            # Email the user
+            email_notifier.vm_email_notifier(
+                EMAIL_RESTART_SUCCESS_SUBJECT.format(name=vm['name']),
+                vm,
+                'emails/restart_success.j2',
+            )
+            metrics.vm_restart_success()
+        else:
+            logger.info(f'VM #{vm_id} failed to restart . Check log for details.')
+            # Change the state of the VM to 3
+            ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 3})
+            email_notifier.vm_email_notifier(
+                EMAIL_RESTART_FAILURE_SUBJECT.format(name=vm['name']),
+                vm,
+                'emails/restart_error.j2',
+            )
+            metrics.vm_restart_failure()
