@@ -23,8 +23,9 @@ class Vrf:
     def __init__(self, password: str):
         self.password = password
 
-    def router_ip(self, router_id):
+    def router_data(self, router_id):
         manage_ip = None
+        router_model = None
         ports = ro.service_entity_list('IAAS', 'port', {}, router_id=router_id)
         for port in ports:
             # Get the Port names ie xe-0/0/0 etc
@@ -33,6 +34,12 @@ class Vrf:
                 'router_model_port_function',
                 pk=port['model_port_id'],
             )
+            # Get the router model
+            router_model = ro.service_entity_read(
+                'IAAS',
+                'router_model',
+                pk=rmpf['router_model_id'],
+            )['model']
             # Get the function names ie 'Management' etc
             port_fun = ro.service_entity_read(
                 'IAAS',
@@ -56,7 +63,7 @@ class Vrf:
                     manage_ip = ip['address']
                     break
                 break
-        return manage_ip
+        return {'manage_ip': manage_ip, 'router_model': router_model}
 
     @staticmethod
     def ip_type(ip):
@@ -92,6 +99,7 @@ class Vrf:
         interface = None
         private = None
         ty = None
+        vrf_port = dict()
         # Get the Ports which are Floating and Floating Pre Filtered of Router
         ports = ro.service_entity_list('IAAS', 'port', {}, router_id=router_id)
         for port in ports:
@@ -175,8 +183,6 @@ class Vrf:
         logger = utils.get_logger_for_name('dispatchers.vrf.build')
         vrf_id = vrf['idVRF']
         logger.info(f'Commencing build dispatch of VRF #{vrf_id}')
-        # Change the state of the vrf to be 'Building' (2)
-        ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 2})
         # Read the project to get the customer idAddress for vxlan
         vrf['vxlan'] = ro.service_entity_read('IAAS', 'project', vrf['idProject'])['idAddCust']
 
@@ -194,6 +200,7 @@ class Vrf:
                     f'VRF {vrf_id} has become Unresourced as it has an invalid '
                     f'vlan ({subnet["vLAN"]})',
                 )
+                metrics.vrf_build_failure()
                 return
             vlans.append(
                 {
@@ -208,13 +215,40 @@ class Vrf:
             for ip in ro.service_entity_list('IAAS', 'ipaddress', params):
                 nats.append({'private': ip['address'], 'public': ip['fip']['address'], 'vlan': subnet['vLAN']})
 
+        # vrf_ip and maskVPN
+        vrf_ip = ro.service_entity_read('IAAS', 'ipaddress', pk=vrf['idIPVrf'])
+        vrf_ip_subnet = ro.service_entity_read('IAAS', 'subnet', pk=vrf_ip['idSubnet'])
+        vrf['vrf_ip'] = vrf_ip['address']
+        vrf['mask_vpn'] = vrf_ip_subnet['addressRange'].split('/')[1]
+
+        # Management IP and Router Model
+        data_router = self.router_data(vrf['idRouter'])
+        vrf['manage_ip'] = data_router['router_ip']
+        vrf['router_model'] = data_router['router_model']
+
+        # vrf_port data
+        vrf['port_data'] = self.get_vrf_port(vrf_ip['idSubnet'], vrf['idRouter'])
+
         # VPNs
         for vpn in ro.service_entity_list('IAAS', 'vpn_tunnel', {'vrf': vrf_id}):
+            # check router compatability with RemoteAccess(siteToSite = False) typed vpn
+            if vrf['router_model'] == 'J6350' and vpn['siteToSite'] is False:
+                logger.error(
+                    f'VRF #{vrf_id} failed to create as VPN #{vpn["idVPNTunnel"]} is incompatable with router '
+                    f'so it is being moved to Unresourced (3)',
+                )
+                # Change the state to 3 and report a failure to influx
+                ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 3})
+                metrics.vrf_build_failure()
+                return
+            # gather required data
             subnet = ro.service_entity_read('IAAS', 'subnet', vpn['vpnLocalSubnet'])
             vpn['vlan'] = subnet['vLAN']
             vpn['remote_subnet_cidr'] = netaddr.IPNetwork(
                 f'{vpn["vpnRemoteSubnetIP"]}/{vpn["vpnRemoteSubnetMask"]}',
             ).cidr
+            vpn['ike'] = ro.service_entity_read('IAAS', 'ike', pk=vpn['ike_id'])['name']
+            vpn['ipsec'] = ro.service_entity_read('IAAS', 'ipsec', pk=vpn['ipsec_id'])['name']
             vpns.append(vpn)
 
         # adding vlans, nats and vpns to vrf
@@ -222,20 +256,10 @@ class Vrf:
         vrf['nats'] = nats
         vrf['vpns'] = vpns
 
-        # vrf_ip and maskVPN
-        vrf_ip = ro.service_entity_read('IAAS', 'ipaddress', pk=vrf['idIPVrf'])
-        vrf_ip_subnet = ro.service_entity_read('IAAS', 'subnet', pk=vrf_ip['idSubnet'])
-        vrf['vrf_ip'] = vrf_ip['address']
-        vrf['mask_vpn'] = vrf_ip_subnet['addressRange'].split('/')[1]
-
-        # Management IP
-        vrf['manage_ip'] = self.router_ip(vrf['idRouter'])
-
-        # vrf_port data
-        vrf['port_data'] = self.get_vrf_port(vrf_ip['idSubnet'], vrf['idRouter'])
-
         # TODO - Add data/ip validations to vrf dispatcher
 
+        # Change the state of the vrf to be 'Building' (2)
+        ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 2})
         # Attempt to build the VRF
         if Builder.build(vrf, self.password):
             logger.info(f'Successfully built VRF #{vrf_id} in router {vrf["idRouter"]}')
@@ -260,7 +284,7 @@ class Vrf:
         vrf_id = vrf['idVRF']
         logger.info(f'Commencing quiesce dispatch of VRF #{vrf_id}')
         # Mangement IP
-        vrf['manage_ip'] = self.router_ip(vrf['idRouter'])
+        vrf['manage_ip'] = self.router_data(vrf['idRouter'])['manage_ip']
         # Attempt to quiesce the VRF
         if Quiescer.quiesce(vrf, self.password):
             logger.info(f'Successfully quiesced VRF #{vrf_id} in router {vrf["idRouter"]}')
@@ -283,7 +307,7 @@ class Vrf:
         vrf_id = vrf['idVRF']
         logger.info(f'Commencing scrub dispatch of VRF #{vrf_id}')
         # Management IP
-        vrf['manage_ip'] = self.router_ip(vrf['idRouter'])
+        vrf['manage_ip'] = self.router_data(vrf['idRouter'])['manage_ip']
         # Attempt to scrub the VRF
         if Scubber.scrub(vrf, self.password):
             logger.info(f'Successfully scrubbed VRF #{vrf_id} in router {vrf["idRouter"]}')
@@ -323,15 +347,46 @@ class Vrf:
                     f'vlan ({subnet["vLAN"]})',
                 )
                 return
-            vlans.append({'vlan': subnet['vLAN'], 'address_range': subnet['addressRange']})
+            vlans.append(
+                {
+                    'vlan': subnet['vLAN'],
+                    'address_range': subnet['addressRange'],
+                    'type': self.ip_type(str(subnet['addressRange']).split('/')[0]),
+                },
+            )
 
             # Check if there are any nats for this subnet
             params = {'subnet__idSubnet': subnet['idSubnet'], 'fip_id__isnull': False, 'fields': '(*,fip)'}
             for ip in ro.service_entity_list('IAAS', 'ipaddress', params):
                 nats.append({'private': ip['address'], 'public': ip['fip']['address']})
 
+        # vrf_ip and maskVPN
+        vrf_ip = ro.service_entity_read('IAAS', 'ipaddress', pk=vrf['idIPVrf'])
+        vrf_ip_subnet = ro.service_entity_read('IAAS', 'subnet', pk=vrf_ip['idSubnet'])
+        vrf['vrf_ip'] = vrf_ip['address']
+        vrf['mask_vpn'] = vrf_ip_subnet['addressRange'].split('/')[1]
+
+        # Management IP and Router Model
+        data_router = self.router_data(vrf['idRouter'])
+        vrf['manage_ip'] = data_router['router_ip']
+        vrf['router_model'] = data_router['router_model']
+
+        # vrf_port data
+        vrf['port_data'] = self.get_vrf_port(vrf_ip['idSubnet'], vrf['idRouter'])
+
         # VPNs
         for vpn in ro.service_entity_list('IAAS', 'vpn_tunnel', {'vrf': vrf_id}):
+            # check router compatability with RemoteAccess(siteTosite = False) typed vpn
+            if vrf['router_model'] == 'J6350' and vpn['siteToSite'] is False:
+                logger.error(
+                    f'VRF #{vrf_id} failed to update as VPN #{vpn["idVPNTunnel"]} is incompatable with router '
+                    f'so it is being moved to Unresourced (3)',
+                )
+                # Change the state to 3 and report a failure to influx
+                ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 3})
+                metrics.vrf_update_failure()
+                return
+            # gather required data
             subnet = ro.service_entity_read('IAAS', 'subnet', vpn['vpnLocalSubnet'])
             vpn['vlan'] = subnet['vLAN']
             vpn['remote_subnet_cidr'] = netaddr.IPNetwork(
@@ -344,18 +399,6 @@ class Vrf:
         vrf['nats'] = nats
         vrf['vpns'] = vpns
 
-        # vrf_ip and maskVPN
-        vrf_ip = ro.service_entity_read('IAAS', 'ipaddress', pk=vrf['idIPVrf'])
-        vrf_ip_subnet = ro.service_entity_read('IAAS', 'subnet', pk=vrf_ip['idSubnet'])
-        vrf['vrf_ip'] = vrf_ip['address']
-        vrf['mask_vpn'] = vrf_ip_subnet['addressRange'].split('/')[1]
-
-        # Management IP
-        vrf['manage_ip'] = self.router_ip(vrf['idRouter'])
-
-        # vrf_port data
-        vrf['port_data'] = self.get_vrf_port(vrf_ip['idSubnet'], vrf['idRouter'])
-
         # TODO - Add data/ip validations to vrf dispatcher
 
         # Attempt to re-build the VRF
@@ -364,11 +407,11 @@ class Vrf:
             logger.info(f'Successfully updated VRF #{vrf_id} in router {vrf["idRouter"]}')
             # Change the state to 4 and report a success to influx
             ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 4})
-            metrics.vrf_build_success()
+            metrics.vrf_update_success()
         else:
             logger.error(
                 f'VRF #{vrf_id} failed to update so it is being moved to Unresourced (3). Check log for details.',
             )
             # Change the state to 3 and report a failure to influx
             ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 3})
-            metrics.vrf_build_failure()
+            metrics.vrf_update_failure()
