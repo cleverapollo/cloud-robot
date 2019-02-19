@@ -37,7 +37,7 @@ class Windows:
             if response.status_code == 0:
                 msg = response.std_out.strip()
                 Windows.logger.info(f'VM restart command for VM #{vm["idVM"]} generated stdout\n{msg}')
-                restarted = f'VM={vm["vm_identifier"]} Successfully Rebooted.' in msg.decode()
+                restarted = f'{vm["vm_identifier"]} Successfully Rebooted.' in msg.decode()
             else:
                 msg = response.std_err.strip()
                 Windows.logger.warning(f'VM restart command for VM #{vm["idVM"]} generated stderr\n{msg}')
