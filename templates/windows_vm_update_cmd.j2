@@ -1,4 +1,3 @@
-"""
 {# 0. Update the IPAddress if any #}
 try{
 $VMName = '{{ vm_identifier }}'
@@ -42,5 +41,4 @@ Add-VMHardDiskDrive -VMName $VMName -Path D:\HyperV\$VMName\{$VMName}_{{ drive['
 {# 5. Restart the VM back. #}
 Start-VM -Name $VMName
 Write-Host "VM Successfully Shutdown, Updated and Rebooted."
-} catch {Write-Error 'VM failed to update, details: $_'}
-"""
+} catch {Write-Error 'VM failed to update.'}

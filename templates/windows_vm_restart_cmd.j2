@@ -1,8 +1,6 @@
 {#  Restart the VM back. #}
-"""
 try{
 $VMName = '{{ vm_identifier }}'
 Start-VM -Name $VMName
-Write-Host 'VM='+ $VMName + ' Successfully Rebooted.'
-} catch {Write-Error 'VM failed to restart, details: $_'}
-"""
+Write-Host $VMName + ' Successfully Rebooted.'
+} catch {Write-Error 'VM failed to restart.'}
