@@ -223,7 +223,7 @@ class Vrf:
 
         # Management IP and Router Model
         data_router = self.router_data(vrf['idRouter'])
-        vrf['manage_ip'] = data_router['router_ip']
+        vrf['manage_ip'] = data_router['manage_ip']
         vrf['router_model'] = data_router['router_model']
 
         # vrf_port data
@@ -368,7 +368,7 @@ class Vrf:
 
         # Management IP and Router Model
         data_router = self.router_data(vrf['idRouter'])
-        vrf['manage_ip'] = data_router['router_ip']
+        vrf['manage_ip'] = data_router['manage_ip']
         vrf['router_model'] = data_router['router_model']
 
         # vrf_port data
