@@ -8,7 +8,7 @@
       register: host_presence
       ignore_errors: yes
     - name: Add influx to the hosts file if it is not present
-      shell: "printf '\n2a02:2078:0:cb00::f11 influx.cloudcix.com\n' >> /etc/hosts"
+      shell: "printf '\n2a02:2078:0:cb00::f11 influx.cloudcix.com\n10.1.1.6 influx.cloudcix.com\n' >> /etc/hosts"
       args:
         warn: no
       when: host_presence.rc != 0
@@ -33,18 +33,20 @@
         registry: gitlab.cloudcix.com:5005
         username: cloudadmin
         password: C1xacc355
+    - name: Delete previous images
+      shell: "docker rmi $(docker images -q)"
+      ignore_errors: yes
     - name: Gracefully shut down last container
       docker_container:
         name: "robot-{{ env }}"
         state: stopped
-        stop_timeout: 600
+        stop_timeout: 3600
       ignore_errors: yes
     - name: Deploy latest Robot image for {{ env }} region
       docker_container:
         name: "robot-{{ env }}"
-        image: "gitlab.cloudcix.com:5005/cloudcix/robot:latest"
+        image: "gitlab.cloudcix.com:5005/cloudcix/robot/{{ env }}:latest"
         state: started
-        restart_policy: unless-stopped
         pull: true
         network_mode: host
         env:

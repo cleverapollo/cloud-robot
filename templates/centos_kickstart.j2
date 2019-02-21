@@ -1,4 +1,4 @@
-# Kickstart file for Image #{{ id_image }} in VM {{ vm_identifier }}
+# Kickstart file for Image #{{ idImage }} in VM {{ vm_identifier }}
 {# Install OS instead of upgrade #}
 install
 {# Installation media #}
@@ -33,7 +33,7 @@ autopart --type=lvm
 {# Root password #}
 rootpw --iscrypted {{ crypted_root_password }}
 {# Username / Password #}
-user --name "administrator" --password={{ crypted_user_password }} --iscrypted
+user --name "administrator" --password={{ crypted_admin_password }} --groups=wheel --iscrypted
 {# SELinux configuration #}
 selinux --disabled
 {# Do not configure the X Window System #}

@@ -7,72 +7,71 @@
 # python
 import random
 import string
-
+import time
 from typing import Optional, Tuple
-
 # libs
+import paramiko
+import winrm
 from cloudcix import api
-
 # locals
 import utils
 
 TOKEN_WRAPPER = utils.Token()
 
 
-def service_entity_create(srv: str, ent: str, data: dict) -> Optional[dict]:
+def service_entity_create(service: str, entity: str, data: dict) -> Optional[dict]:
     """
     Generalised method for creation of an entity
-    :param srv: The api service the entity belongs to
-    :param ent: The entity to create an instance of
+    :param service: The api service the entity belongs to
+    :param entity: The entity to create an instance of
     :param data: The data to be used to create the entity instance
     :return: A dict containing the newly created instance's data, or None if
              nothing was created
     """
     logger = utils.get_logger_for_name('ro.service_entity_create')
     logger.info(
-        f'Attempting to create an instance of {srv}.{ent} with the '
+        f'Attempting to create an instance of {service}.{entity} with the '
         f'following data: {data}',
     )
     entity_create = None
-    service_to_call = getattr(api, srv)
+    service_to_call = getattr(api, service)
     # service_to_call = api.IAAS  (e.g service = 'iaas')
-    entity_to_call = getattr(service_to_call, ent)
+    entity_to_call = getattr(service_to_call, entity)
     # entity_to_call = api.IAAS.image (e.g entity = 'image')
     response = entity_to_call.create(token=TOKEN_WRAPPER.token, data=data)
     if response.status_code == 201:
         entity_create = response.json()['content']
         logger.info(
-            f'Successfully created an instance of {srv}.{ent} with '
+            f'Successfully created an instance of {service}.{entity} with '
             f'the following data: {data}',
         )
     else:
         logger.error(
             f'HTTP Error {response.status_code} occurred while trying to '
-            f'create an instance of {srv}.{ent} with the following '
+            f'create an instance of {service}.{entity} with the following '
             f'data: {data}.\nResponse from API: {response.content.decode()}',
         )
     return entity_create
 
 
-def service_entity_list(srv: str, ent: str, params: dict, **kwargs) -> list:
+def service_entity_list(service: str, entity: str, params: dict, **kwargs) -> list:
     """
-    Retrieves a list of instances of a given entity in a service, which can
-    be filtered
-    :param srv: The api service the entity belongs to
-    :param ent: The entity type to list instances of
+    Retrieves a list of instances of a given entity in a service, which can be filtered
+    :param service: The api service the entity belongs to
+    :param entity: The entity type to list instances of
     :param params: Search parameters to be passed to the list call
     :param kwargs: Any extra kwargs to pass to the call
     :return: A list of instances of service.entity
     """
     logger = utils.get_logger_for_name('ro.service_entity_list')
     logger.info(
-        f'Attempting to retrieve a list of {srv}.{ent} records '
+        f'Attempting to retrieve a list of {service}.{entity} records '
         f'with the following params : {params}',
     )
-    service_to_call = getattr(api, srv)
-    # service_to_call = api.IAAS  (e.g srv = 'iaas')
-    entity_to_call = getattr(service_to_call, ent)
-    # entity_to_call = api.IAAS.image (e.g ent = 'image')
+    service_to_call = getattr(api, service)
+    # service_to_call = api.IAAS  (e.g service = 'iaas')
+    entity_to_call = getattr(service_to_call, entity)
+    # entity_to_call = api.IAAS.image (e.g entity = 'image')
     response = entity_to_call.list(
         token=TOKEN_WRAPPER.token,
         params=params,
@@ -81,7 +80,7 @@ def service_entity_list(srv: str, ent: str, params: dict, **kwargs) -> list:
     if response.status_code != 200:
         logger.error(
             f'HTTP Error {response.status_code} occurred while trying to '
-            f'list instances of {srv}.{ent} with the following params'
+            f'list instances of {service}.{entity} with the following params'
             f': {params}.\nResponse from API: {response.content.decode()}',
         )
         return []
@@ -89,78 +88,105 @@ def service_entity_list(srv: str, ent: str, params: dict, **kwargs) -> list:
     plural = records_found != 1
     logger.info(
         f'Found {records_found} instance{"s" if plural else ""} of '
-        f'{srv}.{ent} with the following params : {params}',
+        f'{service}.{entity} with the following params : {params}',
     )
     return response.json()['content']
 
 
-def service_entity_update(srv: str, ent: str, pk: int, data: dict) -> bool:
+def service_entity_update(service: str, entity: str, pk: int, data: dict, **kwargs) -> bool:
     """
-    Update an instance of service.entity with the specified pk using the
-    supplied data
-    :param srv: The api service the entity belongs to
-    :param ent: The entity type to update
+    Update an instance of service.entity with the specified pk using the supplied data
+    :param service: The api service the entity belongs to
+    :param entity: The entity type to update
     :param pk: The id of the entity to update
     :param data: The data to use for updating the instance
     :return: Flag stating whether or not the update was successful
     """
     logger = utils.get_logger_for_name('ro.service_entity_update')
     logger.info(
-        f'Attempting to update the {srv}.{ent} instance #{pk} '
+        f'Attempting to update the {service}.{entity} instance #{pk} '
         f'with the following data : {data}',
     )
-    service_to_call = getattr(api, srv)
-    # service_to_call = api.IAAS  (e.g srv = 'iaas')
-    entity_to_call = getattr(service_to_call, ent)
-    # entity_to_call = api.IAAS.image (e.g ent = 'image')
+    service_to_call = getattr(api, service)
+    # service_to_call = api.IAAS  (e.g service = 'iaas')
+    entity_to_call = getattr(service_to_call, entity)
+    # entity_to_call = api.IAAS.image (e.g entity = 'image')
     response = entity_to_call.partial_update(
         pk=pk,
         token=TOKEN_WRAPPER.token,
         data=data,
+        **kwargs,
     )
     # Checking just updation no return of data so 204 No content
     if response.status_code == 204:
         logger.info(
-            f'Successfully updated {srv}.{ent} instance #{pk} '
+            f'Successfully updated {service}.{entity} instance #{pk} '
             f'with the following data : {data}',
         )
         return True
     else:
         logger.error(
             f'HTTP Error {response.status_code} returned when attempting to '
-            f'update {srv}.{ent} instance #{pk}\nResponse from API: '
+            f'update {service}.{entity} instance #{pk}\nResponse from API: '
             f'{response.content.decode()}',
         )
         return False
 
 
-def service_entity_read(srv: str, ent: str, pk: int) -> Optional[dict]:
+def service_entity_read(service: str, entity: str, pk: int, **kwargs) -> Optional[dict]:
     """
-    Read an instance of service.entity with the specified pk and return it,
-    using params to filter if necessary
-    :param srv: The api service the entity belongs to
-    :param ent: The entity type to read
+    Read an instance of service.entity with the specified pk and return it
+    :param service: The api service the entity belongs to
+    :param entity: The entity type to read
     :param pk: The id of the entity to read
     :return: A dict containing the data of the read instance, or None if an
              error occurs
     """
     logger = utils.get_logger_for_name('ro.service_entity_read')
-    logger.info(f'Attempting to read the {srv}.{ent} instance #{pk}')
-    service_to_call = getattr(api, srv)
-    # service_to_call = api.IAAS  (e.g srv = 'iaas')
-    entity_to_call = getattr(service_to_call, ent)
-    # entity_to_call = api.IAAS.image (e.g ent = 'image')
-    response = entity_to_call.read(pk=pk, token=TOKEN_WRAPPER.token)
+    logger.info(f'Attempting to read the {service}.{entity} instance #{pk}')
+    service_to_call = getattr(api, service)
+    # service_to_call = api.IAAS  (e.g service = 'iaas')
+    entity_to_call = getattr(service_to_call, entity)
+    # entity_to_call = api.IAAS.image (e.g entity = 'image')
+    response = entity_to_call.read(pk=pk, token=TOKEN_WRAPPER.token, **kwargs)
     if response.status_code == 200:
-        logger.info(f'Successfully read {srv}.{ent} instance #{pk}')
+        logger.info(f'Successfully read {service}.{entity} instance #{pk}')
         return response.json()['content']
     else:
         logger.error(
             f'HTTP Error {response.status_code} returned when attempting to '
-            f'read {srv}.{ent} instance #{pk}\nResponse from API: '
+            f'read {service}.{entity} instance #{pk}\nResponse from API: '
             f'{response.content.decode()}',
         )
         return None
+
+
+def service_entity_delete(service: str, entity: str, pk: int, **kwargs) -> bool:
+    """
+    Delete an instance of service.entity with the specified pk and return a flag stating if it was a success
+    :param service: The api service the entity belongs to
+    :param entity: The entity type to read
+    :param pk: The id of the entity to read
+    :return: A dict containing the data of the read instance, or None if an
+             error occurs
+    """
+    logger = utils.get_logger_for_name('ro.service_entity_delete')
+    logger.info(f'Attempting to delete the {service}.{entity} instance #{pk}')
+    service_to_call = getattr(api, service)
+    # service_to_call = api.IAAS  (e.g service = 'iaas')
+    entity_to_call = getattr(service_to_call, entity)
+    # entity_to_call = api.IAAS.image (e.g entity = 'image')
+    response = entity_to_call.delete(pk=pk, token=TOKEN_WRAPPER.token, **kwargs)
+    if response.status_code == 204:
+        logger.info(f'Successfully deleted {service}.{entity} instance #{pk}')
+        return True
+    else:
+        logger.error(
+            f'HTTP Error {response.status_code} returned when attempting to '
+            f'delete {service}.{entity} instance #{pk}\nResponse from API: '
+            f'{response.content.decode()}',
+        )
+        return False
 
 
 def get_idrac_details(location: str) -> Optional[Tuple[str, str]]:
@@ -283,3 +309,37 @@ def password_generator(size: int = 8, chars: Optional[str] = None) -> str:
     if chars is None:
         chars = string.ascii_letters + string.digits
     return ''.join(random.choice(chars) for _ in range(size))
+
+
+def get_full_response(channel: paramiko.Channel, wait_time: int = 15, read_size: int = 64) -> str:
+    """
+    Get the full response from the specified paramiko channel, waiting a given number of seconds before trying to
+    read from it each time.
+    :param channel: The channel to be read from
+    :param wait_time: How long in seconds between each read
+    :param read_size: How many bytes to be read from the channel each time
+    :return: The full output from the channel, or as much as can be read given the parameters.
+    """
+    msg = ''
+    time.sleep(wait_time)
+    while channel.recv_ready():
+        msg += channel.recv(read_size).decode()
+        time.sleep(wait_time)
+    return msg
+
+
+def fix_run_ps(self: winrm.Session, script: str) -> winrm.Response:
+    """
+    winrm supporting function, dont make anychanges
+    Powershell scripts will be base64 UTF16 little-endian encoded prior to sending to the Windows host.
+    Error messages are converted from the Powershell CLIXML format to a human readable format as a convenience.
+    :param self: winrm session instance
+    :param script: the powershell script to execute on remote host
+    :return: A winrm Response from the remote host result of above script.
+    """
+    from base64 import b64encode
+    encoded_ps = b64encode(script.encode('utf_16_le')).decode('ascii')
+    rs = self.run_cmd('powershell -encodedcommand {0}'.format(encoded_ps))
+    if len(rs.std_err):
+        rs.std_err = self._clean_error_msg(rs.std_err.decode('utf-8'))
+    return rs

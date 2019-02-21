@@ -1,0 +1,28 @@
+{% extends "emails/base.j2" %}
+{% block content %}
+<div>
+  <div class="title-cell">
+    <div class="title">
+      <span class="font-calibri">
+        <h1 class="title">Your VM {{ name }} has been built successfully!</h1>
+        <h4 class="subtitle">Please check your credentials below.</h4>
+      </span>
+    </div>
+  </div>
+</div>
+
+<div>
+  <div class="title-cell">
+    <hr class="divider" />
+  </div>
+</div>
+
+<div>
+  <div class="title-cell">
+    <ul class="credentials">
+      <li class="font-courier">username: <strong>administrator</strong></li>
+      <li class="font-courier">password: <strong>{{ admin_password }}</strong></li>
+    </ul>
+  </div>
+</div>
+{% endblock %}
