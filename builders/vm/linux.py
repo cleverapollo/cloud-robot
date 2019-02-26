@@ -3,20 +3,13 @@ import time
 # lib
 import paramiko
 # local
+import settings
 import utils
 from ro import get_full_response
 
 
-DRIVE_PATH = '/mnt/images/KVM'
-TEMPLATE_MAP = {
-    6: 'ubuntu',
-    7: 'ubuntu',
-    8: 'ubuntu',
-    9: 'ubuntu',
-    10: 'centos',
-    11: 'centos',
-    12: 'ubuntu',
-}
+DRIVE_PATH = settings.KVM_DRIVE_PATH
+TEMPLATE_MAP = settings.OS_TEMPLATE_MAP['Linux']
 
 
 class Linux:

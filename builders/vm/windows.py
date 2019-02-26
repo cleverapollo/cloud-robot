@@ -4,11 +4,9 @@ import winrm
 import settings
 import utils
 
-DRIVE_PATH = '/mnt/images/HyperV'
-FREENAS_URL = f'\\\\{settings.REGION_NAME}-freenas.cloudcix.com\\mnt\\volume\\{settings.REGION_NAME}'
-TEMPLATE_MAP = {
-    3: 'windows2016',
-}
+DRIVE_PATH = settings.HYV_DRIVE_PATH
+FREENAS_URL = settings.FREENAS_URL
+TEMPLATE_MAP = settings.OS_TEMPLATE_MAP['Windows']
 
 
 class Windows:

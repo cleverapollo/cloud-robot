@@ -15,3 +15,6 @@ REGION_NAME = 'cork01'
 CLOUDCIX_EMAIL_USERNAME = 'cork01@cloudcix.com'
 # Region's email password
 CLOUDCIX_EMAIL_PASSWORD = 'C0rk01C1xacc355'
+
+# FreeNas mount url
+FREENAS_URL = f'\\\\{REGION_NAME}-robothost.cloudcix.com\\var\\lib\\libvirt'
