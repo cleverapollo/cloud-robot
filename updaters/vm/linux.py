@@ -5,9 +5,6 @@ import utils
 from ro import get_full_response
 
 
-DRIVE_PATH = '/mnt/images/KVM'
-
-
 class Linux:
     """
     Updater class for updating Linux VMs
@@ -34,7 +31,6 @@ class Linux:
             # Generate and execute the command to update the actual VM
             Linux.logger.info(f'Attempting to update VM #{vm["idVM"]}')
             cmd = utils.jinja_env.get_template('linux_vm_update_cmd.j2').render(
-                drive_path=DRIVE_PATH,
                 SUDO_PASS=password,
                 **vm,
             )

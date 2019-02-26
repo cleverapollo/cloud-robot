@@ -15,3 +15,6 @@ REGION_NAME = 'alpha'
 CLOUDCIX_EMAIL_USERNAME = 'alpha@cloudcix.com'
 # Region's email password
 CLOUDCIX_EMAIL_PASSWORD = 'AlphaC1xacc355'
+
+# FreeNas mount url
+FREENAS_URL = f'\\\\{REGION_NAME}-freenas.cloudcix.com\\mnt\\volume\\{REGION_NAME}'
