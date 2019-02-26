@@ -3,9 +3,10 @@ import os
 import winrm
 # local
 import utils
+import settings
 from ro import fix_run_ps
 
-DRIVE_PATH = '/mnt/images/HyperV'
+DRIVE_PATH = settings.HYV_DRIVE_PATH
 
 
 class Windows:

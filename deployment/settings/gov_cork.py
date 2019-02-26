@@ -15,6 +15,10 @@ __all__ = [
     'REGION_NAME',
     'ROBOT_ENV',
     'VRFS_ENABLED',
+    'KVM_DRIVE_PATH',
+    'HYV_DRIVE_PATH',
+    'FREENAS_URL',
+    'OS_TEMPLATE_MAP',
 ]
 
 # Gov Robot Settings
@@ -62,3 +66,26 @@ REGION_NAME = 'gov_cork'
 
 # Disable VRFs for the GovCloud Robots
 VRFS_ENABLED = False
+
+# Configuration settings
+# KVM path
+KVM_DRIVE_PATH = '/mnt/images/KVM'
+# HyperV path
+HYV_DRIVE_PATH = '/mnt/images/HyperV'
+# FreeNas mount url
+FREENAS_URL = f'\\\\{REGION_NAME}-robothost.cloudcix.com\\var\\lib\\libvirt'
+# Images dict
+OS_TEMPLATE_MAP = {
+    'Linux': {
+        6: 'ubuntu',
+        7: 'ubuntu',
+        8: 'ubuntu',
+        9: 'ubuntu',
+        10: 'centos',
+        11: 'centos',
+        12: 'ubuntu',
+    },
+    'Windows': {
+        3: 'windows2016',
+    },
+}

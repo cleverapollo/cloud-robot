@@ -7,6 +7,7 @@ from settings_local import (
     CLOUDCIX_EMAIL_PASSWORD,
     CLOUDCIX_EMAIL_USERNAME,
     REGION_NAME,
+    FREENAS_URL,
 )
 
 __all__ = [
@@ -24,6 +25,10 @@ __all__ = [
     'REGION_NAME',
     'ROBOT_ENV',
     'VRFS_ENABLED',
+    'KVM_DRIVE_PATH',
+    'HYV_DRIVE_PATH',
+    'FREENAS_URL',
+    'OS_TEMPLATE_MAP',
 ]
 
 # Member ID
@@ -49,3 +54,23 @@ NETWORK_PASSWORD = 'C1xacc355'
 ROBOT_ENV = os.environ.get('ROBOT_ENV', 'dev')
 # Flag to state whether VRFs are enabled or not
 VRFS_ENABLED = True
+# Configuration settings
+# KVM path
+KVM_DRIVE_PATH = '/mnt/images/KVM'
+# HyperV path
+HYV_DRIVE_PATH = '/mnt/images/HyperV'
+# Images dict
+OS_TEMPLATE_MAP = {
+    'Linux': {
+        6: 'ubuntu',
+        7: 'ubuntu',
+        8: 'ubuntu',
+        9: 'ubuntu',
+        10: 'centos',
+        11: 'centos',
+        12: 'ubuntu',
+    },
+    'Windows': {
+        3: 'windows2016',
+    },
+}
