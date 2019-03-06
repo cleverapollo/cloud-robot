@@ -73,7 +73,7 @@ KVM_DRIVE_PATH = '/mnt/images/KVM'
 # HyperV path
 HYV_DRIVE_PATH = '/mnt/images/HyperV'
 # FreeNas mount url
-FREENAS_URL = f'\\\\{REGION_NAME}-robothost.cloudcix.com\\var\\lib\\libvirt'
+FREENAS_URL = f'\\\\{REGION_NAME}-robothost.cloudcix.com\\var\\lib\\libvirt\\robot-drive'
 # Images dict
 OS_TEMPLATE_MAP = {
     'Linux': {
