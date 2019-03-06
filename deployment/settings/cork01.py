@@ -17,4 +17,4 @@ CLOUDCIX_EMAIL_USERNAME = 'cork01@cloudcix.com'
 CLOUDCIX_EMAIL_PASSWORD = 'C0rk01C1xacc355'
 
 # FreeNas mount url
-FREENAS_URL = f'\\\\{REGION_NAME}-robothost.cloudcix.com\\var\\lib\\libvirt'
+FREENAS_URL = f'\\\\{REGION_NAME}-robothost.cloudcix.com\\var\\lib\\libvirt\\robot-drive'
