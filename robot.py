@@ -14,6 +14,17 @@ import utils
 sigterm_recv = False
 robot_logger = utils.get_logger_for_name('robot.mainloop')
 
+BUILD_FILTER = {'state': 1}
+VRF_QUIESCE_FILTER = {'state': 5}
+VM_QUIESCE_FILTER = {'state__in': [5, 8]}
+VRF_SCRUB_FILTER = {'state': 8}
+VM_SCRUB_FILTER = {
+    'state': 9,
+    'updated__lte': (datetime.now() - timedelta(days=30)).isoformat(),
+}
+UPDATE_FILTER = {'state': 10}
+VM_RESTART_FILTER = {'state': 7}
+
 
 def mainloop(process_pool: mp.Pool):
     """
@@ -27,11 +38,16 @@ def mainloop(process_pool: mp.Pool):
     else:
         vrf_dispatch = dispatchers.DummyVrf()
     vm_dispatch = dispatchers.Vm(settings.NETWORK_PASSWORD)
+
+    # Remove the VM scrub 30 grace period for Alpha
+    if settings.REGION_NAME == 'alpha':
+        VM_SCRUB_FILTER.pop('updated__lte')
+
     while not sigterm_recv:
         metrics.heartbeat()
         # Now handle the loop events
         # #################  VRF BUILD ######################################
-        vrfs = ro.service_entity_list('IAAS', 'vrf', params={'state': 1})
+        vrfs = ro.service_entity_list('IAAS', 'vrf', params=BUILD_FILTER)
         if len(vrfs) > 0:
             for vrf in vrfs:
                 # Stop looping if we receive a sigterm
@@ -42,7 +58,7 @@ def mainloop(process_pool: mp.Pool):
         else:
             robot_logger.info('No VRFs in "Requested" state.')
         # ######################## VM BUILD  ################################
-        vms = ro.service_entity_list('IAAS', 'vm', params={'state': 1})
+        vms = ro.service_entity_list('IAAS', 'vm', params=BUILD_FILTER)
         if len(vms) > 0:
             for vm in vms:
                 # Stop looping if we receive a sigterm
@@ -59,7 +75,7 @@ def mainloop(process_pool: mp.Pool):
             robot_logger.info('No VMs in "Requested" state.')
 
         # ######################## VRF QUIESCE  ################################
-        vrfs = ro.service_entity_list('IAAS', 'vrf', params={'state': 5})
+        vrfs = ro.service_entity_list('IAAS', 'vrf', params=VRF_QUIESCE_FILTER)
         if len(vrfs) > 0:
             for vrf in vrfs:
                 # Stop looping if we receive a sigterm
@@ -71,7 +87,7 @@ def mainloop(process_pool: mp.Pool):
             robot_logger.info('No VRFs in "Quiescing" state.')
 
         # ######################## VM QUIESCE  ################################
-        vms = ro.service_entity_list('IAAS', 'vm', params={'state__in': [5, 8]})
+        vms = ro.service_entity_list('IAAS', 'vm', params=VM_QUIESCE_FILTER)
         if len(vms) > 0:
             for vm in vms:
                 # Stop looping if we receive a sigterm
@@ -88,7 +104,7 @@ def mainloop(process_pool: mp.Pool):
             robot_logger.info('No VM for "Shutdown/Quiesce" state.')
 
         # ######################## VRF SCRUB  ################################
-        vrfs = ro.service_entity_list('IAAS', 'vrf', params={'state': 8})
+        vrfs = ro.service_entity_list('IAAS', 'vrf', params=VRF_SCRUB_FILTER)
         if len(vrfs) > 0:
             for vrf in vrfs:
                 # Stop looping if we receive a sigterm
@@ -100,11 +116,7 @@ def mainloop(process_pool: mp.Pool):
             robot_logger.info('No VRFs in "Scrubbing" state.')
 
         # ######################## VM SCRUB  ################################
-        scrub_list_params = {
-            'state': 9,
-            'updated__lte': (datetime.now() - timedelta(days=30)).isoformat(),
-        }
-        vms = ro.service_entity_list('IAAS', 'vm', params=scrub_list_params)
+        vms = ro.service_entity_list('IAAS', 'vm', params=VM_SCRUB_FILTER)
         if len(vms) > 0:
             for vm in vms:
                 # Stop looping if we receive a sigterm
@@ -121,7 +133,7 @@ def mainloop(process_pool: mp.Pool):
             robot_logger.info('No VM is ready for Scrubbing.')
 
         # ######################## VRF UPDATE  ################################
-        vrfs = ro.service_entity_list('IAAS', 'vrf', params={'state': 10})
+        vrfs = ro.service_entity_list('IAAS', 'vrf', params=UPDATE_FILTER)
         if len(vrfs) > 0:
             for vrf in vrfs:
                 robot_logger.info(f'Dispatching VRF #{vrf["idVRF"]} for update')
@@ -130,7 +142,7 @@ def mainloop(process_pool: mp.Pool):
             robot_logger.info('No VRFs in "Update" state.')
 
         # ######################## VM UPDATE  ################################
-        vms = ro.service_entity_list('IAAS', 'vm', params={'state': 10})
+        vms = ro.service_entity_list('IAAS', 'vm', params=UPDATE_FILTER)
         if len(vms) > 0:
             for vm in vms:
                 robot_logger.info(f'Dispatching VM #{vm["idVM"]} for update')
@@ -144,7 +156,7 @@ def mainloop(process_pool: mp.Pool):
             robot_logger.info('No VMs is found for updating.')
 
         # ######################## VM RESTART  ################################
-        vms = ro.service_entity_list('IAAS', 'vm', params={'state': 7})
+        vms = ro.service_entity_list('IAAS', 'vm', params=VM_RESTART_FILTER)
         if len(vms) > 0:
             for vm in vms:
                 robot_logger.info(f'Dispatching VM #{vm["idVM"]} for restart')
