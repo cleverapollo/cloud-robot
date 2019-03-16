@@ -32,7 +32,7 @@ CLOUDCIX_API_KEY = '3bc7cc2bddb34d78b31f1223d0a7408e'
 # Login password
 CLOUDCIX_API_PASSWORD = 'C1x@lphA'
 # URL of the API
-CLOUDCIX_API_URL = 'https://api.cloudcix.com/'
+CLOUDCIX_API_URL = 'https://stageapi.cloudcix.com/'
 # Login username
 CLOUDCIX_API_USERNAME = 'robot@alpha.cloudcix.com'
 # API V2 Stuff
