@@ -55,7 +55,7 @@ CLOUDCIX_INFLUX_PORT = 443
 CLOUDCIX_INFLUX_URL = 'influx.cloudcix.com'
 
 # IP Address of logstash for centralised logging
-LOGSTASH_IP = '10.1.1.7'
+LOGSTASH_IP = 'logstash.cloudcix.com'
 
 # Password for connecting to routers and servers
 NETWORK_PASSWORD = 'C1xacc355'
