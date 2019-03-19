@@ -4,11 +4,7 @@
   <div class="title-cell">
     <div class="title">
       <span class="font-calibri">
-        <h1 class="title">Your VM {{ name }} has been shut down successfully!</h1>
-        {% if state == 8 %}
-          <h2>This VM will be deleted in 30 days.</h2>
-          <h3>If you think this is a mistake, please restore the VM from the CloudCIX Compute App</h3>
-        {% endif %}
+        <h1 class="title">Your VM "{{ name }}" has been shut down successfully!</h1>
       </span>
     </div>
   </div>
