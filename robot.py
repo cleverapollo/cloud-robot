@@ -18,10 +18,7 @@ BUILD_FILTER = {'state': 1}
 VRF_QUIESCE_FILTER = {'state': 5}
 VM_QUIESCE_FILTER = {'state__in': [5, 8]}
 VRF_SCRUB_FILTER = {'state': 8}
-VM_SCRUB_FILTER = {
-    'state': 9,
-    'updated__lte': (datetime.now() - timedelta(days=30)).isoformat(),
-}
+VM_SCRUB_FILTER = {'state': 9}
 UPDATE_FILTER = {'state': 10}
 VM_RESTART_FILTER = {'state': 7}
 
@@ -38,10 +35,6 @@ def mainloop(process_pool: mp.Pool):
     else:
         vrf_dispatch = dispatchers.DummyVrf()
     vm_dispatch = dispatchers.Vm(settings.NETWORK_PASSWORD)
-
-    # Remove the VM scrub 30 grace period for Alpha
-    if settings.REGION_NAME == 'alpha':
-        VM_SCRUB_FILTER.pop('updated__lte')
 
     while not sigterm_recv:
         metrics.heartbeat()
@@ -116,6 +109,10 @@ def mainloop(process_pool: mp.Pool):
             robot_logger.info('No VRFs in "Scrubbing" state.')
 
         # ######################## VM SCRUB  ################################
+        # Add the VM Scrub timestamp when the region isn't Alpha
+        if settings.REGION_NAME != 'alpha':
+            # This needs to be calculated at every loop
+            VM_SCRUB_FILTER['updated__lte'] = (datetime.now() - timedelta(days=30)).isoformat()
         vms = ro.service_entity_list('IAAS', 'vm', params=VM_SCRUB_FILTER)
         if len(vms) > 0:
             for vm in vms:
