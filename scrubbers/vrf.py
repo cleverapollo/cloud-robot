@@ -41,6 +41,9 @@ class Vrf:
         :return: A flag stating whether or not the deployment was successful
         """
         # Connect to the Router
+        commit_warnings = [
+            'statement not found',
+        ]
         Vrf.logger.info(f'Attempting to connect to Physical Router @ {ip}')
         dev = Device(host=ip, user='robot', password=password, port=22)
         cfg = Config(dev)
@@ -61,7 +64,7 @@ class Vrf:
         try:
             for cmd in conf.split('\n'):
                 Vrf.logger.debug(f'Attempting to run "{cmd}" on router @ {ip}')
-                cfg.load(cmd, format='set', merge=True)
+                cfg.load(cmd, format='set', merge=True, ignore_warning=True)
         except ConfigLoadError:
             Vrf.logger.error(f'Unable to load configuration changes onto router @ {ip}', exc_info=True)
             # Try to unlock after failing to load
@@ -76,7 +79,10 @@ class Vrf:
         # Attempt to commit
         Vrf.logger.info(f'All commands successfully loaded onto router @ {ip}, now attempting to commit changes')
         try:
-            cfg.commit(comment=f'Loaded by robot at {time.asctime()}.')
+            cfg.commit(
+                comment=f'Loaded by robot at {time.asctime()}.',
+                ignore_warning=commit_warnings,
+            )
         except CommitError:
             Vrf.logger.error(f'Unable to commit changes onto router @ {ip}', exc_info=True)
             return False

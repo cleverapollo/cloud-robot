@@ -8,6 +8,7 @@ import utils
 from builders import Vrf as Builder
 from net_builders import is_valid_vlan
 from quiescers import Vrf as Quiescer
+from restarters import Vrf as Restarter
 from scrubbers import Vrf as Scubber
 from updaters import Vrf as Updater
 
@@ -288,14 +289,43 @@ class Vrf:
         # Attempt to quiesce the VRF
         if Quiescer.quiesce(vrf, self.password):
             logger.info(f'Successfully quiesced VRF #{vrf_id} in router {vrf["idRouter"]}')
-            # Change the state of the VRF to Quiesced (6) and report a success to influx
-            ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 6})
+            # Change the state of the VRF to:
+            #  1. Quiesced (6) if the existing state is Quiescing (5)
+            #  2. Deleted (9) if the existing state is Scheduled for Deletion (8)
+            # And log a success in Influx
+            if vrf['state'] == 5:
+                ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 6})
+            if vrf['state'] == 8:
+                ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 9})
             metrics.vrf_quiesce_success()
         else:
             logger.error(
                 f'VRF #{vrf_id} failed to quiesce. Check log for details.',
             )
             metrics.vrf_quiesce_failure()
+
+    def restart(self, vrf: dict):
+        """
+        Takes VRF data from the CloudCIX API, adds any additional data needed for restarting it and
+        requests to restart the Vrf in the assigned physical Router.
+        :param vrf: The VRF data from the CloudCIX API
+        """
+        logger = utils.get_logger_for_name('dispatchers.vrf.restart')
+        vrf_id = vrf['idVRF']
+        logger.info(f'Commencing restart dispatch of VRF #{vrf_id}')
+        # Management IP
+        vrf['manage_ip'] = self.router_data(vrf['idRouter'])['manage_ip']
+        # Attempt to restart the VRF
+        if Restarter.restart(vrf, self.password):
+            logger.info(f'Successfully restarted VRF #{vrf_id} in router {vrf["idRouter"]}')
+            # Change the state of the VRF to 4(build) and report a success to influx
+            ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 4})
+            metrics.vrf_restart_success()
+        else:
+            logger.error(
+                f'VRF #{vrf_id} failed to restart. Check log for details.',
+            )
+            metrics.vrf_restart_failure()
 
     def scrub(self, vrf: dict):
         """
@@ -311,9 +341,12 @@ class Vrf:
         # Attempt to scrub the VRF
         if Scubber.scrub(vrf, self.password):
             logger.info(f'Successfully scrubbed VRF #{vrf_id} in router {vrf["idRouter"]}')
-            # Change the state of the VRF to 9(Deleted) and report a success to influx
-            ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 9})
             metrics.vrf_scrub_success()
+            # Delete the VRF from the DB
+            if ro.service_entity_delete('IAAS', 'vrf', vrf_id):
+                logger.info(f'VRF #{vrf_id} successfully deleted from the API')
+            else:
+                logger.error(f'VRF #{vrf_id} API deletion failed. Check log for details')
         else:
             logger.error(
                 f'VRF #{vrf_id} failed to scrub. Check log for details.',

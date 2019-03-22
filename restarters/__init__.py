@@ -1,7 +1,8 @@
-from .linux import Linux
-from .windows import Windows
+from .vm import Linux, Windows
+from .vrf import Vrf
 
 __all__ = [
+    'Vrf',
     'Linux',
     'Windows',
 ]
