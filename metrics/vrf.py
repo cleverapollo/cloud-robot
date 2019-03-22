@@ -6,14 +6,14 @@ def build_success():
     """
     Sends a data packet to Influx reporting a successful build
     """
-    prepare_metrics(lambda: Metric('vrf_success', 1, {'region': REGION_NAME}))
+    prepare_metrics(lambda: Metric('vrf_build_success', 1, {'region': REGION_NAME}))
 
 
 def build_failure():
     """
     Sends a data packet to Influx reporting a failed build
     """
-    prepare_metrics(lambda: Metric('vrf_failure', 1, {'region': REGION_NAME}))
+    prepare_metrics(lambda: Metric('vrf_build_failure', 1, {'region': REGION_NAME}))
 
 
 def scrub_success():
@@ -56,3 +56,17 @@ def quiesce_failure():
     Sends a data packet to Influx reporting a failed quiesce
     """
     prepare_metrics(lambda: Metric('vrf_quiesce_failure', 1, {'region': REGION_NAME}))
+
+
+def restart_success():
+    """
+    Sends a data packet to Influx reporting a successful restart
+    """
+    prepare_metrics(lambda: Metric('vrf_restart_success', 1, {'region': REGION_NAME}))
+
+
+def restart_failure():
+    """
+    Sends a data packet to Influx reporting a failed restart
+    """
+    prepare_metrics(lambda: Metric('vrf_restart_failure', 1, {'region': REGION_NAME}))

@@ -10,7 +10,7 @@ class Windows:
     Restarter class for restarting Windows VMs
     Restarter: Restarts the VM
     """
-    logger = utils.get_logger_for_name('restarters.windows')
+    logger = utils.get_logger_for_name('restarters.vm.windows')
 
     @staticmethod
     def restart(vm: dict, password: str) -> bool:
