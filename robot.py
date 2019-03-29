@@ -3,7 +3,7 @@ import multiprocessing as mp
 import signal
 import sys
 import time
-from datetime import datetime, timedelta
+# from datetime import datetime, timedelta
 # local
 import dispatchers
 import metrics
@@ -95,11 +95,13 @@ def mainloop(process_pool: mp.Pool):
             robot_logger.info('No VMs found in "Quiesce" state.')
 
         # ######################## VRF SCRUB  ################################
+        # TODO
+        """
         # Add the Scrub timestamp when the region isn't Alpha
         if settings.REGION_NAME != 'alpha':
             # This needs to be calculated at every loop
             SCRUB_FILTER['updated__lte'] = (datetime.now() - timedelta(days=30)).isoformat()
-
+        """
         vrfs = ro.service_entity_list('IAAS', 'vrf', params=SCRUB_FILTER)
         if len(vrfs) > 0:
             for vrf in vrfs:
