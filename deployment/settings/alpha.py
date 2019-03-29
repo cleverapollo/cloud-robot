@@ -30,7 +30,7 @@ __all__ = [
 # Member ID
 CLOUDCIX_API_KEY = '3bc7cc2bddb34d78b31f1223d0a7408e'
 # Login password
-CLOUDCIX_API_PASSWORD = 'C1x@lphA'
+CLOUDCIX_API_PASSWORD = 'asdf1234'
 # URL of the API
 CLOUDCIX_API_URL = 'https://stageapi.cloudcix.com/'
 # Login username
