@@ -8,6 +8,7 @@ import utils
 from builders import Vrf as Builder
 from net_builders import is_valid_vlan
 from quiescers import Vrf as Quiescer
+from restarters import Vrf as Restarter
 from scrubbers import Vrf as Scubber
 from updaters import Vrf as Updater
 
@@ -22,6 +23,32 @@ class Vrf:
 
     def __init__(self, password: str):
         self.password = password
+
+    @staticmethod
+    def ntw_address(address_range, type_ip):
+        """
+        it will set the address range to first ip ie if address range is 10.1.0.0/24
+        then the out put will be 10.1.0.1/24
+        :param address_range: ip address network (ipv4/ipv6)
+        :param type_ip: string of either 'inet' or 'inet6'
+        :return: string of network address
+        """
+        ip_addr = str(address_range['addressRange']).split('/')
+        ntw_addr = ip_addr[0]
+        # split the ip
+        if type_ip == 'inet':
+            li = ntw_addr.split('.')
+        elif type_ip == 'inet6':
+            li = ntw_addr.split(':')
+        # set the octet to 1 if it is 0
+        if li[-1] == 0:
+            li[-1] = 1
+        # rearrange subnet
+        if type_ip == 'inet':
+            ntw_addr = '.'.join(f'{i}' for i in li)
+        elif type_ip == 'inet6':
+            ntw_addr = ':'.join(f'{i}' for i in li)
+        return str(netaddr.IPNetwork(f'{ntw_addr}/{ip_addr[1]}'))
 
     def router_data(self, router_id):
         manage_ip = None
@@ -202,11 +229,14 @@ class Vrf:
                 )
                 metrics.vrf_build_failure()
                 return
+
+            subnet_type = self.ip_type(str(subnet['addressRange']).split('/')[0])
+            first_address_range = self.ntw_address(subnet['addressRange'], subnet_type)
             vlans.append(
                 {
                     'vlan': subnet['vLAN'],
-                    'address_range': subnet['addressRange'],
-                    'type': self.ip_type(str(subnet['addressRange']).split('/')[0]),
+                    'address_range': first_address_range,
+                    'type': subnet_type,
                 },
             )
 
@@ -288,14 +318,43 @@ class Vrf:
         # Attempt to quiesce the VRF
         if Quiescer.quiesce(vrf, self.password):
             logger.info(f'Successfully quiesced VRF #{vrf_id} in router {vrf["idRouter"]}')
-            # Change the state of the VRF to Quiesced (6) and report a success to influx
-            ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 6})
+            # Change the state of the VRF to:
+            #  1. Quiesced (6) if the existing state is Quiescing (5)
+            #  2. Deleted (9) if the existing state is Scheduled for Deletion (8)
+            # And log a success in Influx
+            if vrf['state'] == 5:
+                ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 6})
+            if vrf['state'] == 8:
+                ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 9})
             metrics.vrf_quiesce_success()
         else:
             logger.error(
                 f'VRF #{vrf_id} failed to quiesce. Check log for details.',
             )
             metrics.vrf_quiesce_failure()
+
+    def restart(self, vrf: dict):
+        """
+        Takes VRF data from the CloudCIX API, adds any additional data needed for restarting it and
+        requests to restart the Vrf in the assigned physical Router.
+        :param vrf: The VRF data from the CloudCIX API
+        """
+        logger = utils.get_logger_for_name('dispatchers.vrf.restart')
+        vrf_id = vrf['idVRF']
+        logger.info(f'Commencing restart dispatch of VRF #{vrf_id}')
+        # Management IP
+        vrf['manage_ip'] = self.router_data(vrf['idRouter'])['manage_ip']
+        # Attempt to restart the VRF
+        if Restarter.restart(vrf, self.password):
+            logger.info(f'Successfully restarted VRF #{vrf_id} in router {vrf["idRouter"]}')
+            # Change the state of the VRF to 4(build) and report a success to influx
+            ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 4})
+            metrics.vrf_restart_success()
+        else:
+            logger.error(
+                f'VRF #{vrf_id} failed to restart. Check log for details.',
+            )
+            metrics.vrf_restart_failure()
 
     def scrub(self, vrf: dict):
         """
@@ -311,9 +370,12 @@ class Vrf:
         # Attempt to scrub the VRF
         if Scubber.scrub(vrf, self.password):
             logger.info(f'Successfully scrubbed VRF #{vrf_id} in router {vrf["idRouter"]}')
-            # Change the state of the VRF to 9(Deleted) and report a success to influx
-            ro.service_entity_update('IAAS', 'vrf', vrf_id, {'state': 9})
             metrics.vrf_scrub_success()
+            # Delete the VRF from the DB
+            if ro.service_entity_delete('IAAS', 'vrf', vrf_id):
+                logger.info(f'VRF #{vrf_id} successfully deleted from the API')
+            else:
+                logger.error(f'VRF #{vrf_id} API deletion failed. Check log for details')
         else:
             logger.error(
                 f'VRF #{vrf_id} failed to scrub. Check log for details.',
@@ -347,11 +409,14 @@ class Vrf:
                     f'vlan ({subnet["vLAN"]})',
                 )
                 return
+
+            subnet_type = self.ip_type(str(subnet['addressRange']).split('/')[0])
+            first_address_range = self.ntw_address(subnet['addressRange'], subnet_type)
             vlans.append(
                 {
                     'vlan': subnet['vLAN'],
-                    'address_range': subnet['addressRange'],
-                    'type': self.ip_type(str(subnet['addressRange']).split('/')[0]),
+                    'address_range': first_address_range,
+                    'type': subnet_type,
                 },
             )
 

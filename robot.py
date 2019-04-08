@@ -3,7 +3,7 @@ import multiprocessing as mp
 import signal
 import sys
 import time
-from datetime import datetime, timedelta
+# from datetime import datetime, timedelta
 # local
 import dispatchers
 import metrics
@@ -13,6 +13,12 @@ import utils
 
 sigterm_recv = False
 robot_logger = utils.get_logger_for_name('robot.mainloop')
+
+BUILD_FILTER = {'state': 1}
+QUIESCE_FILTER = {'state__in': [5, 8]}
+RESTART_FILTER = {'state': 7}
+SCRUB_FILTER = {'state': 9}
+UPDATE_FILTER = {'state': 10}
 
 
 def mainloop(process_pool: mp.Pool):
@@ -27,28 +33,29 @@ def mainloop(process_pool: mp.Pool):
     else:
         vrf_dispatch = dispatchers.DummyVrf()
     vm_dispatch = dispatchers.Vm(settings.NETWORK_PASSWORD)
+
     while not sigterm_recv:
         metrics.heartbeat()
         # Now handle the loop events
         # #################  VRF BUILD ######################################
-        vrfs = ro.service_entity_list('IAAS', 'vrf', params={'state': 1})
+        vrfs = ro.service_entity_list('IAAS', 'vrf', params=BUILD_FILTER)
         if len(vrfs) > 0:
             for vrf in vrfs:
                 # Stop looping if we receive a sigterm
                 if sigterm_recv:
                     break
-                robot_logger.info(f'Dispatching VRF #{vrf["idVRF"]} for build')
+                robot_logger.info(f'Dispatching VRF #{vrf["idVRF"]} for "Build".')
                 vrf_dispatch.build(vrf)
         else:
-            robot_logger.info('No VRFs in "Requested" state.')
+            robot_logger.info('No VRFs found in "Requested" state.')
         # ######################## VM BUILD  ################################
-        vms = ro.service_entity_list('IAAS', 'vm', params={'state': 1})
+        vms = ro.service_entity_list('IAAS', 'vm', params=BUILD_FILTER)
         if len(vms) > 0:
             for vm in vms:
                 # Stop looping if we receive a sigterm
                 if sigterm_recv:
                     break
-                robot_logger.info(f'Dispatching VM #{vm["idVM"]} for build')
+                robot_logger.info(f'Dispatching VM #{vm["idVM"]} for "Build".')
                 # Call the dispatcher asynchronously
                 try:
                     vm_dispatch.build(vm)
@@ -56,84 +63,93 @@ def mainloop(process_pool: mp.Pool):
                 except mp.ProcessError:
                     robot_logger.error(f'Error when building VM #{vm["idVM"]}', exc_info=True)
         else:
-            robot_logger.info('No VMs in "Requested" state.')
+            robot_logger.info('No VMs found in "Requested" state.')
 
         # ######################## VRF QUIESCE  ################################
-        vrfs = ro.service_entity_list('IAAS', 'vrf', params={'state': 5})
+        vrfs = ro.service_entity_list('IAAS', 'vrf', params=QUIESCE_FILTER)
         if len(vrfs) > 0:
             for vrf in vrfs:
                 # Stop looping if we receive a sigterm
                 if sigterm_recv:
                     break
-                robot_logger.info(f'Dispatching VRF #{vrf["idVRF"]} for quiesce')
+                robot_logger.info(f'Dispatching VRF #{vrf["idVRF"]} for "Quiesce".')
                 vrf_dispatch.quiesce(vrf)
         else:
-            robot_logger.info('No VRFs in "Quiescing" state.')
+            robot_logger.info('No VRFs found in "Quiesce" state.')
 
         # ######################## VM QUIESCE  ################################
-        vms = ro.service_entity_list('IAAS', 'vm', params={'state__in': [5, 8]})
+        vms = ro.service_entity_list('IAAS', 'vm', params=QUIESCE_FILTER)
         if len(vms) > 0:
             for vm in vms:
                 # Stop looping if we receive a sigterm
                 if sigterm_recv:
                     break
-                robot_logger.info(f'Dispatching VM #{vm["idVM"]} for quiesce')
+                robot_logger.info(f'Dispatching VM #{vm["idVM"]} for "Quiesce".')
                 # Call the dispatcher asynchronously
                 try:
                     vm_dispatch.quiesce(vm)
                     # process_pool.apply_async(func=vm_dispatch.quiesce, kwds={'vm': vm})
                 except mp.ProcessError:
-                    robot_logger.error(f'Error when Quiescing VM #{vm["idVM"]}', exc_info=True)
+                    robot_logger.error(f'Error when quiescing VM #{vm["idVM"]}', exc_info=True)
         else:
-            robot_logger.info('No VM for "Shutdown/Quiesce" state.')
+            robot_logger.info('No VMs found in "Quiesce" state.')
 
         # ######################## VRF SCRUB  ################################
-        vrfs = ro.service_entity_list('IAAS', 'vrf', params={'state': 8})
+        # TODO
+        """
+        # Add the Scrub timestamp when the region isn't Alpha
+        if settings.REGION_NAME != 'alpha':
+            # This needs to be calculated at every loop
+            SCRUB_FILTER['updated__lte'] = (datetime.now() - timedelta(days=30)).isoformat()
+        """
+        vrfs = ro.service_entity_list('IAAS', 'vrf', params=SCRUB_FILTER)
         if len(vrfs) > 0:
             for vrf in vrfs:
                 # Stop looping if we receive a sigterm
                 if sigterm_recv:
                     break
-                robot_logger.info(f'Dispatching VRF #{vrf["idVRF"]} for scrub')
+                robot_logger.info(f'Dispatching VRF #{vrf["idVRF"]} for "Scrub"')
                 vrf_dispatch.scrub(vrf)
         else:
-            robot_logger.info('No VRFs in "Scrubbing" state.')
+            robot_logger.info('No VRFs found in "Scrub" state.')
 
         # ######################## VM SCRUB  ################################
-        scrub_list_params = {
-            'state': 9,
-            'updated__lte': (datetime.now() - timedelta(days=30)).isoformat(),
-        }
-        vms = ro.service_entity_list('IAAS', 'vm', params=scrub_list_params)
+        vms = ro.service_entity_list('IAAS', 'vm', params=SCRUB_FILTER)
         if len(vms) > 0:
             for vm in vms:
                 # Stop looping if we receive a sigterm
                 if sigterm_recv:
                     break
-                robot_logger.info(f'Dispatching VM #{vm["idVM"]} for scrub')
+                robot_logger.info(f'Dispatching VM #{vm["idVM"]} for "Scrub".')
                 # Call the dispatcher asynchronously
                 try:
                     vm_dispatch.scrub(vm)
                     # process_pool.apply_async(func=vm_dispatch.scrub, kwds={'vm': vm})
                 except mp.ProcessError:
-                    robot_logger.error(f'Error when Scrubbing VM #{vm["idVM"]}', exc_info=True)
+                    robot_logger.error(f'Error when scrubbing VM #{vm["idVM"]}', exc_info=True)
         else:
-            robot_logger.info('No VM is ready for Scrubbing.')
+            robot_logger.info('No VMs found in "Scrub" state.')
 
         # ######################## VRF UPDATE  ################################
-        vrfs = ro.service_entity_list('IAAS', 'vrf', params={'state': 10})
+        vrfs = ro.service_entity_list('IAAS', 'vrf', params=UPDATE_FILTER)
         if len(vrfs) > 0:
             for vrf in vrfs:
-                robot_logger.info(f'Dispatching VRF #{vrf["idVRF"]} for update')
+                # Stop looping if we receive a sigterm
+                if sigterm_recv:
+                    break
+                robot_logger.info(f'Dispatching VRF #{vrf["idVRF"]} for "Update".')
                 vrf_dispatch.update(vrf)
         else:
-            robot_logger.info('No VRFs in "Update" state.')
+            robot_logger.info('No VRFs found in "Update" state.')
 
         # ######################## VM UPDATE  ################################
-        vms = ro.service_entity_list('IAAS', 'vm', params={'state': 10})
+        vms = ro.service_entity_list('IAAS', 'vm', params=UPDATE_FILTER)
         if len(vms) > 0:
             for vm in vms:
-                robot_logger.info(f'Dispatching VM #{vm["idVM"]} for update')
+                # Stop looping if we receive a sigterm
+                if sigterm_recv:
+                    break
+                robot_logger.info(f'Dispatching VM #{vm["idVM"]} for "Update".')
                 # Call the dispatcher asynchronously
                 try:
                     vm_dispatch.update(vm)
@@ -141,13 +157,28 @@ def mainloop(process_pool: mp.Pool):
                 except mp.ProcessError:
                     robot_logger.error(f'Error when updating VM #{vm["idVM"]}', exc_info=True)
         else:
-            robot_logger.info('No VMs is found for updating.')
+            robot_logger.info('No VMs found in "Update" state.')
+
+        # ######################## VRF RESTART  ################################
+        vrfs = ro.service_entity_list('IAAS', 'vrf', params=RESTART_FILTER)
+        if len(vrfs) > 0:
+            for vrf in vrfs:
+                # Stop looping if we receive a sigterm
+                if sigterm_recv:
+                    break
+                robot_logger.info(f'Dispatching VRF #{vrf["idVRF"]} for "Restart"')
+                vrf_dispatch.restart(vrf)
+        else:
+            robot_logger.info('No VRFs found in  "Restart" state.')
 
         # ######################## VM RESTART  ################################
-        vms = ro.service_entity_list('IAAS', 'vm', params={'state': 7})
+        vms = ro.service_entity_list('IAAS', 'vm', params=RESTART_FILTER)
         if len(vms) > 0:
             for vm in vms:
-                robot_logger.info(f'Dispatching VM #{vm["idVM"]} for restart')
+                # Stop looping if we receive a sigterm
+                if sigterm_recv:
+                    break
+                robot_logger.info(f'Dispatching VM #{vm["idVM"]} for "Restart"')
                 # Call the dispatcher asynchronously
                 try:
                     vm_dispatch.restart(vm)
@@ -155,7 +186,7 @@ def mainloop(process_pool: mp.Pool):
                 except mp.ProcessError:
                     robot_logger.error(f'Error when Restarting VM #{vm["idVM"]}', exc_info=True)
         else:
-            robot_logger.info('No VMs is found for Restarting.')
+            robot_logger.info('No VMs found in "Restart" state.')
         # #############################################################################
 
         while last > time.time() - 20:

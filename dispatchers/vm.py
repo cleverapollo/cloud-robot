@@ -2,6 +2,7 @@
 import netaddr
 import time
 from crypt import crypt, mksalt, METHOD_SHA512
+from datetime import datetime, timedelta
 
 # locals
 import email_notifier
@@ -14,14 +15,15 @@ from quiescers import Linux as LinuxQuiescer, Windows as WindowsQuiescer
 from updaters import Linux as LinuxUpdater, Windows as WindowsUpdater
 from restarters import Linux as LinuxRestarter, Windows as WindowsRestarter
 
-EMAIL_BUILD_SUCCESS_SUBJECT = 'Your VM {name} has been built successfully!'
-EMAIL_BUILD_FAILURE_SUBJECT = 'Your VM {name} has failed to build!'
-EMAIL_SCRUB_SUCCESS_SUBJECT = 'Your VM {name} has been deleted successfully!'
-EMAIL_QUIESCE_SUCCESS_SUBJECT = 'Your VM {name} has been shutdown successfully!'
-EMAIL_UPDATE_SUCCESS_SUBJECT = 'Your VM {name} has been updated successfully!'
-EMAIL_UPDATE_FAILURE_SUBJECT = 'Your VM {name} has been failed to update!'
-EMAIL_RESTART_SUCCESS_SUBJECT = 'Your VM {name} has been restarted successfully!'
-EMAIL_RESTART_FAILURE_SUBJECT = 'Your VM {name} has been failed to restart!'
+EMAIL_BUILD_SUCCESS_SUBJECT = 'Your VM "{name}" has been built successfully!'
+EMAIL_BUILD_FAILURE_SUBJECT = 'Your VM "{name}" has failed to build!'
+EMAIL_SCRUB_SUCCESS_SUBJECT = 'Your VM "{name}" has been deleted successfully!'
+EMAIL_QUIESCE_SUCCESS_SUBJECT = 'Your VM "{name}" has been shutdown successfully!'
+EMAIL_UPDATE_SUCCESS_SUBJECT = 'Your VM "{name}" has been updated successfully!'
+EMAIL_UPDATE_FAILURE_SUBJECT = 'Your VM "{name}" has been failed to update!'
+EMAIL_RESTART_SUCCESS_SUBJECT = 'Your VM "{name}" has been restarted successfully!'
+EMAIL_RESTART_FAILURE_SUBJECT = 'Your VM "{name}" has been failed to restart!'
+EMAIL_DELETE_REQUEST_SUBJECT = 'The request to delete the VM "{name}" has been received successfully!'
 
 
 class Vm:
@@ -234,9 +236,11 @@ class Vm:
                 )
             if vm['state'] == 8:
                 ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 9})
+                # Add a deletion date in the format 'Monday September 30 2013'
+                vm['deletion_date'] = (datetime.now().date() + timedelta(days=30)).strftime('%A %B %d, %Y')
                 # Email the user
                 email_notifier.vm_email_notifier(
-                    EMAIL_QUIESCE_SUCCESS_SUBJECT.format(name=vm['name']),
+                    EMAIL_DELETE_REQUEST_SUBJECT.format(name=vm['name']),
                     vm,
                     'emails/scheduled_delete_success.j2',
                 )

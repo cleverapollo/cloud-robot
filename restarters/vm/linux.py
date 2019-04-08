@@ -11,7 +11,7 @@ class Linux:
     Restarter class for Linux VMs
     Restart:  Restarts the VM in host server
     """
-    logger = utils.get_logger_for_name('restarters.linux')
+    logger = utils.get_logger_for_name('restarters.vm.linux')
 
     @staticmethod
     def restart(vm: dict, password: str) -> bool:
