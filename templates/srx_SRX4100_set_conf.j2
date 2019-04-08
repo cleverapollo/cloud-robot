@@ -66,9 +66,7 @@ set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-vpn-{{ v
 set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-vpn-{{ vpn['vlan'] }}-gw local-address {{ vrf_ip }}
 set groups vrf-{{ idProject }} security ike gateway vrf-{{ idProject }}-vpn-{{ vpn['vlan'] }}-gw version v1-only
 {# Phase 2 authentication and encryption #}
-set groups vrf-{{ idProject }} security ipsec proposal vrf-{{ idProject }}-vpn-{{ vpn['vlan'] }}-ipsec-proposal protocol esp
 set groups vrf-{{ idProject }} security ipsec policy vrf-{{ idProject }}-vpn-{{ vpn['vlan'] }}-ipsec-policy proposal-set {{ vpn['ipsec'] }}
-set groups vrf-{{ idProject }} security ipsec policy vrf-{{ idProject }}-vpn-{{ vpn['vlan'] }}-ipsec-policy proposals vrf-{{ idProject }}-vpn-{{ vpn['vlan'] }}-ipsec-proposal
 set groups vrf-{{ idProject }} security ipsec policy vrf-{{ idProject }}-vpn-{{ vpn['vlan'] }}-ipsec-policy perfect-forward-secrecy keys group2
 set groups vrf-{{ idProject }} security ipsec vpn vrf-{{ idProject }}-vpn-{{ vpn['vlan'] }}-ipsec-vpn ike gateway vrf-{{ idProject }}-vpn-{{ vpn['vlan'] }}-gw
 set groups vrf-{{ idProject }} security ipsec vpn vrf-{{ idProject }}-vpn-{{ vpn['vlan'] }}-ipsec-vpn ike ipsec-policy vrf-{{ idProject }}-vpn-{{ vpn['vlan'] }}-ipsec-policy

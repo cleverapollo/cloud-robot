@@ -24,6 +24,32 @@ class Vrf:
     def __init__(self, password: str):
         self.password = password
 
+    @staticmethod
+    def ntw_address(address_range, type_ip):
+        """
+        it will set the address range to first ip ie if address range is 10.1.0.0/24
+        then the out put will be 10.1.0.1/24
+        :param address_range: ip address network (ipv4/ipv6)
+        :param type_ip: string of either 'inet' or 'inet6'
+        :return: string of network address
+        """
+        ip_addr = str(address_range['addressRange']).split('/')
+        ntw_addr = ip_addr[0]
+        # split the ip
+        if type_ip == 'inet':
+            li = ntw_addr.split('.')
+        elif type_ip == 'inet6':
+            li = ntw_addr.split(':')
+        # set the octet to 1 if it is 0
+        if li[-1] == 0:
+            li[-1] = 1
+        # rearrange subnet
+        if type_ip == 'inet':
+            ntw_addr = '.'.join(f'{i}' for i in li)
+        elif type_ip == 'inet6':
+            ntw_addr = ':'.join(f'{i}' for i in li)
+        return str(netaddr.IPNetwork(f'{ntw_addr}/{ip_addr[1]}'))
+
     def router_data(self, router_id):
         manage_ip = None
         router_model = None
@@ -203,11 +229,14 @@ class Vrf:
                 )
                 metrics.vrf_build_failure()
                 return
+
+            subnet_type = self.ip_type(str(subnet['addressRange']).split('/')[0])
+            first_address_range = self.ntw_address(subnet['addressRange'], subnet_type)
             vlans.append(
                 {
                     'vlan': subnet['vLAN'],
-                    'address_range': subnet['addressRange'],
-                    'type': self.ip_type(str(subnet['addressRange']).split('/')[0]),
+                    'address_range': first_address_range,
+                    'type': subnet_type,
                 },
             )
 
@@ -380,11 +409,14 @@ class Vrf:
                     f'vlan ({subnet["vLAN"]})',
                 )
                 return
+
+            subnet_type = self.ip_type(str(subnet['addressRange']).split('/')[0])
+            first_address_range = self.ntw_address(subnet['addressRange'], subnet_type)
             vlans.append(
                 {
                     'vlan': subnet['vLAN'],
-                    'address_range': subnet['addressRange'],
-                    'type': self.ip_type(str(subnet['addressRange']).split('/')[0]),
+                    'address_range': first_address_range,
+                    'type': subnet_type,
                 },
             )
 
