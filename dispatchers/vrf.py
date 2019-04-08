@@ -34,15 +34,14 @@ class Vrf:
         :return: string of network address
         """
         ip_addr = str(address_range).split('/')
-        ntw_addr = ip_addr[0]
         # split the ip
         if type_ip == 'inet':
-            li = ntw_addr.split('.')
+            li = ip_addr[0].split('.')
         elif type_ip == 'inet6':
-            li = ntw_addr.split(':')
+            li = ip_addr[0].split(':')
         # set the octet to 1 if it is 0
-        if li[-1] == 0:
-            li[-1] = 1
+        if li[-1] == '0':
+            li[-1] = '1'
         # rearrange subnet
         if type_ip == 'inet':
             ntw_addr = '.'.join(f'{i}' for i in li)
