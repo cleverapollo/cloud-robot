@@ -33,7 +33,7 @@ class Vrf:
         :param type_ip: string of either 'inet' or 'inet6'
         :return: string of network address
         """
-        ip_addr = str(address_range['addressRange']).split('/')
+        ip_addr = str(address_range).split('/')
         ntw_addr = ip_addr[0]
         # split the ip
         if type_ip == 'inet':
