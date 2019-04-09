@@ -1,11 +1,7 @@
 # libs
 import winrm
 # local
-import settings
 import utils
-
-DRIVE_PATH = settings.HYV_DRIVE_PATH
-FREENAS_URL = settings.FREENAS_URL
 
 
 class Windows:
@@ -30,7 +26,6 @@ class Windows:
         try:
             # Generate the command that quiesces the VM
             cmd = utils.jinja_env.get_template('windows_vm_quiesce_cmd.j2').render(
-                freenas_url=FREENAS_URL,
                 **vm,
             )
             Windows.logger.debug(f'Generated quiesce command for VM #{vm["idVM"]}\n{cmd}')

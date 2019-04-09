@@ -7,8 +7,7 @@ import utils
 import settings
 from ro import get_full_response
 
-
-DRIVE_PATH = settings.KVM_DRIVE_PATH
+ROBOT_DRIVE_PATH = settings.ROBOT_KVM_DRIVE_PATH
 
 
 class Linux:
@@ -37,7 +36,6 @@ class Linux:
             # Generate and execute the command to scrub the VM
             Linux.logger.info(f'Attempting to scrub VM #{vm["idVM"]}')
             cmd = utils.jinja_env.get_template('linux_vm_scrub_cmd.j2').render(
-                drive_path=DRIVE_PATH,
                 SUDO_PASS=password,
                 **vm,
             )
@@ -55,8 +53,8 @@ class Linux:
 
             if scrubbed:
                 try:
-                    if os.path.exists(f'{DRIVE_PATH}/kickstarts/{vm["vm_identifier"]}.cfg'):
-                        os.remove(f'{DRIVE_PATH}/kickstarts/{vm["vm_identifier"]}.cfg')
+                    if os.path.exists(f'{ROBOT_DRIVE_PATH}/kickstarts/{vm["vm_identifier"]}.cfg'):
+                        os.remove(f'{ROBOT_DRIVE_PATH}/kickstarts/{vm["vm_identifier"]}.cfg')
                     Linux.logger.debug(f'Deleted {vm["vm_identifier"]}.cfg file for FreeNas drive')
                 except IOError:
                     Linux.logger.error(f'Failed to delete kickstart conf of VM #{vm["idVM"]}', exc_info=True)
@@ -76,8 +74,8 @@ class Linux:
                     Linux.logger.warning(f'Bridge delete command for vlan #br{vm["vlan"]} generated stderr.\n{err}')
                 # Delete the bridge xml file
                 try:
-                    if os.path.exists(f'{DRIVE_PATH}/bridge_xmls/br{vm["vlan"]}.xml'):
-                        os.remove(f'{DRIVE_PATH}/bridge_xmls/br{vm["vlan"]}.xml')
+                    if os.path.exists(f'{ROBOT_DRIVE_PATH}/bridge_xmls/br{vm["vlan"]}.xml'):
+                        os.remove(f'{ROBOT_DRIVE_PATH}/bridge_xmls/br{vm["vlan"]}.xml')
                     Linux.logger.debug(f'Removed br{vm["vlan"]}.xml file for FreeNas drive')
                 except IOError:
                     Linux.logger.error(
