@@ -8,7 +8,8 @@ import utils
 from ro import get_full_response
 
 
-DRIVE_PATH = settings.KVM_DRIVE_PATH
+SERVER_DRIVE_PATH = settings.SERVER_KVM_DRIVE_PATH
+ROBOT_DRIVE_PATH = settings.ROBOT_KVM_DRIVE_PATH
 TEMPLATE_MAP = settings.OS_TEMPLATE_MAP['Linux']
 
 
@@ -40,7 +41,7 @@ class Linux:
             return False
         try:
             kickstart = utils.jinja_env.get_template(f'{os_name}_kickstart.j2').render(**vm)
-            with open(f'{DRIVE_PATH}/kickstarts/{vm["vm_identifier"]}.cfg', 'w') as f:
+            with open(f'{ROBOT_DRIVE_PATH}/kickstarts/{vm["vm_identifier"]}.cfg', 'w') as f:
                 f.write(kickstart)
             Linux.logger.debug(f'Generated Kickstart file for vm #{vm["idVM"]}\n{kickstart}')
         except IOError:
@@ -48,7 +49,7 @@ class Linux:
             return False
 
         # Create the XML to build the bridge network
-        with open(f'{DRIVE_PATH}/bridge_xmls/br{vm["vlan"]}.xml', 'w') as f:
+        with open(f'{ROBOT_DRIVE_PATH}/bridge_xmls/br{vm["vlan"]}.xml', 'w') as f:
             f.write(utils.jinja_env.get_template('kvm_bridge_network.j2').render(**vm))
 
         # Attempt to connect to the host server
@@ -61,7 +62,7 @@ class Linux:
             # Generate and execute the command to build the bridge interface
             Linux.logger.info(f'Attempting to build bridge network for VM #{vm["idVM"]}')
             cmd = utils.jinja_env.get_template('kvm_bridge_build_cmd.j2').render(
-                drive_path=DRIVE_PATH,
+                drive_path=SERVER_DRIVE_PATH,
                 SUDO_PASS=password,
                 **vm,
             )
@@ -81,7 +82,7 @@ class Linux:
             # Generate and execute the command to build the actual VM
             Linux.logger.info(f'Attempting to build VM #{vm["idVM"]}')
             cmd = utils.jinja_env.get_template('linux_vm_build_cmd.j2').render(
-                drive_path=DRIVE_PATH,
+                drive_path=SERVER_DRIVE_PATH,
                 SUDO_PASS=password,
                 **vm,
             )

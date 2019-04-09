@@ -6,7 +6,7 @@ import utils
 import settings
 from ro import fix_run_ps
 
-DRIVE_PATH = settings.HYV_DRIVE_PATH
+ROBOT_DRIVE_PATH = settings.ROBOT_HYV_DRIVE_PATH
 
 
 class Windows:
@@ -26,8 +26,8 @@ class Windows:
         """
         scrubbed = False
         try:
-            if os.path.exists(f'{DRIVE_PATH}/unattend_xmls/{vm["vm_identifier"]}.xml'):
-                os.remove(f'{DRIVE_PATH}/unattend_xmls/{vm["vm_identifier"]}.xml')
+            if os.path.exists(f'{ROBOT_DRIVE_PATH}/unattend_xmls/{vm["vm_identifier"]}.xml'):
+                os.remove(f'{ROBOT_DRIVE_PATH}/unattend_xmls/{vm["vm_identifier"]}.xml')
             Windows.logger.debug(f'Deleted {vm["vm_identifier"]}.xml file from FreeNas drive')
         except IOError:
             Windows.logger.error(f'Failed to delete unattend file of VM #{vm["idVM"]}', exc_info=True)
