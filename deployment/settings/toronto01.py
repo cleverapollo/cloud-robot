@@ -16,5 +16,10 @@ CLOUDCIX_EMAIL_USERNAME = 'toronto01@cloudcix.com'
 # Region's email password
 CLOUDCIX_EMAIL_PASSWORD = 'T0ronto01C1xacc355'
 
+# Configuration settings
+# KVM path
+SERVER_KVM_DRIVE_PATH = '/var/lib/libvirt/ISOs/KVM'
+# HyperV path
+SERVER_HYV_DRIVE_PATH = '/var/lib/libvirt/ISOs/HyperV'
 # FreeNas mount url
 FREENAS_URL = f'\\\\{REGION_NAME}-robothost.cloudcix.com\\var\\lib\\libvirt'

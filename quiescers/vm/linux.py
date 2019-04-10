@@ -3,11 +3,7 @@
 import paramiko
 # local
 import utils
-import settings
 from ro import get_full_response
-
-
-DRIVE_PATH = settings.KVM_DRIVE_PATH
 
 
 class Linux:

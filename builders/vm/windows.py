@@ -4,7 +4,7 @@ import winrm
 import settings
 import utils
 
-DRIVE_PATH = settings.HYV_DRIVE_PATH
+ROBOT_DRIVE_PATH = settings.ROBOT_HYV_DRIVE_PATH
 FREENAS_URL = settings.FREENAS_URL
 TEMPLATE_MAP = settings.OS_TEMPLATE_MAP['Windows']
 
@@ -37,7 +37,7 @@ class Windows:
             return False
         unattend = utils.jinja_env.get_template(f'{os_name}_unattend.j2').render(**vm)
         try:
-            with open(f'{DRIVE_PATH}/unattend_xmls/{vm["vm_identifier"]}.xml', 'w') as f:
+            with open(f'{ROBOT_DRIVE_PATH}/unattend_xmls/{vm["vm_identifier"]}.xml', 'w') as f:
                 f.write(unattend)
             Windows.logger.debug(f'Generated unattend file for VM #{vm["idVM"]}\n{unattend}')
         except IOError:

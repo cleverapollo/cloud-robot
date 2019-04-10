@@ -8,6 +8,8 @@ from settings_local import (
     CLOUDCIX_EMAIL_USERNAME,
     REGION_NAME,
     FREENAS_URL,
+    SERVER_KVM_DRIVE_PATH,
+    SERVER_HYV_DRIVE_PATH,
 )
 
 __all__ = [
@@ -25,8 +27,10 @@ __all__ = [
     'REGION_NAME',
     'ROBOT_ENV',
     'VRFS_ENABLED',
-    'KVM_DRIVE_PATH',
-    'HYV_DRIVE_PATH',
+    'ROBOT_KVM_DRIVE_PATH',
+    'ROBOT_HYV_DRIVE_PATH',
+    'SERVER_KVM_DRIVE_PATH',
+    'SERVER_HYV_DRIVE_PATH',
     'FREENAS_URL',
     'OS_TEMPLATE_MAP',
 ]
@@ -56,9 +60,9 @@ ROBOT_ENV = os.environ.get('ROBOT_ENV', 'dev')
 VRFS_ENABLED = True
 # Configuration settings
 # KVM path
-KVM_DRIVE_PATH = '/mnt/images/KVM'
+ROBOT_KVM_DRIVE_PATH = '/mnt/images/KVM'
 # HyperV path
-HYV_DRIVE_PATH = '/mnt/images/HyperV'
+ROBOT_HYV_DRIVE_PATH = '/mnt/images/HyperV'
 # Images dict
 OS_TEMPLATE_MAP = {
     'Linux': {
