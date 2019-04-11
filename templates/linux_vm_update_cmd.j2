@@ -1,15 +1,15 @@
 {# ----------------1. Shut down the VM ----------------------- #}
-virsh shutdown {{ vm_identifier }}
+echo {{ SUDO_PASS }} | sudo -S virsh shutdown {{ vm_identifier }}
 {# ----------------2. Change of ram if any---------------------#}
 {# 2a. set max memory of VM #}
-virsh setmaxmem {{ vm_identifier }} {{ ram }}M --config
+echo {{ SUDO_PASS }} | sudo -S virsh setmaxmem {{ vm_identifier }} {{ ram }}M --config
 {# 2b. set current memory of VM #}
-virsh setmem {{ vm_identifier }} {{ ram }}M --config
+echo {{ SUDO_PASS }} | sudo -S virsh setmem {{ vm_identifier }} {{ ram }}M --config
 {# ----------------3. Change of vcpu if any--------------------#}
 {# 3a. set maximum vcpus of VM #}
-virsh setvcpus {{ vm_identifier }} --maximum {{ vcpus }} --config
+echo {{ SUDO_PASS }} | sudo -S virsh setvcpus {{ vm_identifier }} --maximum {{ vcpus }} --config
 {# 3b. set current vcpus of VM #}
-virsh setvcpus {{ vm_identifier }} --count {{ vcpus }} --config
+echo {{ SUDO_PASS }} | sudo -S virsh setvcpus {{ vm_identifier }} --count {{ vcpus }} --config
 {# ----------------4. Change the IP configurations--------------#}
 {#  todo #}
 {# ----------------5. Resize the storage drive of the VM---------#}
@@ -50,4 +50,4 @@ echo {{ SUDO_PASS }} | sudo -S virsh attach-disk {{ vm_identifier }} \
 {% endfor %}
 {% endfor %}
 {# ----------------6. Start the VM-------------------------------#}
-virsh start {{ vm_identifier }}
+echo {{ SUDO_PASS }} | sudo -S virsh start {{ vm_identifier }}
