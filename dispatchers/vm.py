@@ -37,6 +37,38 @@ class Vm:
     def __init__(self, password: str):
         self.password = password
 
+    @staticmethod
+    def ntw_address(address_range):
+        """
+        it will set the address range to first ip ie if address range is 10.1.0.0/24
+        then the out put will be 10.1.0.1/24
+        :param address_range: ip address network (ipv4/ipv6)
+        :return: string of network address
+        """
+        ip_addr = str(address_range).split('/')
+        ntw_addr = ip_addr[0]
+        # find the ip type
+        response = ro.api.IAAS.ip_validator.list(
+            token=ro.TOKEN_WRAPPER.token,
+            params={'ipAddresses': ntw_addr},
+        )
+        result = response.json()['ipAddresses'][ntw_addr]['result']
+        if result['ipv4']:
+            li = ip_addr[0].split('.')
+            # set the octet to 1 if it is 0
+            if li[-1] == '0':
+                li[-1] = '1'
+            # rearrange subnet
+            ntw_addr = '.'.join(f'{i}' for i in li)
+        elif result['ipv6']:
+            li = ip_addr[0].split(':')
+            # set the octet to 1 if it is 0
+            if li[-1] == '0':
+                li[-1] = '1'
+            # rearrange subnet
+            ntw_addr = ':'.join(f'{i}' for i in li)
+        return str(netaddr.IPNetwork(f'{ntw_addr}/{ip_addr[1]}'))
+
     def build(self, vm: dict):
         """
         Takes VM data from the CloudCIX API, adds any additional data needed for building it and requests to build it
@@ -87,7 +119,7 @@ class Vm:
                 vm['ip'] = ip['address']
                 # Get the subnet of this IP
                 subnet = ro.service_entity_read('IAAS', 'subnet', ip['idSubnet'])
-                vm['gateway'], vm['netmask'] = subnet['addressRange'].split('/')
+                vm['gateway'], vm['netmask'] = self.ntw_address(subnet['addressRange']).split('/')
                 vm['netmask_ip'] = netaddr.IPNetwork(subnet['addressRange']).netmask
                 vm['vlan'] = subnet['vLAN']
                 # Get user email to notify the user
@@ -422,7 +454,7 @@ class Vm:
                 vm['ip'] = ip['address']
                 # Get the subnet of this IP
                 subnet = ro.service_entity_read('IAAS', 'subnet', ip['idSubnet'])
-                vm['gateway'], vm['netmask'] = subnet['addressRange'].split('/')
+                vm['gateway'], vm['netmask'] = self.ntw_address(subnet['addressRange']).split('/')
                 vm['netmask_ip'] = netaddr.IPNetwork(subnet['addressRange']).netmask
                 vm['vlan'] = subnet['vLAN']
                 # Get user email to notify the user
