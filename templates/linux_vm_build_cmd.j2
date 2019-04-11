@@ -5,7 +5,7 @@ echo {{ SUDO_PASS }} | sudo -S qemu-img create -f qcow2 /var/lib/libvirt/images/
 echo {{ SUDO_PASS }} | sudo -S qemu-img create -f qcow2 /var/lib/libvirt/images/{{ vm_identifier }}_SSD_{{ ssd.split(':')[0] }}.img {{ ssd.split(':')[1] }}G
 {% endif %}
 {% for drive in drives %}
-sudo qemu-img create -f qcow2 /var/lib/libvirt/images/{{ vm_identifier }}_{{ drive["type"] }}_{{ drive["st_id"] }}.img {{ drive["size"] }}G
+echo {{ SUDO_PASS }} | sudo -S qemu-img create -f qcow2 /var/lib/libvirt/images/{{ vm_identifier }}_{{ drive["type"] }}_{{ drive["st_id"] }}.img {{ drive["size"] }}G
 {% endfor %}
 {#----------------------- VM creation------------------------- #}
 echo {{ SUDO_PASS }} | sudo -S virt-install --name {{ vm_identifier }} \
