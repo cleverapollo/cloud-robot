@@ -1,6 +1,6 @@
 {# 1. Destroy or Stop the bridge interface first #}
-virsh iface-destroy br{{ vlan }}
+echo {{ SUDO_PASS }} | sudo -S virsh iface-destroy br{{ vlan }}
 {# 2. Undefine or delete the bridge instance from the system #}
-virsh iface-undefine br{{ vlan }}
+echo {{ SUDO_PASS }} | sudo -S virsh iface-undefine br{{ vlan }}
 {# 3. Undefine or delete the enp8s0f0.vlan instace from the system #}
-virsh iface-undefine enp8s0f0.{{ vlan }}
+echo {{ SUDO_PASS }} | sudo -S virsh iface-undefine enp8s0f0.{{ vlan }}
