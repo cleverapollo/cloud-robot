@@ -20,6 +20,8 @@ __all__ = [
     'VRFS_ENABLED',
     'SERVER_KVM_DRIVE_PATH',
     'SERVER_HYV_DRIVE_PATH',
+    'ROBOT_KVM_DRIVE_PATH',
+    'ROBOT_HYV_DRIVE_PATH',
     'FREENAS_URL',
     'OS_TEMPLATE_MAP',
 ]
@@ -72,9 +74,11 @@ VRFS_ENABLED = True
 
 # Configuration settings
 # KVM path
-SERVER_KVM_DRIVE_PATH = '/mnt/images/KVM'
+ROBOT_KVM_DRIVE_PATH = '/mnt/images/KVM'
+SERVER_KVM_DRIVE_PATH = ROBOT_KVM_DRIVE_PATH
 # HyperV path
-SERVER_HYV_DRIVE_PATH = '/mnt/images/HyperV'
+ROBOT_HYV_DRIVE_PATH = '/mnt/images/HyperV'
+SERVER_HYV_DRIVE_PATH = ROBOT_HYV_DRIVE_PATH
 # FreeNas mount url
 FREENAS_URL = f'\\\\{REGION_NAME}-freenas.cloudcix.com\\mnt\\volume\\{REGION_NAME}'
 # Images dict

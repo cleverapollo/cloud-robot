@@ -49,6 +49,7 @@
         state: started
         pull: true
         network_mode: host
+        restart_policy: "no"
         env:
           ROBOT_ENV: "{{ env }}"
         volumes:
