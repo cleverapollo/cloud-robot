@@ -23,8 +23,6 @@ build_base:
   script:
     - docker build -f deployment/dockerfiles/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/base:latest --no-cache .
     - docker push gitlab.cloudcix.com:5005/cloudcix/robot/base:latest
-  after_script:
-    - docker system prune -f
   only:
     - master
 
