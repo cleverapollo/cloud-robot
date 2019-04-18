@@ -32,6 +32,7 @@ class Linux:
             # Generate and execute the command to quiesce the actual VM
             Linux.logger.info(f'Attempting to quiesce the VM #{vm["idVM"]}')
             cmd = utils.jinja_env.get_template('linux_vm_quiesce_cmd.j2').render(
+                SUDO_PASS=password,
                 vm_identifier=vm['vm_identifier'],
             )
             Linux.logger.debug(f'Generated VM quiesce command for VM #{vm["idVM"]}\n{cmd}')
