@@ -3,7 +3,7 @@ try {
   Get-VMHardDiskDrive -VMName $VMName | foreach {
     Remove-Item -Path $_.Path -Recurse -Force -Confirm:$false
   }
-  Remove-VM -Name $VMName
+  Remove-VM -Name $VMName -Force
   Remove-Item -Recurse D:\HyperV\$VMName
   Write-Host "$VMName Successfully Deleted."
 } catch {
