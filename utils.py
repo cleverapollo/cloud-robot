@@ -1,5 +1,6 @@
 """File containing some utility functions such as generating our logger"""
 # python
+import atexit
 import logging
 import logging.handlers
 import subprocess
@@ -69,6 +70,9 @@ def setup_root_logger():
     logstash_handler = AsynchronousLogstashHandler(LOGSTASH_IP, 5959, 'log.db')
     logstash_handler.setFormatter(logstash_fmt)
     logger.addHandler(logstash_handler)
+
+    # At exit, flush all logs to logstash
+    atexit.register(logstash_handler.flush())
 
 
 def get_logger_for_name(name: str, level=logging.DEBUG) -> logging.Logger:
