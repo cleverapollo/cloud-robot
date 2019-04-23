@@ -72,7 +72,7 @@ def setup_root_logger():
     logger.addHandler(logstash_handler)
 
     # At exit, flush all logs to logstash
-    atexit.register(logstash_handler.flush())
+    atexit.register(logstash_handler.flush)
 
 
 def get_logger_for_name(name: str, level=logging.DEBUG) -> logging.Logger:
