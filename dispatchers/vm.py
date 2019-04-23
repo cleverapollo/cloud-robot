@@ -393,7 +393,18 @@ class Vm:
             else:
                 logger.error(f'VM #{vm_id} API deletion failed. Check log for details')
 
-            # TODO - Check if the project is empty and if so delete that too
+            # Check that list requests for VRF and VM both are empty, and if so, delete the project
+            project_id = vm['idProject']
+            active_vrfs = len(ro.service_entity_list('IAAS', 'vrf', {'project': project_id}))
+            active_vms = len(ro.service_entity_list('IAAS', 'vm', {'project': project_id}))
+            if active_vms == 0 and active_vrfs == 0:
+                logger.info('Project is empty. Sending delete request.')
+                if ro.service_entity_delete('IAAS', 'project', project_id):
+                    logger.info(f'Project #{project_id} successfully deleted from the API')
+                else:
+                    logger.error(f'Project #{project_id} API deletion failed. Check log for details')
+            else:
+                logger.info(f'Not deleting project. {active_vrfs} VRFs and {active_vms} VMs remain active.')
 
         else:
             logger.info(f'VM #{vm_id} failed to scrub. Check log for details.')
