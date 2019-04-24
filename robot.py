@@ -1,4 +1,5 @@
 # python
+import logging
 import multiprocessing as mp
 import signal
 import sys
@@ -26,7 +27,6 @@ def mainloop(process_pool: mp.Pool):
     The main loop of the Robot program
     """
     global sigterm_recv
-    last = time.time()
     # Create the dispatcher instances
     if settings.VRFS_ENABLED:
         vrf_dispatch = dispatchers.Vrf(settings.NETWORK_PASSWORD)
@@ -189,9 +189,11 @@ def mainloop(process_pool: mp.Pool):
             robot_logger.info('No VMs found in "Restart" state.')
         # #############################################################################
 
-        while last > time.time() - 20:
-            time.sleep(1)
-        last = time.time()
+        # Flush the logs
+        for handler in logging.getLogger().handlers:
+            if hasattr(handler, 'flush'):
+                handler.flush()
+        time.sleep(20)
 
     # When we leave the loop, join the process pool
     process_pool.join()
