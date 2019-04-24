@@ -157,6 +157,9 @@ class Vm:
             )
             if vm_vrf[0]['state'] == 3:
                 logger.error('Cannot build VM #{vm_id} as its VRF is Unresourced.')
+                ro.service_entity_update('IAAS', 'vm', vm_id, {'state': 3})
+                metrics.vm_build_failure()
+                return
             time.sleep(5)
             vm_vrf = ro.service_entity_list('IAAS', 'vrf', vrf_request_data)
 
