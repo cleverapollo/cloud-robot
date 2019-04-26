@@ -43,11 +43,11 @@ class Windows:
             session = winrm.Session(vm['host_name'], auth=('administrator', password))
             response = fix_run_ps(self=session, script=cmd)
             if response.status_code == 0:
-                msg = response.std_out.strip()
+                msg = response.std_out.strip().decode()
                 Windows.logger.info(f'VM scrub command for VM #{vm["idVM"]} generated stdout\n{msg}')
-                scrubbed = f'{vm["vm_identifier"]} Successfully Deleted.' in msg.decode()
+                scrubbed = f'{vm["vm_identifier"]} Successfully Deleted.' in msg
             else:
-                msg = response.std_err.strip()
+                msg = response.std_err.strip().decode()
                 Windows.logger.warning(f'VM scrub command for VM #{vm["idVM"]} generated stderr\n{msg}')
         except winrm.exceptions.WinRMError:
             Windows.logger.error(

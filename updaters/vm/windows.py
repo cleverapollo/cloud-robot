@@ -33,11 +33,11 @@ class Windows:
             session = winrm.Session(vm['host_name'], auth=('administrator', password))
             response = fix_run_ps(self=session, script=cmd)
             if response.status_code == 0:
-                msg = response.std_out.strip()
+                msg = response.std_out.strip().decode()
                 Windows.logger.info(f'VM update command for VM #{vm["idVM"]} generated stdout\n{msg}')
-                updated = 'VM Successfully Shutdown, Updated and Rebooted.' in msg.decode()
+                updated = 'VM Successfully Shutdown, Updated and Rebooted.' in msg
             else:
-                msg = response.std_err.strip()
+                msg = response.std_err.strip().decode()
                 Windows.logger.warning(f'VM update command for VM #{vm["idVM"]} generated stderr\n{msg}')
         except winrm.WinRMError:
             Windows.logger.error(

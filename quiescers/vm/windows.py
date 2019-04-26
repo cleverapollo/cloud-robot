@@ -2,6 +2,7 @@
 import winrm
 # local
 import utils
+from ro import fix_run_ps
 
 
 class Windows:
@@ -25,31 +26,19 @@ class Windows:
         Windows.logger.info(f'Attempting to connect to host @ {vm["host_name"]} to quiesce VM #{vm["idVM"]}')
         try:
             # Generate the command that quiesces the VM
-            cmd = utils.jinja_env.get_template('windows_vm_quiesce_cmd.j2').render(
-                **vm,
-            )
+            cmd = utils.jinja_env.get_template('windows_vm_quiesce_cmd.j2').render(**vm)
             Windows.logger.debug(f'Generated quiesce command for VM #{vm["idVM"]}\n{cmd}')
             Windows.logger.info(f'Attempting to execute the command to quiesce VM #{vm["idVM"]}')
             # Connecting HyperV host with session
             session = winrm.Session(vm['host_name'], auth=('administrator', password))
-            shell_id = session.protocol.open_shell()
-            command_id = session.protocol.run_command(shell_id=shell_id, command=cmd)
-            std_out, std_err, status_code = session.protocol.get_command_output(
-                shell_id=shell_id,
-                command_id=command_id,
-            )
-            if std_out:
-                msg = std_out.strip()
+            response = fix_run_ps(session, cmd)
+            if response.status_code == 0:
+                msg = response.std_out.strip().decode()
                 Windows.logger.info(f'VM quiesce command for VM #{vm["idVM"]} generated stdout\n{msg}')
-                quiesced = (
-                    f'{vm["vm_identifier"]} Off' in msg.decode() or
-                    'already in the specified state' in msg.decode()
-                )
-            if std_err:
-                msg = std_err.strip()
+                scrubbed = f'{vm["vm_identifier"]} Successfully Quiesced.' in msg
+            else:
+                msg = response.std_err.strip().decode()
                 Windows.logger.warning(f'VM quiesce command for VM #{vm["idVM"]} generated stderr\n{msg}')
-            session.protocol.cleanup_command(shell_id=shell_id, command_id=command_id)
-            session.protocol.close_shell(shell_id=shell_id)
         except winrm.exceptions.WinRMError:
             Windows.logger.error(
                 f'Exception occurred while connected to host server @ {vm["host_ip"]} for the quiesce of VM '
