@@ -35,7 +35,7 @@ class Windows:
             if response.status_code == 0:
                 msg = response.std_out.strip().decode()
                 Windows.logger.info(f'VM quiesce command for VM #{vm["idVM"]} generated stdout\n{msg}')
-                scrubbed = f'{vm["vm_identifier"]} Successfully Quiesced.' in msg
+                quiesced = f'{vm["vm_identifier"]} Successfully Quiesced.' in msg
             else:
                 msg = response.std_err.strip().decode()
                 Windows.logger.warning(f'VM quiesce command for VM #{vm["idVM"]} generated stderr\n{msg}')
