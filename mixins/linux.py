@@ -5,6 +5,7 @@ methods included;
     - a helper method to fully retrieve the response from paramiko outputs
 """
 # stdlib
+import logging
 from collections import deque
 from time import sleep
 from typing import Deque, Tuple
@@ -17,6 +18,7 @@ __all__ = [
 
 
 class LinuxMixin:
+    logger: logging.Logger
 
     @staticmethod
     def get_full_response(channel: Channel, wait_time: int = 15, read_size: int = 64) -> str:
@@ -44,8 +46,10 @@ class LinuxMixin:
             The client is passed instead of the host_ip so we can avoid having to open multiple connections
         :return: The messages retrieved from stdout and stderr of the command
         """
+        hostname = client.get_transport().sock.getpeername()[0]
+        cls.logger.debug(f'Deploying command to Linux Host {hostname}')
         # Run the command via the client
-        _, stdout, stderr = client.run_command()
+        _, stdout, stderr = client.exec_command(command)
         # Block until command finishes
         stdout.channel.recv_exit_status()
         # Read the full response from both channels
