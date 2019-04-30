@@ -53,7 +53,7 @@ class Token:
             old_token = self._token
             self._token = get_admin_token()
             self._created = datetime.utcnow()
-            logging.getLogger('cloudcix_token').info(
+            logging.getLogger('robot.cloudcix_token').info(
                 f'Generated new token: {old_token} -> {self._token}',
             )
         return self._token

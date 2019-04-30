@@ -28,7 +28,7 @@ class Linux(LinuxMixin):
     When we get to this point, we can be sure that the VM is a linux VM
     """
     # Keep a logger for logging messages from this class
-    logger = logging.getLogger('quiescers.vm.linux')
+    logger = logging.getLogger('robot.quiescers.vm.linux')
     # Keep track of the keys necessary for the template, so we can ensure that all keys are present before quiescing
     template_keys = {
         # the ip address of the host that the VM to quiesce is running on

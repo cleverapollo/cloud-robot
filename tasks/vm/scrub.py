@@ -24,7 +24,7 @@ def scrub_vm(vm_id: int):
     Task to scrub the specified vm
     """
     # TODO - Start a tracing span here
-    logger = logging.getLogger('tasks.vm.scrub')
+    logger = logging.getLogger('robot.tasks.vm.scrub')
     logger.info(f'Commencing scrub of VM #{vm_id}')
 
     # Read the VM

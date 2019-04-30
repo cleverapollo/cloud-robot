@@ -21,7 +21,7 @@ class Vrf:
         :param vrf_id: The id of the VRF to build
         """
         # log a message about the dispatch, and pass the request to celery
-        logging.getLogger('dispatchers.vrf.build').debug(
+        logging.getLogger('robot.dispatchers.vrf.build').debug(
             f'Passing VRF #{vrf_id} to the build task queue',
         )
         vrf_tasks.build_vrf(vrf_id)
@@ -33,7 +33,7 @@ class Vrf:
         :param vrf_id: The id of the VRF to quiesce
         """
         # log a message about the dispatch, and pass the request to celery
-        logging.getLogger('dispatchers.vrf.quiesce').debug(
+        logging.getLogger('robot.dispatchers.vrf.quiesce').debug(
             f'Passing VRF #{vrf_id} to the quiesce task queue',
         )
         vrf_tasks.quiesce_vrf(vrf_id)
@@ -45,7 +45,7 @@ class Vrf:
         :param vrf_id: The id of the VRF to restart
         """
         # log a message about the dispatch, and pass the request to celery
-        logging.getLogger('dispatchers.vrf.restart').debug(
+        logging.getLogger('robot.dispatchers.vrf.restart').debug(
             f'Passing VRF #{vrf_id} to the restart task queue',
         )
         vrf_tasks.restart_vrf(vrf_id)
@@ -57,7 +57,7 @@ class Vrf:
         :param vrf_id: The id of the VRF to scrub
         """
         # log a message about the dispatch, and pass the request to celery
-        logging.getLogger('dispatchers.vrf.scrub').debug(
+        logging.getLogger('robot.dispatchers.vrf.scrub').debug(
             f'Passing VRF #{vrf_id} to the scrub task queue',
         )
         vrf_tasks.scrub_vrf(vrf_id)
@@ -69,7 +69,7 @@ class Vrf:
         :param vrf_id: The id of the VRF to update
         """
         # log a message about the dispatch, and pass the request to celery
-        logging.getLogger('dispatchers.vrf.update').debug(
+        logging.getLogger('robot.dispatchers.vrf.update').debug(
             f'Passing VRF #{vrf_id} to the update task queue',
         )
         vrf_tasks.update_vrf(vrf_id)

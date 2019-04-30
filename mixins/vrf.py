@@ -130,7 +130,7 @@ class VrfMixin:
                     manage_ip = str(ip['address'])
                     break
                 break
-        return {'manage_ip': manage_ip, 'router_model': router_model}
+        return {'management_ip': manage_ip, 'router_model': router_model}
 
     @classmethod
     def _get_vrf_port_data(cls, vrf_ip_subnet_id: int, router_id: int) -> Optional[Dict[str, Union[str, bool]]]:

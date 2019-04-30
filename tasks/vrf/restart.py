@@ -17,7 +17,7 @@ def restart_vrf(vrf_id: int):
     Task to build the specified vrf
     """
     # TODO - Start a tracing span here
-    logger = logging.getLogger('tasks.vrf.restart')
+    logger = logging.getLogger('robot.tasks.vrf.restart')
     logger.info(f'Commencing restart of VRF #{vrf_id}')
 
     # Read the VRF

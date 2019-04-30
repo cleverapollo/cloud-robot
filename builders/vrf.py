@@ -28,7 +28,7 @@ class Vrf(VrfMixin):
     Class that handles the building of the specified VRF
     """
     # Keep a logger for logging messages from this class
-    logger = logging.getLogger('builders.vrf')
+    logger = logging.getLogger('robot.builders.vrf')
     # Keep track of the keys necessary for the template, so we can check all keys are present before building
     template_keys = {
         # A flag stating whether or not there is a firewall for the project
@@ -165,6 +165,8 @@ class Vrf(VrfMixin):
                     'public_address': ip['fip']['address'],
                     'vlan': subnet['vLAN'],
                 })
+        data['vlans'] = vlans
+        data['nats'] = nats
 
         # Retrieve the IP Address and Subnet Mask for the VRF
         # Get the IP Address of the VRF
@@ -193,7 +195,7 @@ class Vrf(VrfMixin):
         if port_data is None:
             # The function will have done the logging so we should be okay to just return
             return None
-        data['address_family'] = port_data['address_family']
+        data['port_address_family'] = port_data['address_family']
         data['has_firewall'] = port_data['has_firewall']
         data['private_port'] = port_data['private_port']
         data['public_port'] = port_data['public_port']
@@ -228,5 +230,6 @@ class Vrf(VrfMixin):
                 return None
             vpn['ipsec'] = ipsec['name']
             vpns.append(vpn)
+        data['vpns'] = vpns
 
         return data

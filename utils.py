@@ -41,7 +41,7 @@ def setup_root_logger():
     instead of having that old bad system
     :param level: The level at which to log messages
     """
-    logger = logging.getLogger()
+    logger = logging.getLogger('robot')
     logger.setLevel(logging.DEBUG)
 
     # Stream Handler
@@ -62,7 +62,6 @@ def setup_root_logger():
     atexit.register(logstash_handler.flush)
 
     # Hide other logs
-    logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 
 def get_current_git_sha() -> str:
@@ -136,7 +135,11 @@ def api_list(client: Client, params: Dict[str, Any], **kwargs) -> List[Any]:
         )
         return []
     response_data = response.json()
-    records_found = response_data['_metadata'].get('totalRecords', response_data['_metadata']['total_records'])
+    records_found: int
+    if 'totalRecords' in response_data['_metadata']:
+        records_found = response_data['_metadata']['totalRecords']
+    else:
+        records_found = response_data['_metadata']['total_records']
     logger.debug(
         f'{client_name}.list retrieved {records_found} records with the following filters: {params}',
     )

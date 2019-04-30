@@ -21,7 +21,7 @@ class DummyVrf:
         in the assigned physical Router.
         :param vrf: The VRF data from the CloudCIX API
         """
-        logger = logging.getLogger('dispatchers.dummy_vrf.build')
+        logger = logging.getLogger('robot.dispatchers.dummy_vrf.build')
         logger.info(f'Updating VRF #{vrf_id} to state RUNNING')
         # Change the state to RUNNING and report a success to influx
         response = IAAS.vrf.update(
@@ -44,7 +44,7 @@ class DummyVrf:
         in the assigned physical Router.
         :param vrf: The VRF data from the CloudCIX API
         """
-        logger = logging.getLogger('dispatchers.dummy_vrf.quiesce')
+        logger = logging.getLogger('robot.dispatchers.dummy_vrf.quiesce')
         logger.info(f'Updating VRF #{vrf_id} to state QUIESCED')
         # In order to change the state to the correct value we need to read the VRF and check its state
         vrf = utils.api_read(IAAS.vrf, vrf_id)
@@ -89,7 +89,7 @@ class DummyVrf:
         in the assigned physical Router.
         :param vrf: The VRF data from the CloudCIX API
         """
-        logger = logging.getLogger('dispatchers.dummy_vrf.restart')
+        logger = logging.getLogger('robot.dispatchers.dummy_vrf.restart')
         logger.info(f'Updating VRF #{vrf_id} to state RUNNING')
         # Change the state of the VRF to RUNNING and report a success to influx
         response = IAAS.vrf.update(
@@ -112,7 +112,7 @@ class DummyVrf:
         in the assigned physical Router.
         :param vrf: The VRF data from the CloudCIX API
         """
-        logger = logging.getLogger('dispatchers.dummy_vrf.scrub')
+        logger = logging.getLogger('robot.dispatchers.dummy_vrf.scrub')
         logger.info(f'Updating VRF #{vrf_id} to state DELETED')
         # Change the state of the VRF to DELETED and report a success to influx
         response = IAAS.vrf.update(
@@ -140,7 +140,7 @@ class DummyVrf:
         in the assigned physical Router.
         :param vrf: The VRF data from the CloudCIX API
         """
-        logger = logging.getLogger('dispatchers.dummy_vrf.update')
+        logger = logging.getLogger('robot.dispatchers.dummy_vrf.update')
         logger.info(f'Updating VRF #{vrf_id} to state RUNNING')
         # Change the state of the VRF to RUNNING and report a success to influx
         response = IAAS.vrf.update(

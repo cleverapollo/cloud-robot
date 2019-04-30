@@ -35,7 +35,7 @@ class Windows(WindowsMixin):
     When we get to this point, we can be sure that the VM is a windows VM
     """
     # Keep a logger for logging messages from this class
-    logger = logging.getLogger('builders.vm.windows')
+    logger = logging.getLogger('robot.builders.vm.windows')
     # Keep track of the keys necessary for the template, so we can ensure that all keys are present before building
     template_keys = {
         # the admin password for the vm, unencrypted

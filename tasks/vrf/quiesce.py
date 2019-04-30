@@ -17,7 +17,7 @@ def quiesce_vrf(vrf_id: int):
     Task to build the specified vrf
     """
     # TODO - Start a tracing span here
-    logger = logging.getLogger('tasks.vrf.quiesce')
+    logger = logging.getLogger('robot.tasks.vrf.quiesce')
     logger.info(f'Commencing quiesce of VRF #{vrf_id}')
 
     # Read the VRF

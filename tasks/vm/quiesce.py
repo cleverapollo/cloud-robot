@@ -26,7 +26,7 @@ def quiesce_vm(vm_id: int):
     Task to quiesce the specified vm
     """
     # TODO - Start a tracing span here
-    logger = logging.getLogger('tasks.vm.quiesce')
+    logger = logging.getLogger('robot.tasks.vm.quiesce')
     logger.info(f'Commencing quiesce of VM #{vm_id}')
 
     # Read the VM

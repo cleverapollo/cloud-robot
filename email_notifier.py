@@ -46,7 +46,7 @@ class EmailNotifier:
         """
         Given a VM's details, render and send a build success email
         """
-        logger = logging.getLogger('email_notifier.build_success')
+        logger = logging.getLogger('robot.email_notifier.build_success')
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -63,7 +63,7 @@ class EmailNotifier:
         """
         Given a VM's details, render and send a build failure email
         """
-        logger = logging.getLogger('email_notifier.build_failure')
+        logger = logging.getLogger('robot.email_notifier.build_failure')
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -84,7 +84,7 @@ class EmailNotifier:
         """
         Given a VM's details, render and send a quiesce success email
         """
-        logger = logging.getLogger('email_notifier.quiesce_success')
+        logger = logging.getLogger('robot.email_notifier.quiesce_success')
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -101,7 +101,7 @@ class EmailNotifier:
         """
         Given a VM's details, render and send a delete_schedule success email
         """
-        logger = logging.getLogger('email_notifier.delete_schedule_success')
+        logger = logging.getLogger('robot.email_notifier.delete_schedule_success')
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -122,7 +122,7 @@ class EmailNotifier:
         """
         Given a VM's details, render and send a restart success email
         """
-        logger = logging.getLogger('email_notifier.restart_success')
+        logger = logging.getLogger('robot.email_notifier.restart_success')
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -139,7 +139,7 @@ class EmailNotifier:
         """
         Given a VM's details, render and send a restart failure email
         """
-        logger = logging.getLogger('email_notifier.restart_failure')
+        logger = logging.getLogger('robot.email_notifier.restart_failure')
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -160,7 +160,7 @@ class EmailNotifier:
         """
         Given a VM's details, render and send a update success email
         """
-        logger = logging.getLogger('email_notifier.update_success')
+        logger = logging.getLogger('robot.email_notifier.update_success')
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -177,7 +177,7 @@ class EmailNotifier:
         """
         Given a VM's details, render and send a update failure email
         """
-        logger = logging.getLogger('email_notifier.update_failure')
+        logger = logging.getLogger('robot.email_notifier.update_failure')
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -225,7 +225,7 @@ class EmailNotifier:
         """
         Given a receiver's email address and a composed message, attempt to send the message
         """
-        logger = logging.getLogger('email_notifier.send_email')
+        logger = logging.getLogger('robot.email_notifier.send_email')
         try:
             server = smtplib.SMTP(settings.CLOUDCIX_EMAIL_HOST)
             # Log in to the server

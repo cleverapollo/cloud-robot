@@ -21,7 +21,7 @@ class Vm:
         :param vm_id: The id of the VM to build
         """
         # log a message about the dispatch, and pass the request to celery
-        logging.getLogger('dispatchers.vm.build').debug(
+        logging.getLogger('robot.dispatchers.vm.build').debug(
             f'Passing VM #{vm_id} to the build task queue',
         )
         vm_tasks.build_vm(vm_id)
@@ -33,7 +33,7 @@ class Vm:
         :param vm_id: The id of the VM to quiesce
         """
         # log a message about the dispatch, and pass the request to celery
-        logging.getLogger('dispatchers.vm.quiesce').debug(
+        logging.getLogger('robot.dispatchers.vm.quiesce').debug(
             f'Passing VM #{vm_id} to the quiesce task queue',
         )
         vm_tasks.quiesce_vm(vm_id)
@@ -45,7 +45,7 @@ class Vm:
         :param vm_id: The id of the VM to restart
         """
         # log a message about the dispatch, and pass the request to celery
-        logging.getLogger('dispatchers.vm.restart').debug(
+        logging.getLogger('robot.dispatchers.vm.restart').debug(
             f'Passing VM #{vm_id} to the restart task queue',
         )
         vm_tasks.restart_vm(vm_id)
@@ -57,7 +57,7 @@ class Vm:
         :param vm_id: The id of the VM to scrub
         """
         # log a message about the dispatch, and pass the request to celery
-        logging.getLogger('dispatchers.vm.scrub').debug(
+        logging.getLogger('robot.dispatchers.vm.scrub').debug(
             f'Passing VM #{vm_id} to the scrub task queue',
         )
         vm_tasks.scrub_vm(vm_id)
@@ -69,7 +69,7 @@ class Vm:
         :param vm_id: The id of the VM to update
         """
         # log a message about the dispatch, and pass the request to celery
-        logging.getLogger('dispatchers.vm.update').debug(
+        logging.getLogger('robot.dispatchers.vm.update').debug(
             f'Passing VM #{vm_id} to the update task queue',
         )
         vm_tasks.update_vm(vm_id)

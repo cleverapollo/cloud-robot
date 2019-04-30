@@ -27,7 +27,7 @@ def update_vm(vm_id: int):
     Task to update the specified vm
     """
     # TODO - Start a tracing span here
-    logger = logging.getLogger('tasks.vm.update')
+    logger = logging.getLogger('robot.tasks.vm.update')
     logger.info(f'Commencing update of VM #{vm_id}')
 
     # Read the VM

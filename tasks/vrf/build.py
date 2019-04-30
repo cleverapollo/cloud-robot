@@ -17,7 +17,7 @@ def build_vrf(vrf_id: int):
     Task to build the specified vrf
     """
     # TODO - Start a tracing span here
-    logger = logging.getLogger('tasks.vrf.build')
+    logger = logging.getLogger('robot.tasks.vrf.build')
     logger.info(f'Commencing build of VRF #{vrf_id}')
 
     # Read the VRF

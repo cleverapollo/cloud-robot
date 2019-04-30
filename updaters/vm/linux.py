@@ -29,7 +29,7 @@ class Linux(LinuxMixin):
     When we get to this point, we can be sure that the VM is a linux VM
     """
     # Keep a logger for logging messages from this class
-    logger = logging.getLogger('updaters.vm.linux')
+    logger = logging.getLogger('robot.updaters.vm.linux')
     # Keep track of the keys necessary for the template, so we can ensure that all keys are present before updating
     template_keys = {
         # the number of cpus in the vm

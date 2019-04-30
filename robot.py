@@ -39,7 +39,7 @@ class Robot:
 
     def __init__(self):
         # Instantiate a logger instance
-        self.logger = logging.getLogger('mainloop')
+        self.logger = logging.getLogger('robot.mainloop')
         # Instantiate the dispatchers
         self.vm_dispatcher = dispatchers.Vm(settings.NETWORK_PASSWORD)
         if settings.VRFS_ENABLED:
@@ -71,8 +71,8 @@ class Robot:
             # ############################################################## #
             #                             QUIESCE                            #
             # ############################################################## #
-            self._vrf_queisce()
-            self._vm_queisce()
+            self._vrf_quiesce()
+            self._vm_quiesce()
 
             # ############################################################## #
             #                              SCRUB                             #

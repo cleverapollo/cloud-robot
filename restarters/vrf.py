@@ -23,7 +23,7 @@ class Vrf(VrfMixin):
     Class that handles the restarting of the specified VRF
     """
     # Keep a logger for logging messages from this class
-    logger = logging.getLogger('restarters.vrf')
+    logger = logging.getLogger('robot.restarters.vrf')
     # Keep track of the keys necessary for the template, so we can check all keys are present before restarting
     template_keys = {
         # The IP Address of the Management port of the physical Router

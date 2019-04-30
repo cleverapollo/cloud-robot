@@ -25,7 +25,7 @@ class Vrf(VrfBuilder):
     Inherits the Builder class as both classes have the same template data gathering method
     """
     # Keep a logger for logging messages from this class
-    logger = logging.getLogger('updaters.vrf')
+    logger = logging.getLogger('robot.updaters.vrf')
 
     # Override this method to ensure that nobody calls this accidentally
     @staticmethod

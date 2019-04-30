@@ -23,7 +23,7 @@ class Vrf(VrfMixin):
     Class that handles the scrubbing of the specified VRF
     """
     # Keep a logger for logging messages from this class
-    logger = logging.getLogger('scrubbers.vrf')
+    logger = logging.getLogger('robot.scrubbers.vrf')
     # Keep track of the keys necessary for the template, so we can check all keys are present before scrubbing
     template_keys = {
         # The IP Address of the Management port of the physical Router

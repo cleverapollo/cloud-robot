@@ -17,7 +17,7 @@ def scrub_vrf(vrf_id: int):
     Task to build the specified vrf
     """
     # TODO - Start a tracing span here
-    logger = logging.getLogger('tasks.vrf.scrub')
+    logger = logging.getLogger('robot.tasks.vrf.scrub')
     logger.info(f'Commencing scrub of VRF #{vrf_id}')
 
     # Read the VRF

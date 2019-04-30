@@ -25,7 +25,7 @@ def restart_vm(vm_id: int):
     Task to restart the specified vm
     """
     # TODO - Start a tracing span here
-    logger = logging.getLogger('tasks.vm.restart')
+    logger = logging.getLogger('robot.tasks.vm.restart')
     logger.info(f'Commencing restart of VM #{vm_id}')
 
     # Read the VM

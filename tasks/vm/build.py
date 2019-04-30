@@ -33,7 +33,7 @@ def _unresource(vm: Dict[str, Any]):
         data={'state': state.UNRESOURCED},
     )
     if response.status_code != 204:
-        logging.getLogger('tasks.vm.build').error(
+        logging.getLogger('robot.tasks.vm.build').error(
             f'Could not update VM #{vm_id} to state UNRESOURCED. Response: {response.content.decode()}.',
         )
     EmailNotifier.build_failure(vm)
@@ -45,7 +45,7 @@ def build_vm(vm_id: int):
     Task to build the specified vm
     """
     # TODO - Start a tracing span here
-    logger = logging.getLogger('tasks.vm.build')
+    logger = logging.getLogger('robot.tasks.vm.build')
     logger.info(f'Commencing build of VM #{vm_id}')
 
     # Read the VM

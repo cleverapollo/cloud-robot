@@ -30,7 +30,7 @@ class Linux(LinuxMixin):
     When we get to this point, we can be sure that the VM is a linux VM
     """
     # Keep a logger for logging messages from this class
-    logger = logging.getLogger('scrubbers.vm.linux')
+    logger = logging.getLogger('robot.scrubbers.vm.linux')
     # Keep track of the keys necessary for the template, so we can ensure that all keys are present before scrubbing
     template_keys = {
         # a flag stating whether or not we need to delete the bridge as well (only if there are no more VMs)

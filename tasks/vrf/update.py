@@ -17,7 +17,7 @@ def update_vrf(vrf_id: int):
     Task to update the specified vrf
     """
     # TODO - Start a tracing span here
-    logger = logging.getLogger('tasks.vrf.update')
+    logger = logging.getLogger('robot.tasks.vrf.update')
     logger.info(f'Commencing update of VRF #{vrf_id}')
 
     # Read the VRF

@@ -23,7 +23,7 @@ class Vrf(VrfMixin):
     Class that handles the quiescing of the specified VRF
     """
     # Keep a logger for logging messages from this class
-    logger = logging.getLogger('quiescers.vrf')
+    logger = logging.getLogger('robot.quiescers.vrf')
     # Keep track of the keys necessary for the template, so we can check all keys are present before quiescing
     template_keys = {
         # The IP Address of the Management port of the physical Router
