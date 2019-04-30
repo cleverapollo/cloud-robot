@@ -1,0 +1,63 @@
+# Kickstart file for VM #{{ vm_identifier }}
+
+{# System Language #}
+lang {{ language }}
+
+{# Language Modules to install #}
+langsupport {{ language }}
+
+{# System Keyboard #}
+keyboard {{ keyboard }}
+
+{# System Mouse #}
+mouse
+
+{# System Timezone #}
+timezone {{ timezone }}
+
+{# Root Password #}
+rootpw --disabled
+
+{# Username / Password #}
+user administrator --fullname "Administrator" --password {{ crypted_admin_password }} --iscrypted
+
+{# Reboot After Installation #}
+reboot
+
+{# Use text mode install #}
+text
+
+{# Install OS instead of upgrade #}
+install
+
+{# Installation Media #}
+cdrom
+
+{# System Bootloader Configuration #}
+bootloader --location=mbr
+
+{# Clear the MBR #}
+zerombr yes
+
+{# Partition Clearing Information #}
+clearpart --all --initlabel
+
+{# Basic Disk Partition #}
+part / --fstype ext4 --size 1 --grow --asprimary
+part swap --size 1024
+part /boot --fstype ext4 --size 256 --asprimary
+
+{# System Authorization Information #}
+authconfig --passalgo=sha512 --kickstart
+
+{# Network #}
+network --bootproto=static --ip={{ ip_address }} --netmask={{ netmask }} --gateway={{ gateway }} --nameserver={{ dns.replace(',', ' ') }}
+
+{# Do not configure the X Window System #}
+skipx
+
+{# Post Install #}
+%packages
+@ ubuntu-server
+@ openssh-server
+%end

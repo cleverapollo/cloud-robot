@@ -1,0 +1,54 @@
+"""
+mixin class containing methods that are needed by linux vm task classes
+methods included;
+    - method to deploy a given command to a given host
+    - a helper method to fully retrieve the response from paramiko outputs
+"""
+# stdlib
+from collections import deque
+from time import sleep
+from typing import Deque, Tuple
+# lib
+from paramiko import Channel, SSHClient
+
+__all__ = [
+    'LinuxMixin',
+]
+
+
+class LinuxMixin:
+
+    @staticmethod
+    def get_full_response(channel: Channel, wait_time: int = 15, read_size: int = 64) -> str:
+        """
+        Get the full response from the specified paramiko channel, waiting a given number of seconds before trying to
+        read from it each time.
+        :param channel: The channel to be read from
+        :param wait_time: How long in seconds between each read
+        :param read_size: How many bytes to be read from the channel each time
+        :return: The full output from the channel, or as much as can be read given the parameters.
+        """
+        fragments: Deque[str] = deque()
+        sleep(wait_time)
+        while channel.recv_ready():
+            fragments.append(channel.recv(read_size).decode())
+            sleep(wait_time)
+        return ''.join(fragments)
+
+    @classmethod
+    def deploy(cls, command: str, client: SSHClient) -> Tuple[str, str]:
+        """
+        Deploy the given `command` to the Linux host accessible via the supplied `client`
+        :param command: The command to run on the host
+        :param client: A paramiko.Client instance that is connected to the host
+            The client is passed instead of the host_ip so we can avoid having to open multiple connections
+        :return: The messages retrieved from stdout and stderr of the command
+        """
+        # Run the command via the client
+        _, stdout, stderr = client.run_command()
+        # Block until command finishes
+        stdout.channel.recv_exit_status()
+        # Read the full response from both channels
+        output = cls.get_full_response(stdout.channel)
+        error = cls.get_full_response(stderr.channel)
+        return output, error

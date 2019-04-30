@@ -1,58 +1,118 @@
-# libs
-import os
-import winrm
+"""
+scrubber class for windows vms
+
+- gathers template data
+- generates necessary files
+- connects to the vm's server and deploys the vm to it
+"""
+# stdlib
+import logging
+from typing import Any, Dict, Optional
+# lib
+from cloudcix.api import IAAS
+from winrm.exceptions import WinRMError
 # local
 import utils
-import settings
-from ro import fix_run_ps
-
-ROBOT_DRIVE_PATH = settings.ROBOT_HYV_DRIVE_PATH
+from mixins import WindowsMixin
 
 
-class Windows:
+__all__ = [
+    'Windows',
+]
+
+
+class Windows(WindowsMixin):
     """
-    Scrubber class for Scrubbing Windows VMs
+    Class that handles the scrubbing of the specified VM
+    When we get to this point, we can be sure that the VM is a windows VM
     """
-    logger = utils.get_logger_for_name('scrubbers.vm.windows')
+    # Keep a logger for logging messages from this class
+    logger = logging.getLogger('scrubbers.vm.windows')
+    # Keep track of the keys necessary for the template, so we can ensure that all keys are present before scrubbing
+    template_keys = {
+        # the DNS hostname for the host machine, as WinRM cannot use IPv6
+        'host_name',
+        # an identifier that uniquely identifies the vm
+        'vm_identifier',
+    }
 
     @staticmethod
-    def scrub(vm: dict, password: str) -> bool:
+    def scrub(vm_data: Dict[str, Any]) -> bool:
         """
-        Given data from the VM dispatcher, request for a Windows VM to be deleted in the specified HyperV host and
-        return a flag indicating whether or not the scrub was successful.
-        :param vm: The data about the VM from the dispatcher
-        :param password: The password used to log in to the host to scrub the VM
+        Commence the scrub of a vm using the data read from the API
+        :param vm_data: The result of a read request for the specified VM
         :return: A flag stating whether or not the scrub was successful
         """
+        vm_id = vm_data['idVM']
+
+        # Generate the necessary template data
+        template_data = Windows._get_template_data(vm_data)
+
+        # Check that the data was successfully generated
+        if template_data is None:
+            Windows.logger.error(
+                f'Failed to retrieve template data for VM #{vm_id}.',
+            )
+            return False
+
+        # Check that all of the necessary keys are present
+        if not all(template_data[key] is not None for key in Windows.template_keys):
+            missing_keys = [
+                f'"{key}"' for key in Windows.template_keys if template_data[key] is None
+            ]
+            Windows.logger.error(
+                f'Template Data Error, the following keys were missing from the VM scrub data: '
+                f'{", ".join(missing_keys)}',
+            )
+            return False
+
+        # If everything is okay, commence scrubbing the VM
+        host_name = template_data.pop('host_name')
+
+        # Render the scrub command
+        vm_scrub_cmd = utils.JINJA_ENV.get_template('vm/windows/scrub_cmd.j2').render(**template_data)
+
+        # Open a client and run the two necessary commands on the host
         scrubbed = False
         try:
-            if os.path.exists(f'{ROBOT_DRIVE_PATH}/unattend_xmls/{vm["vm_identifier"]}.xml'):
-                os.remove(f'{ROBOT_DRIVE_PATH}/unattend_xmls/{vm["vm_identifier"]}.xml')
-            Windows.logger.debug(f'Deleted {vm["vm_identifier"]}.xml file from FreeNas drive')
-        except IOError:
-            Windows.logger.error(f'Failed to delete unattend file of VM #{vm["idVM"]}', exc_info=True)
-
-        # Attempt to connect to the host to begin removing the VM
-        Windows.logger.info(f'Attempting to connect to host @ {vm["host_name"]} to scrub VM #{vm["idVM"]}')
-        try:
-            # Generate the command that actually scrubs the VM
-            cmd = utils.jinja_env.get_template('windows_vm_scrub_cmd.j2').render(**vm)
-            Windows.logger.debug(f'Generated scrub command for VM #{vm["idVM"]}\n{cmd}')
-            Windows.logger.info(f'Attempting to execute the command to scrub VM #{vm["idVM"]}')
-            # Connecting HyperV host with session
-            session = winrm.Session(vm['host_name'], auth=('administrator', password))
-            response = fix_run_ps(self=session, script=cmd)
-            if response.status_code == 0:
-                msg = response.std_out.strip().decode()
-                Windows.logger.info(f'VM scrub command for VM #{vm["idVM"]} generated stdout\n{msg}')
-                scrubbed = f'{vm["vm_identifier"]} Successfully Deleted.' in msg
-            else:
-                msg = response.std_err.strip().decode()
-                Windows.logger.warning(f'VM scrub command for VM #{vm["idVM"]} generated stderr\n{msg}')
-        except winrm.exceptions.WinRMError:
+            response = Windows.deploy(vm_scrub_cmd, host_name)
+        except WinRMError:
             Windows.logger.error(
-                f'Exception occurred while connected to host server @ {vm["host_ip"]} for the scrub of VM '
-                f'#{vm["idVM"]}',
+                f'Exception occurred while attempting to scrub VM #{vm_id} on {host_name}',
                 exc_info=True,
             )
-        return scrubbed
+        else:
+            # Check the stdout and stderr for messages
+            if response.status_code == 0:
+                msg = response.std_out.strip()
+                Windows.logger.debug(f'VM scrub command for VM #{vm_id} generated stdout\n{msg}')
+                scrubbed = f'{template_data["vm_identifier"]} Successfully Deleted' in msg
+            else:
+                msg = response.std_err.strip()
+                Windows.logger.warning(f'VM scrub command for VM #{vm_id} generated stderr\n{msg}')
+        finally:
+            return scrubbed
+
+    @staticmethod
+    def _get_template_data(vm_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Given the vm data from the API, create a dictionary that contains all of the necessary keys for the template
+        The keys will be checked in the build method and not here, this method is only concerned with fetching the data
+        that it can.
+        :param vm_data: The data of the VM read from the API
+        :param image_data: The data of the Image for the VM
+        :returns: The data needed for the templates to build a Windows VM
+        """
+        vm_id = vm_data['idVM']
+        Windows.logger.debug(f'Compiling template data for VM #{vm_id}')
+        data: Dict[str, Any] = {key: None for key in Windows.template_keys}
+
+        data['vm_identifier'] = f'{vm_data["idProject"]}_{vm_data["idVM"]}'
+
+        # Get the ip address of the host
+        for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer']):
+            if mac['status'] is True and mac['ip'] is not None:
+                data['host_name'] = mac['dnsName']
+                break
+
+        return data
