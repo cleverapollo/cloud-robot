@@ -22,21 +22,6 @@ class EmailNotifier:
     # A list of image files that need to be attached to the emails
     message_images = ['cloudcix_logo.bmp', 'twitter.png', 'website.png']
 
-    # Build Email Subject Templates
-    build_success_subject = 'Your VM "{name}" has been built successfully!'
-    build_failure_subject = 'Your VM "{name}" has failed to build.'
-
-    # Quiesce Email Subject Templates
-    quiesce_success_subject = 'Your VM "{name}" has been shut down successfully!'
-
-    # Restart Email Subject Templates
-    restart_success_subject = 'Your VM "{name}" has been restarted successfully!'
-    restart_failure_subject = 'Your VM "{name}" failed to restart'
-
-    # Update Email Subject Templates
-    update_success_subject = 'Your VM "{name}" has been updated successfully!'
-    update_failure_subject = 'Your VM "{name}" failed to update'
-
     # ############################################################## #
     #                              BUILD                             #
     # ############################################################## #
@@ -47,6 +32,7 @@ class EmailNotifier:
         Given a VM's details, render and send a build success email
         """
         logger = logging.getLogger('robot.email_notifier.build_success')
+        name = vm_data["name"]
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -55,7 +41,7 @@ class EmailNotifier:
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/build_success.j2').render(**vm_data)
         # Format the subject
-        subject = f'[CloudCIX] {EmailNotifier.build_success_subject.format(vm_data["name"])}'
+        subject = f'[CloudCIX] Your VM "{name}" has been built successfully!'
         EmailNotifier._compose_email(email, subject, body)
 
     @staticmethod
@@ -64,6 +50,7 @@ class EmailNotifier:
         Given a VM's details, render and send a build failure email
         """
         logger = logging.getLogger('robot.email_notifier.build_failure')
+        name = vm_data["name"]
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -72,7 +59,7 @@ class EmailNotifier:
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/build_failure.j2').render(**vm_data)
         # Format the subject
-        subject = f'[CloudCIX] {EmailNotifier.build_failure_subject.format(vm_data["name"])}'
+        subject = f'[CloudCIX] Your VM "{name}" has failed to build.'
         EmailNotifier._compose_email(email, subject, body)
 
     # ############################################################## #
@@ -85,6 +72,7 @@ class EmailNotifier:
         Given a VM's details, render and send a quiesce success email
         """
         logger = logging.getLogger('robot.email_notifier.quiesce_success')
+        name = vm_data["name"]
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -93,7 +81,7 @@ class EmailNotifier:
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/quiesce_success.j2').render(**vm_data)
         # Format the subject
-        subject = f'[CloudCIX] {EmailNotifier.quiesce_success_subject.format(vm_data["name"])}'
+        subject = f'[CloudCIX] Your VM "{name}" has been shut down successfully!'
         EmailNotifier._compose_email(email, subject, body)
 
     @staticmethod
@@ -102,6 +90,7 @@ class EmailNotifier:
         Given a VM's details, render and send a delete_schedule success email
         """
         logger = logging.getLogger('robot.email_notifier.delete_schedule_success')
+        name = vm_data["name"]
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -110,7 +99,7 @@ class EmailNotifier:
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/scheduled_delete_success.j2').render(**vm_data)
         # Format the subject
-        subject = f'[CloudCIX] {EmailNotifier.quiesce_success_subject.format(vm_data["name"])}'
+        subject = f'[CloudCIX] Your VM "{name}" has been shut down successfully!'
         EmailNotifier._compose_email(email, subject, body)
 
     # ############################################################## #
@@ -123,6 +112,7 @@ class EmailNotifier:
         Given a VM's details, render and send a restart success email
         """
         logger = logging.getLogger('robot.email_notifier.restart_success')
+        name = vm_data["name"]
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -131,7 +121,7 @@ class EmailNotifier:
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/restart_success.j2').render(**vm_data)
         # Format the subject
-        subject = f'[CloudCIX] {EmailNotifier.restart_success_subject.format(vm_data["name"])}'
+        subject = f'[CloudCIX] Your VM "{name}" has been restarted successfully!'
         EmailNotifier._compose_email(email, subject, body)
 
     @staticmethod
@@ -140,6 +130,7 @@ class EmailNotifier:
         Given a VM's details, render and send a restart failure email
         """
         logger = logging.getLogger('robot.email_notifier.restart_failure')
+        name = vm_data["name"]
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -148,7 +139,7 @@ class EmailNotifier:
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/restart_failure.j2').render(**vm_data)
         # Format the subject
-        subject = f'[CloudCIX] {EmailNotifier.restart_failure_subject.format(vm_data["name"])}'
+        subject = f'[CloudCIX] Your VM "{name}" failed to restart'
         EmailNotifier._compose_email(email, subject, body)
 
     # ############################################################## #
@@ -161,6 +152,7 @@ class EmailNotifier:
         Given a VM's details, render and send a update success email
         """
         logger = logging.getLogger('robot.email_notifier.update_success')
+        name = vm_data["name"]
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -169,7 +161,7 @@ class EmailNotifier:
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/update_success.j2').render(**vm_data)
         # Format the subject
-        subject = f'[CloudCIX] {EmailNotifier.update_success_subject.format(vm_data["name"])}'
+        subject = f'[CloudCIX] Your VM "{name}" has been updated successfully!'
         EmailNotifier._compose_email(email, subject, body)
 
     @staticmethod
@@ -178,6 +170,7 @@ class EmailNotifier:
         Given a VM's details, render and send a update failure email
         """
         logger = logging.getLogger('robot.email_notifier.update_failure')
+        name = vm_data["name"]
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -186,7 +179,7 @@ class EmailNotifier:
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/update_failure.j2').render(**vm_data)
         # Format the subject
-        subject = f'[CloudCIX] {EmailNotifier.update_failure_subject.format(vm_data["name"])}'
+        subject = f'[CloudCIX] Your VM "{name}" failed to update'
         EmailNotifier._compose_email(email, subject, body)
 
     # ############################################################## #
