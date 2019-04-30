@@ -32,4 +32,9 @@ class WindowsMixin:
         # Check for and clean any error
         if len(response.std_err):
             response.std_err = session._clean_error_msg(response.std_err.decode('utf-8'))
+        # Decode out and err
+        if hasattr(response.std_out, 'decode'):
+            response.std_out = response.std_out.decode()
+        if hasattr(response.std_err, 'decode'):
+            response.std_err = response.std_err.decode()
         return response
