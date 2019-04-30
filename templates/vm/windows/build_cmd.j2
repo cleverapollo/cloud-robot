@@ -1,3 +1,9 @@
-New-PSDrive -Name Z -Root {{ freenas_url }} -PSProvider FileSystem -Persist
-Z:\HyperV\scripts\VMCreator.ps1 -VMName {{ vm_identifier }} -Gen 1 -OSName {{ image_filename }} -ProcessorCount {{ cpu }} -Dynamic 1 -Ram {{ ram }} -Hdd {{ hdd }} -Ssd {{ ssd }} -MulDrive {{ drives }} -VlanId {{ vlan }} -Verbose
-Remove-PSDrive -Name Z
+try {
+  New-PSDrive -Name Z -Root {{ freenas_url }} -PSProvider FileSystem -Persist;
+  Test-Path -Path Z:\HyperV\
+  & Z:\HyperV\scripts\VMCreator.ps1 -VMName {{ vm_identifier }} -Gen 1 -OSName {{ image_filename }} -ProcessorCount {{ cpu }} -Dynamic 1 -Ram {{ ram }} -Hdd {{ hdd }} -Ssd {{ ssd }} -MulDrive {{ drives }} -VlanId {{ vlan }} -Verbose;
+} catch {
+  Write-Error "VM Build Failed. $_.Exception.Message";
+} finally {
+  Remove-PSDrive -Name Z;
+}

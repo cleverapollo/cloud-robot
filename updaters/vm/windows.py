@@ -106,11 +106,11 @@ class Windows(WindowsMixin):
             )
         else:
             # Check the stdout and stderr for messages
-            if response.status_code == 0:
+            if response.std_out:
                 msg = response.std_out.strip()
                 Windows.logger.debug(f'VM update command for VM #{vm_id} generated stdout\n{msg}')
-                updated = 'VM Successfully Created' in msg
-            else:
+                updated = 'VM Successfully Shutdown Updated and Rebooted' in msg
+            if response.std_err:
                 msg = response.std_err.strip()
                 Windows.logger.warning(f'VM update command for VM #{vm_id} generated stderr\n{msg}')
         finally:
