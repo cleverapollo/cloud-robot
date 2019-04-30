@@ -8,10 +8,10 @@ import sys
 import time
 from typing import Union
 # lib
+from cloudcix.api import IAAS
 # local
 import dispatchers
 import metrics
-import ro
 import settings
 import utils
 
@@ -131,7 +131,7 @@ class Robot:
         Check the API for VRFs to build, and asyncronously build them
         """
         # Retrive the VRFs from the API
-        to_build = ro.service_entity_list('IAAS', 'vrf', params=BUILD_FILTERS)
+        to_build = utils.api_list(IAAS.vrf, BUILD_FILTERS)
         if len(to_build) == 0:
             self.logger.debug('No VRFs found in the "Requested" state')
             return
@@ -143,7 +143,7 @@ class Robot:
         Check the API for VMs to build, and asyncronously build them
         """
         # Retrive the VMs from the API
-        to_build = ro.service_entity_list('IAAS', 'vm', params=BUILD_FILTERS)
+        to_build = utils.api_list(IAAS.vm, BUILD_FILTERS)
         if len(to_build) == 0:
             self.logger.debug('No VMs found in the "Requested" state')
             return
@@ -159,7 +159,7 @@ class Robot:
         Check the API for VRFs to quiesce, and asyncronously quiesce them
         """
         # Retrive the VRFs from the API
-        to_quiesce = ro.service_entity_list('IAAS', 'vrf', params=QUIESCE_FILTERS)
+        to_quiesce = utils.api_list(IAAS.vrf, QUIESCE_FILTERS)
         if len(to_quiesce) == 0:
             self.logger.debug('No VRFs found in the "Quiesce" state')
             return
@@ -171,7 +171,7 @@ class Robot:
         Check the API for VMs to quiesce, and asyncronously quiesce them
         """
         # Retrive the VMs from the API
-        to_quiesce = ro.service_entity_list('IAAS', 'vm', params=QUIESCE_FILTERS)
+        to_quiesce = utils.api_list(IAAS.vm, QUIESCE_FILTERS)
         if len(to_quiesce) == 0:
             self.logger.debug('No VMs found in the "Quiesce" state')
             return
@@ -187,7 +187,7 @@ class Robot:
         Check the API for VRFs to restart, and asyncronously restart them
         """
         # Retrive the VRFs from the API
-        to_restart = ro.service_entity_list('IAAS', 'vrf', params=RESTART_FILTERS)
+        to_restart = utils.api_list(IAAS.vrf, RESTART_FILTERS)
         if len(to_restart) == 0:
             self.logger.debug('No VRFs found in the "Restart" state')
             return
@@ -199,7 +199,7 @@ class Robot:
         Check the API for VMs to restart, and asyncronously restart them
         """
         # Retrive the VMs from the API
-        to_restart = ro.service_entity_list('IAAS', 'vm', params=RESTART_FILTERS)
+        to_restart = utils.api_list(IAAS.vm, RESTART_FILTERS)
         if len(to_restart) == 0:
             self.logger.debug('No VMs found in the "Restart" state')
             return
@@ -215,7 +215,7 @@ class Robot:
         Check the API for VRFs to scrub, and asyncronously scrub them
         """
         # Retrive the VRFs from the API
-        to_scrub = ro.service_entity_list('IAAS', 'vrf', params=SCRUB_FILTERS)
+        to_scrub = utils.api_list(IAAS.vrf, SCRUB_FILTERS)
         if len(to_scrub) == 0:
             self.logger.debug('No VRFs found in the "Scrub" state')
             return
@@ -227,7 +227,7 @@ class Robot:
         Check the API for VMs to scrub, and asyncronously scrub them
         """
         # Retrive the VMs from the API
-        to_scrub = ro.service_entity_list('IAAS', 'vm', params=SCRUB_FILTERS)
+        to_scrub = utils.api_list(IAAS.vm, SCRUB_FILTERS)
         if len(to_scrub) == 0:
             self.logger.debug('No VMs found in the "Scrub" state')
             return
@@ -243,7 +243,7 @@ class Robot:
         Check the API for VRFs to update, and asyncronously update them
         """
         # Retrive the VRFs from the API
-        to_update = ro.service_entity_list('IAAS', 'vrf', params=UPDATE_FILTERS)
+        to_update = utils.api_list(IAAS.vrf, UPDATE_FILTERS)
         if len(to_update) == 0:
             self.logger.debug('No VRFs found in the "Update" state')
             return
@@ -255,7 +255,7 @@ class Robot:
         Check the API for VMs to update, and asyncronously update them
         """
         # Retrive the VMs from the API
-        to_update = ro.service_entity_list('IAAS', 'vm', params=UPDATE_FILTERS)
+        to_update = utils.api_list(IAAS.vm, UPDATE_FILTERS)
         if len(to_update) == 0:
             self.logger.debug('No VMs found in the "Update" state')
             return

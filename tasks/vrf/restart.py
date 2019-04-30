@@ -6,7 +6,7 @@ from cloudcix.api import IAAS
 import metrics
 import state
 import utils
-from restarts import Vrf as VrfRestarter
+from restarters import Vrf as VrfRestarter
 from celery_app import app
 from cloudcix_token import Token
 

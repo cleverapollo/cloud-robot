@@ -61,6 +61,9 @@ def setup_root_logger():
     # At exit, flush all logs to logstash
     atexit.register(logstash_handler.flush)
 
+    # Hide other logs
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
+
 
 def get_current_git_sha() -> str:
     """
