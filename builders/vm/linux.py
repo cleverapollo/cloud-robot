@@ -15,7 +15,7 @@ from time import sleep
 from typing import Any, Deque, Dict, Optional, Tuple
 # lib
 from cloudcix.api import IAAS
-from netaddr import IPAddress
+from netaddr import IPAddress, IPNetwork
 from paramiko import AutoAddPolicy, SSHClient, SSHException
 # local
 import settings
@@ -70,7 +70,7 @@ class Linux(LinuxMixin):
         'keyboard',
         # the language of the vm
         'language',
-        # the subnet mask in integer form (/24)
+        # the subnet mask in ip address form (255.255.255.0)
         'netmask',
         # the path on the host where the network drive is found
         'network_drive_path',
@@ -231,7 +231,8 @@ class Linux(LinuxMixin):
             subnet = utils.api_read(IAAS.subnet, ip_address['idSubnet'])
             if subnet is None:
                 return None
-            data['gateway'], data['netmask'] = subnet['addressRange'].split('/')
+            net = IPNetwork(subnet['addressRange'])
+            data['gateway'], data['netmask'] = str(net.ip), str(net.netmask)
             data['vlan'] = subnet['vLAN']
 
         # Add locale data to the VM
