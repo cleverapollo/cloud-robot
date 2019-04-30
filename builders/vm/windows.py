@@ -63,7 +63,7 @@ class Windows(WindowsMixin):
         # the language of the vm
         'language',
         # the subnet mask in integer form (/24)
-        'netmask',
+        'netmask_int',
         # the amount of RAM in the VM
         'ram',
         # the ssd primary drive of the VM 'id:size'
@@ -201,7 +201,7 @@ class Windows(WindowsMixin):
             subnet = utils.api_read(IAAS.subnet, ip_address['idSubnet'])
             if subnet is None:
                 return None
-            data['gateway'], data['netmask'] = subnet['addressRange'].split('/')
+            data['gateway'], data['netmask_int'] = subnet['addressRange'].split('/')
             data['vlan'] = subnet['vLAN']
 
         # Add locale data to the VM

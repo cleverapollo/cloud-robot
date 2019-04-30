@@ -9,7 +9,7 @@ try {
   $Msvm_GuestNetworkAdapterConfiguration = ($Msvm_SyntheticEthernetPortSettingData.GetRelated("Msvm_GuestNetworkAdapterConfiguration", "Msvm_SettingDataComponent", $null, $null, "PartComponent", "GroupComponent", $false, $null) | % {$_})
   $Msvm_GuestNetworkAdapterConfiguration.DHCPEnabled = $false
   $Msvm_GuestNetworkAdapterConfiguration.IPAddresses = @("{{ ip_address }}")
-  $Msvm_GuestNetworkAdapterConfiguration.Subnets = @("{{ netmask_ip }}")
+  $Msvm_GuestNetworkAdapterConfiguration.Subnets = @("{{ netmask }}")
   $Msvm_GuestNetworkAdapterConfiguration.DefaultGateways = @("{{ gateway }}")
   $Msvm_GuestNetworkAdapterConfiguration.DNSServers = @("{{ dns }}")
   $Msvm_VirtualSystemManagementService.SetGuestNetworkAdapterConfiguration($Msvm_ComputerSystem.Path, $Msvm_GuestNetworkAdapterConfiguration.GetText(1))

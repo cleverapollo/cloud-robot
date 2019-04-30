@@ -48,7 +48,7 @@ class Windows(WindowsMixin):
         # the ip address of the vm in its subnet
         'ip_address',
         # the subnet mask in address form (255.255.255.0)
-        'netmask_ip',
+        'netmask',
         # the amount of RAM in the VM
         'ram',
         # the ssd primary drive of the VM 'id:size'
@@ -183,7 +183,7 @@ class Windows(WindowsMixin):
             if subnet is None:
                 return None
             data['gateway'], _ = subnet['addressRange'].split('/')
-            data['netmask_ip'] = IPNetwork(subnet['addressRange']).netmask
+            data['netmask'] = IPNetwork(subnet['addressRange']).netmask
             data['vlan'] = subnet['vLAN']
 
         # Get the ip address of the host
