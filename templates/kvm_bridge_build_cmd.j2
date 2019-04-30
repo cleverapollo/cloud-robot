@@ -1,3 +1,0 @@
-echo {{ SUDO_PASS }} | sudo -S virsh iface-define --file {{ drive_path }}/bridge_xmls/br{{ vlan }}.xml
-echo {{ SUDO_PASS }} | sudo -S ifup enp8s0f0.{{ vlan }}
-echo {{ SUDO_PASS }} | sudo -S virsh iface-start br{{ vlan }}

@@ -1,0 +1,53 @@
+try {
+  $VMName = '{{ vm_identifier }}'
+
+  {# 0. Update the IPAddress if any #}
+  $Msvm_VirtualSystemManagementService = Get-WmiObject -Namespace root\virtualization\v2 -Class Msvm_VirtualSystemManagementService
+  $Msvm_ComputerSystem = Get-WmiObject -Namespace root\virtualization\v2 -Class Msvm_ComputerSystem -Filter "ElementName='$VMName'"
+  $Msvm_VirtualSystemSettingData = ($Msvm_ComputerSystem.GetRelated("Msvm_VirtualSystemSettingData", "Msvm_SettingsDefineState", $null, $null, "SettingData", "ManagedElement", $false, $null) | % {$_})
+  $Msvm_SyntheticEthernetPortSettingData = $Msvm_VirtualSystemSettingData.GetRelated("Msvm_SyntheticEthernetPortSettingData")
+  $Msvm_GuestNetworkAdapterConfiguration = ($Msvm_SyntheticEthernetPortSettingData.GetRelated("Msvm_GuestNetworkAdapterConfiguration", "Msvm_SettingDataComponent", $null, $null, "PartComponent", "GroupComponent", $false, $null) | % {$_})
+  $Msvm_GuestNetworkAdapterConfiguration.DHCPEnabled = $false
+  $Msvm_GuestNetworkAdapterConfiguration.IPAddresses = @("{{ ip_address }}")
+  $Msvm_GuestNetworkAdapterConfiguration.Subnets = @("{{ netmask_ip }}")
+  $Msvm_GuestNetworkAdapterConfiguration.DefaultGateways = @("{{ gateway }}")
+  $Msvm_GuestNetworkAdapterConfiguration.DNSServers = @("{{ dns }}")
+  $Msvm_VirtualSystemManagementService.SetGuestNetworkAdapterConfiguration($Msvm_ComputerSystem.Path, $Msvm_GuestNetworkAdapterConfiguration.GetText(1))
+
+  {# 1. Shutdown the VM first #}
+  Stop-VM -Name $VMName
+
+  {# 2. Updates the processor/cpu count and Ram sizes even if changed or not #}
+  Set-VM -Name $VMName -ProcessorCount {{ cpu }} -StaticMemory -MemoryStartupBytes {{ ram }}
+
+  {# 3. Set the vLan #}
+  Set-VMNetworkAdapterVlan -VMName {{ vm_identifier }} -Access -VlanId {{ vlan }}
+
+  {# 4. Update Drive Sizes #}
+  {# 4a. Primary Drive #}
+  {# considering new_size > old_size always #}
+  {% if hdd and int(hdd.split(':')[1]) > int(hdd.split(':')[2]) %}
+    Resize-VHD -Path D:\HyperV\$VMName\{$VMName}_HDD_{{ hdd.split(':')[0] }}.vhdx -SizeBytes {{ hdd.split(':')[1] }}*1GB
+  {% elif ssd and int(ssd.split(':')[1]) > int(ssd.split(':')[2]) %}
+    Resize-VHD -Path D:\HyperV\$VMName\{$VMName}_SSD_{{ ssd.split(':')[0] }}.vhdx -SizeBytes {{ ssd.split(':')[1] }}*1GB
+  {% endif %}
+
+  {# 4b. Extra Drives #}
+  {% for drive in drives %}
+    {% if int(drive['new_size']) > int(drive['old_size']) %}
+      Resize-VHD -Path D:\HyperV\$VMName\{$VMName}_{{ drive['type'] }}_{{ drive['id'] }}.vhdx -SizeBytes {{ drive['new_size'] }}*1GB
+    {% elif int(drive['new_size']) == 0 %}
+      Remove-Item -Recurse D:\HyperV\$VMName\{$VMName}_{{ drive['type'] }}_{{ drive['id'] }}.vhdx
+    {% elif drive['old_size'] is in [0, None, ''] %}
+      New-VHD -Path D:\HyperV\$VMName\{$VMName}_{{ drive['type'] }}_{{ drive['id'] }}.vhdx -SizeBytes {{ drive['new_size'] }}*1GB -Dynamic
+      Add-VMHardDiskDrive -VMName $VMName -Path D:\HyperV\$VMName\{$VMName}_{{ drive['type'] }}_{{ drive['id'] }}.vhdx
+    {% endif %}
+  {% endfor %}
+
+  {# 5. Start the VM again. #}
+  Start-VM -Name $VMName
+
+  Write-Host "VM Successfully Shutdown Updated and Rebooted."
+} catch {
+  Write-Error "VM failed to update."
+}

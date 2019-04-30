@@ -1,0 +1,16 @@
+"""
+Constants for the different states in the CloudCIX system
+"""
+
+IGNORE = 0
+REQUESTED = 1
+BUILDING = 2
+UNRESOURCED = 3
+RUNNING = 4
+QUIESCING = 5
+QUIESCED = 6
+RESTARTING = 7
+SCRUBBING = 8
+DELETED = 9
+UPDATE = 10
+UPDATING = 11

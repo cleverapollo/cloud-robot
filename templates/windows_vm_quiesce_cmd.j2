@@ -1,8 +1,0 @@
-{#  Restart the VM back. #}
-try {
-  $VMName = '{{ vm_identifier }}'
-  Stop-VM -Name $VMName
-  Write-Host "$VMName Successfully Quiesced."
-} catch {
-  Write-Error "VM failed to quiesce."
-}

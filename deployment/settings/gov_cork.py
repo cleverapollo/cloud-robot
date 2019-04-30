@@ -10,17 +10,17 @@ __all__ = [
     'CLOUDCIX_EMAIL_HOST',
     'CLOUDCIX_EMAIL_PASSWORD',
     'CLOUDCIX_EMAIL_USERNAME',
+    'FREENAS_URL',
+    'HYPERV_HOST_NETWORK_DRIVE_PATH',
+    'HYPERV_ROBOT_NETWORK_DRIVE_PATH',
+    'KVM_HOST_NETWORK_DRIVE_PATH',
+    'KVM_ROBOT_NETWORK_DRIVE_PATH',
     'LOGSTASH_IP',
     'NETWORK_PASSWORD',
+    'OS_TEMPLATE_MAP',
     'REGION_NAME',
     'ROBOT_ENV',
     'VRFS_ENABLED',
-    'SERVER_KVM_DRIVE_PATH',
-    'SERVER_HYV_DRIVE_PATH',
-    'ROBOT_KVM_DRIVE_PATH',
-    'ROBOT_HYV_DRIVE_PATH',
-    'FREENAS_URL',
-    'OS_TEMPLATE_MAP',
 ]
 
 # Gov Robot Settings
@@ -71,11 +71,11 @@ VRFS_ENABLED = False
 
 # Configuration settings
 # KVM path
-ROBOT_KVM_DRIVE_PATH = '/mnt/images/KVM'
-SERVER_KVM_DRIVE_PATH = '/var/lib/libvirt/ISOs/KVM'
+KVM_ROBOT_NETWORK_DRIVE_PATH = '/mnt/images/KVM'
+KVM_HOST_NETWORK_DRIVE_PATH = '/var/lib/libvirt/ISOs/KVM'
 # HyperV path
-ROBOT_HYV_DRIVE_PATH = '/mnt/images/HyperV'
-SERVER_HYV_DRIVE_PATH = '/var/lib/libvirt/ISOs/HyperV'
+HYPERV_ROBOT_NETWORK_DRIVE_PATH = '/mnt/images/HyperV'
+HYPERV_HOST_NETWORK_DRIVE_PATH = '/var/lib/libvirt/ISOs/HyperV'
 # FreeNas mount url
 FREENAS_URL = f'\\\\{REGION_NAME}-robothost.cloudcix.com\\var\\lib\\libvirt\\robot-drive'
 # Images dict
@@ -90,6 +90,6 @@ OS_TEMPLATE_MAP = {
         12: 'ubuntu',
     },
     'Windows': {
-        3: 'windows2016',
+        3: '2016',
     },
 }

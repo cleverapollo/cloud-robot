@@ -1,0 +1,61 @@
+{# 1. Shutdown the VM if it isn't already #}
+echo {{ host_sudo_passwd }} | sudo -S virsh shutdown {{ vm_identifier }}
+
+{# 2. Update the RAM #}
+{# 2a. Maximum #}
+echo {{ host_sudo_passwd }} | sudo -S virsh setmaxmem {{ vm_identifier }} {{ ram }}M --config
+{# 2b. Current #}
+echo {{ host_sudo_passwd }} | sudo -S virsh setmem {{ vm_identifier }} {{ ram }}M --config
+
+{# 3. Update the vCPU values #}
+{# 3a. Maximum #}
+echo {{ host_sudo_passwd }} | sudo -S virsh setvcpus {{ vm_identifier }} --maximum {{ cpu }} --config
+{# 3b. Current #}
+echo {{ host_sudo_passwd }} | sudo -S virsh setvcpus {{ vm_identifier }} --count {{ cpu }} --config
+
+{# 4. Update IP Configurations #}
+{# TODO #}
+
+{# 5. Upgrade Drive Sizes #}
+{# 5a. Primary Drive #}
+{# considering new_size > old_size always #}
+{% if hdd and int(hdd.split(':')[1]) != int(hdd.split(':')[2]) %}
+{% set diff = int(hdd.split(':')[1]) - int(hdd.split(':')[2]) %}
+echo {{ host_sudo_passwd }} | sudo -S qemu-img resize /var/lib/libvirt/images/{{ vm_identifier }}_HDD_{{ hdd.split(':')[0] }}.img +{{ diff }}G
+{% elif ssd and int(ssd.split(':')[1]) != int(ssd.split(':')[2]) %}
+{% set diff = int(ssd.split(':')[1]) - int(ssd.split(':')[2]) %}
+echo {{ host_sudo_passwd }} | sudo -S qemu-img resize /var/lib/libvirt/images/{{ vm_identifier }}_SSD_{{ ssd.split(':')[0] }}.img +{{ diff }}G
+{% endif %}
+
+{# 5b. Extra Drives #}
+{% set number = 0 %}
+{% for drive in drives %}
+{% if drive['new_size'] > drive['old_size'] %}
+{# Expand the Drive #}
+{% set diff = drive['new_size'] - drive['old_size'] %}
+echo {{ host_sudo_passwd }} | sudo -S qemu-img resize /var/lib/libvirt/images/{{ vm_identifier }}_{{ drive['type'] }}_{{ drive['id'] }}.img +{{ diff }}G
+{% elif int(drive['new_size']) == 0 %}
+{# Delete the Drive #}
+echo {{ host_sudo_passwd }} | sudo -S rm -rf /var/lib/libvirt/images/{{ vm_identifier }}_{{ drive["type"] }}_{{ drive["id"] }}.img
+{% elif drive['old_size'] is in [0, None, ''] %}
+{# Create a new Drive #}
+{% set number += 1 %}
+echo {{ host_sudo_passwd }} | sudo -S qemu-img create -f qcow2 /var/lib/libvirt/images/{{ vm_identifier }}_{{ drive["type"] }}_{{ drive["id"] }}.img {{ drive["size"] }}G
+{% endif %}
+{% endfor %}
+
+{# 5c. Generate correct names for the new drives to mount them to the VM #}
+{% for i in range(number) %}
+{% for drive in drives %}
+{% if drive['old_size'] is in [0, None, ''] %}
+{% set alphabet = chr(96 + (len(drives) - number) + (i + 1)) %}
+echo {{ host_sudo_passwd }} | sudo -S virsh attach-disk {{ vm_identifier }} \
+--source /var/lib/libvirt/images/{{ vm_identifier }}_{{ drive["type"] }}_{{ drive["id"] }}.img \
+--target vd{{ alphabet }}
+{% break %}
+{% endif %}
+{% endfor %}
+{% endfor %}
+
+{# 6. Restart the VM #}
+echo {{ host_sudo_passwd }} | sudo -S virsh start {{ vm_identifier }}

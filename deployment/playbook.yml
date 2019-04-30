@@ -7,41 +7,50 @@
       shell: "grep influx.cloudcix.com /etc/hosts"
       register: host_presence
       ignore_errors: yes
+
     - name: Add influx to the hosts file if it is not present
       shell: "printf '\n2a02:2078:0:cb00::f11 influx.cloudcix.com\n10.1.1.6 influx.cloudcix.com\n' >> /etc/hosts"
       args:
         warn: no
       when: host_presence.rc != 0
+
     - name: Check for presence of Docker
       shell: "docker --version"
       register: docker_presence
       ignore_errors: yes
+
     - name: Ensure Docker is installed
       shell: "curl -sSL https://get.docker.com/ | sh"
       args:
         warn: no
       when: docker_presence.rc != 0
+
     - name: Ensure pip3 is installed
       apt:
         update_cache: yes
         name: python3-pip
+
     - name: Ensure docker is installed so ansible can control docker
       pip:
         name: docker
+
     - name: Login to the Docker registry
       docker_login:
         registry: gitlab.cloudcix.com:5005
         username: cloudadmin
         password: C1xacc355
+
     - name: Delete previous images
       shell: "docker rmi $(docker images -q)"
       ignore_errors: yes
+
     - name: Gracefully shut down last container
       docker_container:
         name: "robot-{{ env }}"
         state: stopped
         stop_timeout: 3600
       ignore_errors: yes
+
     - name: Deploy latest Robot image for {{ env }} region
       docker_container:
         name: "robot-{{ env }}"
