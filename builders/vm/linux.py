@@ -153,10 +153,7 @@ class Linux(LinuxMixin):
                 Linux.logger.debug(f'VM build command for VM #{vm_id} generated stdout.\n{stdout}')
             if stderr:
                 Linux.logger.warning(f'VM build command for VM #{vm_id} generated stderr.\n{stderr}')
-            built = 'Creating domain' in stdout
-            # Sleep if the VM has built to ensure that by the time we respond the VM is up and running
-            if built:
-                sleep(30)
+            built = 'Domain creation completed' in stdout
         except SSHException:
             Linux.logger.error(
                 f'Exception occurred while building VM #{vm_id} in {host_ip}',
