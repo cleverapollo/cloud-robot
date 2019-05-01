@@ -49,10 +49,11 @@
 			<Interfaces>
 				<Interface wcm:action="add">
 					<DNSServerSearchOrder>
-                        {% for dns_server in dns %}
-                        <IpAddress wcm:action="add" wcm:keyValue="{{ loop.index }}">{{ dns_server }}</IpAddress>
-                        {% endfor %}
-					</DNSServerSearchOrder>
+			{# Weird indentation here to have proper indentation in the output. Don't know why we have to do it like this but we will until we figure it out #}
+			{%- for dns_server in dns %}
+			<IpAddress wcm:action="add" wcm:keyValue="{{ loop.index }}">{{ dns_server }}</IpAddress>
+			{% endfor %}
+		</DNSServerSearchOrder>
 					<Identifier>Ethernet</Identifier>
 					<DisableDynamicUpdate>false</DisableDynamicUpdate>
 					<EnableAdapterDomainNameRegistration>true</EnableAdapterDomainNameRegistration>
@@ -75,30 +76,24 @@
 				</AdministratorPassword>
 			</UserAccounts>
 			<AutoLogon>
-			    <Password>
-			        <Value>{{ admin_password }}</Value>
-			        <PlainText>true</PlainText>
-			    </Password>
-			    <Username>Administrator</Username>
-			    <LogonCount>1</LogonCount>
-			    <Enabled>true</Enabled>
+				<Password>
+					<Value>{{ admin_password }}</Value>
+					<PlainText>true</PlainText>
+				</Password>
+				<Username>Administrator</Username>
+				<LogonCount>1</LogonCount>
+				<Enabled>true</Enabled>
 			</AutoLogon>
 			<TimeZone>{{ timezone }}</TimeZone>
 			<FirstLogonCommands>
-			    <SynchronousCommand wcm:action="add">
-				    <Order>1</Order>
-				    <RequiresUserInput>false</RequiresUserInput>
-					<Description>Enable ICMPv4 Incoming Ping Request</Description>
-					<CommandLine>Netsh advfirewall firewall add rule name="Allow incoming ping requests IPv4" dir=in action=allow protocol=icmpv4</CommandLine>
-				</SynchronousCommand>
-			    <SynchronousCommand wcm:action="add">
-				    <Order>2</Order>
+				<SynchronousCommand wcm:action="add">
+					<Order>1</Order>
 					<RequiresUserInput>false</RequiresUserInput>
 					<Description>Enable ICMPv4 Incoming Ping Request</Description>
 					<CommandLine>Netsh advfirewall firewall add rule name="Allow incoming ping requests IPv4" dir=in action=allow protocol=icmpv4</CommandLine>
 				</SynchronousCommand>
-			    <SynchronousCommand wcm:action="add">
-				    <Order>2</Order>
+				<SynchronousCommand wcm:action="add">
+					<Order>2</Order>
 					<RequiresUserInput>false</RequiresUserInput>
 					<Description>Enable Remote Desktop Firewall</Description>
 					<CommandLine>Netsh advfirewall firewall set rule group="remote desktop" new enable=yes</CommandLine>

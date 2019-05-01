@@ -206,7 +206,7 @@ class Windows(WindowsMixin):
 
         # Add locale data to the VM
         data['language'] = 'en_IE'
-        data['timezone'] = 'Europe/Dublin'
+        data['timezone'] = 'GMT Standard Time'
 
         # Get the ip address of the host
         for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer']):
