@@ -95,10 +95,14 @@ def project_delete(project_id: int):
     active_vms = len(api_list(IAAS.vm, {'project': project_id}))
     if active_vms == 0 and active_vrfs == 0:
         logger.debug(f'Project #{project_id} is empty. Sending delete request.')
-        if IAAS.project.delete(token=Token.get_instance().token, pk=project_id).status_code != 204:
+        response = IAAS.project.delete(token=Token.get_instance().token, pk=project_id)
+        if response.status_code != 204:
             logger.info(f'Successfully deleted Project #{project_id} from the CMDB')
         else:
-            logger.error(f'Project #{project_id} API deletion failed. Check log for details')
+            logger.error(
+                f'HTTP {response.status_code} error occurred when attempting to delete Project #{project_id};\n'
+                f'Response Text: {response.content.decode()}',
+            )
     else:
         logger.debug(f'Cannot delete Project #{project_id}. {active_vrfs} VRFs and {active_vms} VMs remain active.')
 
