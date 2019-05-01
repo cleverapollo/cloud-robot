@@ -80,7 +80,7 @@ def flush_logstash():
     """
     helper method to flush the logstash handler
     """
-    for handler in logging.getLogger().handlers:
+    for handler in logging.getLogger('robot').handlers:
         if hasattr(handler, 'flush'):
             handler.flush()
 
@@ -89,7 +89,7 @@ def project_delete(project_id: int):
     """
     Check if the specified project is ready to be deleted from the API, and delete it if it is
     """
-    logger = logging.getLogger('utils.project_delete')
+    logger = logging.getLogger('robot.utils.project_delete')
     # Check that list requests for VRF and VM both are empty, and if so, delete the project
     active_vrfs = len(api_list(IAAS.vrf, {'project': project_id}))
     active_vms = len(api_list(IAAS.vm, {'project': project_id}))
@@ -117,7 +117,7 @@ def api_list(client: Client, params: Dict[str, Any], **kwargs) -> List[Any]:
     :param kwargs: Any extra kwargs to pass to the request (ie spans)
     :returns: A list of instances of the client, if the request is valid, else an empty list
     """
-    logger = logging.getLogger('utils.api_list')
+    logger = logging.getLogger('robot.utils.api_list')
     client_name = f'{client.application}.{client.service_uri}'
     logger.debug(
         f'Attempting to retrieve a list of {client_name} records with the following filters: {params}',
@@ -169,7 +169,7 @@ def api_read(client: Client, pk: int, **kwargs) -> Optional[Dict[str, Any]]:
     :param kwargs: Any extra kwargs to pass to the request (ie spans)
     :returns: The read instance, or None if an error occurs
     """
-    logger = logging.getLogger('utils.api_read')
+    logger = logging.getLogger('robot.utils.api_read')
     client_name = f'{client.application}.{client.service_uri}'
     logger.debug(f'Attempting to read {client_name} #{pk}')
     response = client.read(
