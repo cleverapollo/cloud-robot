@@ -70,7 +70,7 @@ class Vrf(VrfMixin):
         )
 
         # Deploy the generated setconf to the router
-        return Vrf.deploy(conf, management_ip)
+        return Vrf.deploy(conf, management_ip, True)
 
     @staticmethod
     def _get_template_data(vrf_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:

@@ -26,11 +26,12 @@ class VrfMixin:
     logger: logging.Logger
 
     @classmethod
-    def deploy(cls, setconf: str, management_ip: str) -> bool:
+    def deploy(cls, setconf: str, management_ip: str, scrub: bool = False) -> bool:
         """
         Deploy the generated configuration to the Router and return whether or not the deployment succeeded
         :param setconf: The configuration for the virtual router
         :param management_ip: The ip of the physical router to deploy to
+        :param scrub: Flag stating whether or not we are scrubbing the Router. Used to ignore statement not found issues
         :return: A flag stating whether or not the deployment was successful
         """
         cls.logger.debug(f'Attempting to connect to Router {management_ip} to deploy')
@@ -69,7 +70,11 @@ class VrfMixin:
             f'All commands successfully loaded onto Router {management_ip}, now attempting to commit changes',
         )
         try:
-            config.commit(comment=f'Loaded by robot at {asctime()}.')
+            commit_msg = f'Loaded by robot at {asctime()}.'
+            if not scrub:
+                config.commit(comment=commit_msg)
+            else:
+                config.commit(comment=commit_msg, ignore_warnings=['statement not found'])
         except CommitError:
             cls.logger.error(f'Unable to commit changes onto Router {management_ip}', exc_info=True)
             # Unlock configuration before exiting
