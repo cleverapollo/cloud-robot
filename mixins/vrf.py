@@ -53,7 +53,7 @@ class VrfMixin:
         cls.logger.debug(f'Successfully locked config in Router {management_ip}, now attempting to apply config')
         try:
             for cmd in setconf.split('\n'):
-                config.load(cmd, format='set', merge=True)
+                config.load(cmd, format='set', merge=True, ignore_warning=scrub)
         except ConfigLoadError:
             cls.logger.error(f'Unable to load configuration changes onto Router {management_ip}', exc_info=True)
             # Try to unlock after failing to load
@@ -74,7 +74,7 @@ class VrfMixin:
             if not scrub:
                 config.commit(comment=commit_msg)
             else:
-                config.commit(comment=commit_msg, ignore_warnings=['statement not found'])
+                config.commit(comment=commit_msg, ignore_warning=['statement not found'])
         except CommitError:
             cls.logger.error(f'Unable to commit changes onto Router {management_ip}', exc_info=True)
             # Unlock configuration before exiting
