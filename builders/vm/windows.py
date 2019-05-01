@@ -42,7 +42,7 @@ class Windows(WindowsMixin):
         'admin_password',
         # the number of cpus in the vm
         'cpu',
-        # the dns servers for the vm
+        # the dns servers for the vm (in list form, not string form)
         'dns',
         # the drives in the vm
         'drives',
@@ -161,7 +161,7 @@ class Windows(WindowsMixin):
         # RAM is needed in MB for the builder but we take it in in GB
         data['ram'] = vm_data['ram'] * 1000
         data['cpu'] = vm_data['cpu']
-        data['dns'] = vm_data['dns']
+        data['dns'] = [server.strip() for server in vm_data['dns'].split(',')]
 
         # Generate encrypted passwords
         data['admin_password'] = Windows._password_generator(size=8)
