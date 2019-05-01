@@ -186,13 +186,7 @@ class Linux(LinuxMixin):
                 data['host_ip'] = mac['ip']
                 break
 
-        # Determine whether or not we need to delete the bridge by seeing if this is the last VM in its Subnet
-        # aka there are no other VMs in the API with the same idSubnet
-        params = {'project': vm_data['idProject'], 'exclude__idVM': vm_id}
-        subnet_vms = filter(lambda api_vm: api_vm['idSubnet'] == vm_data['idSubnet'], utils.api_list(IAAS.vm, params))
-        # Since we exclude the id of the VM being deleted, just check that the filter is empty
-        data['delete_bridge'] = any(subnet_vms)
-        Linux.logger.debug(f'Delete bridge flag is {data["delete_bridge"]} for VM #{vm_id}')
+        data['delete_bridge'] = Linux._determine_bridge_deletion(vm_data)
         return data
 
     @staticmethod
@@ -232,3 +226,42 @@ class Linux(LinuxMixin):
                 f'Exception occurred while attempting to delete {path} from the network drive for VM #{vm_id}',
                 exc_info=True,
             )
+
+    @staticmethod
+    def _determine_bridge_deletion(vm_data: Dict[str, Any]) -> bool:
+        """
+        Given a VM, determine if we need to delete it's bridge.
+        We need to delete the bridge if the VM is the last Linux VM left in the Subnet
+
+        Steps:
+            - Get the private IP Address of the VM being deleted
+            - Read the other private IP Addresses (fip_id__isnull=False) in the same Subnet (excluding this VM's id)
+            - List all the VMs pointed to by the idVM fields of the returned (if any)
+            - For each VM, check if it is Windows or Linux
+            - If we find a Linux one, return False
+            - If we make it through the entire loop, return True
+        """
+        vm_id = vm_data['idVM']
+        # Get the id of the VM's private IP Address
+        priv_ip = utils.api_list(IAAS.ipaddress, {'vm': vm_id, 'fip_id__isnull': False})[0]
+
+        # Find the other private ip addresses in the subnet
+        params = {
+            'fip_id__isnull': False,
+            'exclude__idIPAddress': priv_ip['idIPAddress'],
+            'subnet__idSubnet': priv_ip['idSubnet'],
+        }
+        subnet_ips = utils.api_list(IAAS.ipaddress, params)
+
+        # List the other VMs in the subnet
+        subnet_vm_ids = list(map(lambda ip: ip['idVM'], subnet_ips))
+        subnet_vms = utils.api_list(IAAS.vm, {'idVM__in': subnet_vm_ids})
+
+        # Get the images from the VMs and check for linux hypervisors
+        image_ids = list(set(map(lambda vm: vm['idImage'], subnet_vms)))
+        images = utils.api_list(IAAS.image, {'idImage__in': image_ids})
+
+        # Check the list of images for any linux hypervisor
+        # any returns True if any item in the iterable is True
+        # make an iterable that checks if the image's idHypervisor is 2
+        return any(image['idHypervisor'] == 2 for image in images)
