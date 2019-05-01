@@ -50,7 +50,7 @@
 				<Interface wcm:action="add">
 					<DNSServerSearchOrder>
                         {% for dns_server in dns %}
-                        <IpAddress wcm:action="add" wcm:keyValue="{{ loop.index }}">{{ dns }}</IpAddress>
+                        <IpAddress wcm:action="add" wcm:keyValue="{{ loop.index }}">{{ dns_server }}</IpAddress>
                         {% endfor %}
 					</DNSServerSearchOrder>
 					<Identifier>Ethernet</Identifier>
