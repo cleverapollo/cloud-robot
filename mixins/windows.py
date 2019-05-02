@@ -6,6 +6,7 @@ methods included;
 """
 # stdlib
 import logging
+from base64 import b64encode
 # lib
 from jaeger_client import Span
 from winrm import Response, Session
@@ -25,9 +26,13 @@ class WindowsMixin:
         """
         cls.logger.debug(f'Deploying command to Windows Host {management_ip}\n{cmd}')
         session = Session(management_ip, auth=('administrator', settings.NETWORK_PASSWORD))
-        child_span = tracer.start_span('run_ps', child_of=span)
-        response = session.run_ps(cmd)
+        encoded_cmd = b64encode(cmd.encode('utf_16_le')).decode('ascii')
+        child_span = tracer.start_span('run_command', child_of=span)
+        response = session.run_cmd(f'powershell -encodedcommand {encoded_cmd}')
+        if len(response.std_err):
+            response.std_err = session._clean_error_msg(response.std_err)
         child_span.finish()
+
         # Decode out and err
         if hasattr(response.std_out, 'decode'):
             response.std_out = response.std_out.decode()
