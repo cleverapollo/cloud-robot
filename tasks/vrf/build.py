@@ -8,7 +8,7 @@ import metrics
 import state
 import utils
 from builders import Vrf as VrfBuilder
-from celery_app import app, tracer
+from celery_app import app
 from cloudcix_token import Token
 
 __all__ = [

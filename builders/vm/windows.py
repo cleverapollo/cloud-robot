@@ -19,7 +19,6 @@ from winrm.exceptions import WinRMError
 # local
 import settings
 import utils
-from celery_app import tracer
 from mixins import WindowsMixin
 
 

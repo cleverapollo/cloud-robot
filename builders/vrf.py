@@ -16,7 +16,6 @@ from jaeger_client import Span
 from netaddr import IPNetwork
 # local
 import utils
-from celery_app import tracer
 from mixins import VrfMixin
 from net_builders import is_valid_vlan
 

@@ -7,7 +7,7 @@ from jaeger_client import Span
 import metrics
 import state
 import utils
-from celery_app import app, tracer
+from celery_app import app
 from cloudcix_token import Token
 from email_notifier import EmailNotifier
 from updaters.vm import (

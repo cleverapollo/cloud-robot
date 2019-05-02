@@ -13,7 +13,6 @@ from typing import Any, Dict, Optional
 from jaeger_client import Span
 # local
 import utils
-from celery_app import tracer
 from mixins import VrfMixin
 
 __all__ = [

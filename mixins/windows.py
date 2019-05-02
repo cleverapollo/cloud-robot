@@ -12,7 +12,6 @@ from jaeger_client import Span
 from winrm import Response, Session
 # local
 import settings
-from celery_app import tracer
 
 
 class WindowsMixin:

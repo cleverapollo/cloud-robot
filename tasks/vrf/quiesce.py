@@ -8,7 +8,7 @@ import metrics
 import state
 import utils
 from quiescers import Vrf as VrfQuiescer
-from celery_app import app, tracer
+from celery_app import app
 from cloudcix_token import Token
 
 __all__ = [
