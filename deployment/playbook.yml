@@ -57,7 +57,7 @@
           - "6832:6832/udp"
           - "5778:5778/tcp"
         env:
-          COLLECTOR_HOST_PORT: "[2a02:2078:0:cb00::f12]:14267"
+          COLLECTOR_HOST_PORT: "logstash.cloudcix.com:14267"
 
     - name: Gracefully shut down last container
       docker_container:
