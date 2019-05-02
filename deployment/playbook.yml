@@ -58,6 +58,8 @@
           - "5778:5778/tcp"
         env:
           COLLECTOR_HOST_PORT: "logstash.cloudcix.com:14267"
+        etc_hosts:
+          logstash.cloudcix.com: 2a02:2078:0:cb00::f12
 
     - name: Gracefully shut down last container
       docker_container:
