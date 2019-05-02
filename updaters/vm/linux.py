@@ -64,8 +64,9 @@ class Linux(LinuxMixin):
         vm_id = vm_data['idVM']
 
         # Generate the necessary template data
-        with tracer.start_span('generate_template_data', child_of=span) as child_span:
-            template_data = Linux._get_template_data(vm_data, child_span)
+        child_span = tracer.start_span('generate_template_data', child_of=span)
+        template_data = Linux._get_template_data(vm_data, child_span)
+        child_span.finish()
 
         # Check that the data was successfully generated
         if template_data is None:
@@ -91,8 +92,10 @@ class Linux(LinuxMixin):
         host_ip = template_data.pop('host_ip')
 
         # Generate the update command using the template data
-        with tracer.start_span('generate_command', child_of=span):
-            cmd = utils.JINJA_ENV.get_template('vm/linux/update_cmd.j2').render(**template_data)
+        child_span = tracer.start_span('generate_command', child_of=span)
+        cmd = utils.JINJA_ENV.get_template('vm/linux/update_cmd.j2').render(**template_data)
+        child_span.finish()
+
         Linux.logger.debug(f'Generated VM update command for VM #{vm_data["idVM"]}\n{cmd}')
 
         # Open a client and run the two necessary commands on the host
@@ -106,8 +109,11 @@ class Linux(LinuxMixin):
 
             # Attempt to execute the update command
             Linux.logger.debug(f'Executing update command for VM #{vm_id}')
-            with tracer.start_span('update_vm', child_of=span) as child_span:
-                stdout, stderr = Linux.deploy(cmd, client, child_span)
+
+            child_span = tracer.start_span('update_vm', child_of=span)
+            stdout, stderr = Linux.deploy(cmd, client, child_span)
+            child_span.finish()
+
             if stdout:
                 Linux.logger.debug(f'VM update command for VM #{vm_id} generated stdout.\n{stdout}')
                 updated = True

@@ -72,8 +72,9 @@ class Windows(WindowsMixin):
         vm_id = vm_data['idVM']
 
         # Generate the necessary template data
-        with tracer.start_span('generate_template_data', child_of=span) as child_span:
-            template_data = Windows._get_template_data(vm_data, child_span)
+        child_span = tracer.start_span('generate_template_data', child_of=span)
+        template_data = Windows._get_template_data(vm_data, child_span)
+        child_span.finish()
 
         # Check that the data was successfully generated
         if template_data is None:
@@ -99,15 +100,17 @@ class Windows(WindowsMixin):
         host_name = template_data.pop('host_name')
 
         # Render the update command
-        with tracer.start_span('generate_command', child_of=span):
-            cmd = utils.JINJA_ENV.get_template('vm/windows/update_cmd.j2').render(**template_data)
+        child_span = tracer.start_span('generate_command', child_of=span)
+        cmd = utils.JINJA_ENV.get_template('vm/windows/update_cmd.j2').render(**template_data)
+        child_span.finish()
 
         # Open a client and run the two necessary commands on the host
         updated = False
         try:
-            with tracer.start_span('update_vm', child_of=span) as child_span:
-                response = Windows.deploy(cmd, host_name, child_span)
+            child_span = tracer.start_span('update_vm', child_of=span)
+            response = Windows.deploy(cmd, host_name, child_span)
             span.set_tag('host', host_name)
+            child_span.finish()
         except WinRMError:
             Windows.logger.error(
                 f'Exception occurred while attempting to update VM #{vm_id} on {host_name}',

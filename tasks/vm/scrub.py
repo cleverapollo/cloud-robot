@@ -24,8 +24,9 @@ def scrub_vm(vm_id: int):
     """
     Helper function that wraps the actual task in a span, meaning we don't have to remember to call .finish
     """
-    with tracer.start_span('scrub_vm') as span:
-        _scrub_vm(vm_id, span)
+    span = tracer.start_span('scrub_vm')
+    _scrub_vm(vm_id, span)
+    span.finish()
     # Flush the loggers here so it's not in the span
     utils.flush_logstash()
 
@@ -34,18 +35,19 @@ def _scrub_vm(vm_id: int, span: Span):
     """
     Task to scrub the specified vm
     """
-    span = tracer.start_span('scrub_vm')
     logger = logging.getLogger('robot.tasks.vm.scrub')
     logger.info(f'Commencing scrub of VM #{vm_id}')
 
     # Read the VM
     # Don't use utils so we can check the response code
-    with tracer.start_span('read_vm', child_of=span) as child_span:
-        response = IAAS.vrf.read(
-            token=Token.get_instance().token,
-            pk=vm_id,
-            span=child_span,
-        )
+    child_span = tracer.start_span('read_vm', child_of=span)
+    response = IAAS.vrf.read(
+        token=Token.get_instance().token,
+        pk=vm_id,
+        span=child_span,
+    )
+    child_span.close()
+
     if response.status_code == 404:
         logger.info(
             f'Received scrub task for VM #{vm_id} but it was already deleted from the API',
@@ -72,9 +74,12 @@ def _scrub_vm(vm_id: int, span: Span):
 
     # There's no in-between state for scrub tasks, just jump straight to doing the work
     success: bool = False
+
     # Read the VM image to get the hypervisor id
-    with tracer.start_span('read_vm_image', child_of=span) as child_span:
-        image = utils.api_read(IAAS.image, vm['idImage'], span=child_span)
+    child_span = tracer.start_span('read_vm_image', child_of=span)
+    image = utils.api_read(IAAS.image, vm['idImage'], span=child_span)
+    child_span.finish()
+
     if image is None:
         logger.error(
             f'Could not scrub VM #{vm_id} as its Image was not readable',
@@ -83,18 +88,19 @@ def _scrub_vm(vm_id: int, span: Span):
         return
 
     hypervisor = image['idHypervisor']
-    with tracer.start_span('scrub', child_of=span) as child_span:
-        if hypervisor == 1:  # HyperV -> Windows
-            success = WindowsVmScrubber.scrub(vm, child_span)
-            child_span.set_tag('hypervisor', 'windows')
-        elif hypervisor == 2:  # KVM -> Linux
-            success = LinuxVmScrubber.scrub(vm, child_span)
-            child_span.set_tag('hypervisor', 'linux')
-        else:
-            logger.error(
-                f'Unsupported Hypervisor ID #{hypervisor} for VM #{vm_id}',
-            )
-            child_span.set_tag('hypervisor', 'linux')
+    child_span = tracer.start_span('scrub', child_of=span)
+    if hypervisor == 1:  # HyperV -> Windows
+        success = WindowsVmScrubber.scrub(vm, child_span)
+        child_span.set_tag('hypervisor', 'windows')
+    elif hypervisor == 2:  # KVM -> Linux
+        success = LinuxVmScrubber.scrub(vm, child_span)
+        child_span.set_tag('hypervisor', 'linux')
+    else:
+        logger.error(
+            f'Unsupported Hypervisor ID #{hypervisor} for VM #{vm_id}',
+        )
+        child_span.set_tag('hypervisor', 'linux')
+    child_span.finish()
 
     span.set_tag('return_reason', f'success: {success}')
 
@@ -103,8 +109,11 @@ def _scrub_vm(vm_id: int, span: Span):
         metrics.vm_scrub_success()
         # Do API deletions
         logger.debug(f'Deleting VM #{vm_id} from the CMDB')
-        with tracer.start_span('delete_vm_from_api', child_of=span) as child_span:
-            response = IAAS.vm.delete(token=Token.get_instance().token, pk=vm_id, span=child_span)
+
+        child_span = tracer.start_span('delete_vm_from_api', child_of=span)
+        response = IAAS.vm.delete(token=Token.get_instance().token, pk=vm_id, span=child_span)
+        child_span.finish()
+
         if response.status_code != 204:
             logger.error(
                 f'HTTP {response.status_code} error occurred when attempting to delete VM #{vm_id};\n'
@@ -112,8 +121,10 @@ def _scrub_vm(vm_id: int, span: Span):
             )
             return
         logger.info(f'Successfully deleted VM #{vm_id} from the CMDB.')
-        with tracer.start_span('delete_project_from_api', child_of=span) as child_span:
-            utils.project_delete(vm['idProject'], child_span)
+
+        child_span = tracer.start_span('delete_project_from_api', child_of=span)
+        utils.project_delete(vm['idProject'], child_span)
+        child_span.finish()
     else:
         logger.error(f'Failed to scrub VM #{vm_id}')
         metrics.vm_scrub_failure()

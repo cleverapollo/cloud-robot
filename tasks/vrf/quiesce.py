@@ -21,8 +21,10 @@ def quiesce_vrf(vrf_id: int):
     """
     Helper function that wraps the actual task in a span, meaning we don't have to remember to call .finish
     """
-    with tracer.start_span('quiesce_vrf') as span:
-        _quiesce_vrf(vrf_id, span)
+    span = tracer.start_span('quiesce_vrf')
+    _quiesce_vrf(vrf_id, span)
+    span.finish()
+
     # Flush the loggers here so it's not in the span
     utils.flush_logstash()
 
@@ -35,8 +37,9 @@ def _quiesce_vrf(vrf_id: int, span: Span):
     logger.info(f'Commencing quiesce of VRF #{vrf_id}')
 
     # Read the VRF
-    with tracer.start_span('read_vrf', child_of=span) as child_span:
-        vrf = utils.api_read(IAAS.vrf, vrf_id, span=child_span)
+    child_span = tracer.start_span('read_vrf', child_of=span)
+    vrf = utils.api_read(IAAS.vrf, vrf_id, span=child_span)
+    child_span.finish()
 
     # Ensure it is not none
     if vrf is None:
@@ -56,8 +59,9 @@ def _quiesce_vrf(vrf_id: int, span: Span):
         return
 
     # There's no in-between state for Quiesce tasks, just jump straight to doing the work
-    with tracer.start_span('quiesce', child_of=span) as child_span:
-        success = VrfQuiescer.quiesce(vrf, child_span)
+    child_span = tracer.start_span('quiesce', child_of=span)
+    success = VrfQuiescer.quiesce(vrf, child_span)
+    child_span.finish()
 
     span.set_tag('return_reason', f'success: {success}')
 
@@ -66,25 +70,29 @@ def _quiesce_vrf(vrf_id: int, span: Span):
         metrics.vrf_quiesce_success()
         # Update state, depending on what state the VRF is currently in (QUIESCING -> QUIESCED, SCRUBBING -> DELETED)
         if vrf['state'] == state.QUIESCING:
-            with tracer.start_span('update_to_quiescing', child_of=span) as child_span:
-                response = IAAS.vrf.partial_update(
-                    token=Token.get_instance().token,
-                    pk=vrf_id,
-                    data={'state': state.QUIESCED},
-                    span=child_span,
-                )
+            child_span = tracer.start_span('update_to_quiescing', child_of=span)
+            response = IAAS.vrf.partial_update(
+                token=Token.get_instance().token,
+                pk=vrf_id,
+                data={'state': state.QUIESCED},
+                span=child_span,
+            )
+            child_span.finish()
+
             if response.status_code != 204:
                 logger.error(
                     f'Could not update VRF #{vrf_id} to state QUIESCED. Response: {response.content.decode()}.',
                 )
         elif vrf['state'] == state.SCRUBBING:
-            with tracer.start_span('update_to_deleted', child_of=span) as child_span:
-                response = IAAS.vrf.partial_update(
-                    token=Token.get_instance().token,
-                    pk=vrf_id,
-                    data={'state': state.DELETED},
-                    span=child_span,
-                )
+            child_span = tracer.start_span('update_to_deleted', child_of=span)
+            response = IAAS.vrf.partial_update(
+                token=Token.get_instance().token,
+                pk=vrf_id,
+                data={'state': state.DELETED},
+                span=child_span,
+            )
+            child_span.finish()
+
             if response.status_code != 204:
                 logger.error(
                     f'Could not update VRF #{vrf_id} to state DELETED. Response: {response.content.decode()}.',

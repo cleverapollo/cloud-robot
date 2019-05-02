@@ -90,8 +90,9 @@ class Windows(WindowsMixin):
         vm_id = vm_data['idVM']
 
         # Generate the necessary template data
-        with tracer.start_span('generate_template_data', child_of=span) as child_span:
-            template_data = Windows._get_template_data(vm_data, image_data, child_span)
+        child_span = tracer.start_span('generate_template_data', child_of=span)
+        template_data = Windows._get_template_data(vm_data, image_data, child_span)
+        child_span.finish()
 
         # Check that the data was successfully generated
         if template_data is None:
@@ -118,22 +119,26 @@ class Windows(WindowsMixin):
         image_id = template_data.pop('image_id')
 
         # Write necessary files into the network drive
-        with tracer.start_span('write_files_to_network_drive', child_of=span):
-            file_write_success = Windows._generate_network_drive_files(vm_id, image_id, template_data)
+        child_span = tracer.start_span('write_files_to_network_drive', child_of=span)
+        file_write_success = Windows._generate_network_drive_files(vm_id, image_id, template_data)
+        child_span.finish()
+
         if not file_write_success:
             # The method will log which part failed, so we can just exit
             span.set_tag('failed_reason', 'network_drive_files_failed_to_write')
             return False
 
         # Render the build command
-        with tracer.start_span('generate_command', child_of=span):
-            cmd = utils.JINJA_ENV.get_template('vm/windows/build_cmd.j2').render(**template_data)
+        child_span = tracer.start_span('generate_command', child_of=span)
+        cmd = utils.JINJA_ENV.get_template('vm/windows/build_cmd.j2').render(**template_data)
+        child_span.finish()
 
         # Open a client and run the two necessary commands on the host
         built = False
         try:
-            with tracer.start_span('build_vm', child_of=span) as child_span:
-                response = Windows.deploy(cmd, host_name, child_span)
+            child_span = tracer.start_span('build_vm', child_of=span)
+            response = Windows.deploy(cmd, host_name, child_span)
+            child_span.finish()
             span.set_tag('host', host_name)
         except WinRMError:
             Windows.logger.error(

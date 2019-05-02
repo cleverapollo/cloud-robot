@@ -48,8 +48,9 @@ class Vrf(VrfBuilder):
         vrf_id = vrf_data['idVRF']
 
         # Start by generating the proper dict of data needed by the template
-        with tracer.start_span('generate_template_data', child_of=span) as child_span:
-            template_data = Vrf._get_template_data(vrf_data, child_span)
+        child_span = tracer.start_span('generate_template_data', child_of=span)
+        template_data = Vrf._get_template_data(vrf_data, child_span)
+        child_span.finish()
 
         # Check that the template data was successfully retrieved
         if template_data is None:
@@ -75,10 +76,11 @@ class Vrf(VrfBuilder):
         router_model = template_data.pop('router_model')
         management_ip = template_data.pop('management_ip')
         try:
+            child_span = tracer.start_span('generate_setconf', child_of=span)
             template_name = f'vrf/update_{router_model}.j2'
-            with tracer.start_span('generate_setconf', child_of=span) as child_span:
-                child_span.set_tag('template_name', template_name)
-                conf = utils.JINJA_ENV.get_template(template_name).render(**template_data)
+            child_span.set_tag('template_name', template_name)
+            conf = utils.JINJA_ENV.get_template(template_name).render(**template_data)
+            child_span.finish()
         except Exception:
             Vrf.logger.error(
                 f'Unable to find the update template for {router_model} Routers',
@@ -89,5 +91,7 @@ class Vrf(VrfBuilder):
         Vrf.logger.debug(f'Generated setconf for VRF #{vrf_id}\n{conf}')
 
         # Deploy the generated setconf to the router
-        with tracer.start_span('deploy_setconf', child_of=span):
-            return Vrf.deploy(conf, management_ip)
+        child_span = tracer.start_span('deploy_setconf', child_of=span)
+        success = Vrf.deploy(conf, management_ip)
+        child_span.finish()
+        return success

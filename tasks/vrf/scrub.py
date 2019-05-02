@@ -21,8 +21,10 @@ def scrub_vrf(vrf_id: int):
     """
     Helper function that wraps the actual task in a span, meaning we don't have to remember to call .finish
     """
-    with tracer.start_span('scrub_vrf') as span:
-        _scrub_vrf(vrf_id, span)
+    span = tracer.start_span('scrub_vrf')
+    _scrub_vrf(vrf_id, span)
+    span.finish()
+
     # Flush the loggers here so it's not in the span
     utils.flush_logstash()
 
@@ -36,12 +38,14 @@ def _scrub_vrf(vrf_id: int, span: Span):
 
     # Read the VRF
     # Don't use utils so we can check the response code
-    with tracer.start_span('read_vrf', child_of=span) as child_span:
-        response = IAAS.vrf.read(
-            token=Token.get_instance().token,
-            pk=vrf_id,
-            span=child_span,
-        )
+    child_span = tracer.start_span('read_vrf', child_of=span)
+    response = IAAS.vrf.read(
+        token=Token.get_instance().token,
+        pk=vrf_id,
+        span=child_span,
+    )
+    child_span.finish()
+
     if response.status_code == 404:
         logger.info(
             f'Received scrub task for VRF #{vrf_id} but it was already deleted from the API',
@@ -67,8 +71,9 @@ def _scrub_vrf(vrf_id: int, span: Span):
         return
 
     # There's no in-between state for Scrub tasks, just jump straight to doing the work
-    with tracer.start_span('scrub', child_of=span) as child_span:
-        success = VrfScrubber.scrub(vrf, child_span)
+    child_span = tracer.start_span('scrub', child_of=span)
+    success = VrfScrubber.scrub(vrf, child_span)
+    child_span.finish()
 
     span.set_tag('return_reason', f'success: {success}')
 
@@ -76,12 +81,14 @@ def _scrub_vrf(vrf_id: int, span: Span):
         logger.info(f'Successfully scrubbed VRF #{vrf_id}')
         metrics.vrf_scrub_success()
         # Delete the VRF from the DB
-        with tracer.start_span('delete_vrf_from_api', child_of=span) as child_span:
-            response = IAAS.vrf.delete(
-                token=Token.get_instance().token,
-                pk=vrf_id,
-                span=child_span,
-            )
+        child_span = tracer.start_span('delete_vrf_from_api', child_of=span)
+        response = IAAS.vrf.delete(
+            token=Token.get_instance().token,
+            pk=vrf_id,
+            span=child_span,
+        )
+        child_span.finish()
+
         if response.status_code == 204:
             logger.info(f'VRF #{vrf_id} successfully deleted from the API')
         else:
@@ -89,8 +96,10 @@ def _scrub_vrf(vrf_id: int, span: Span):
                 f'HTTP {response.status_code} response received when attempting to delete VRF #{vrf_id};\n'
                 f'Response Text: {response.content.decode()}',
             )
-        with tracer.start_span('delete_project_from_api', child_of=span) as child_span:
-            utils.project_delete(vrf['idProject'], child_span)
+
+        child_span = tracer.start_span('delete_project_from_api', child_of=span)
+        utils.project_delete(vrf['idProject'], child_span)
+        child_span.finish()
     else:
         logger.error(f'Failed to scrub VRF #{vrf_id}')
         metrics.vrf_scrub_failure()

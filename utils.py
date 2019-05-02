@@ -44,6 +44,8 @@ def setup_root_logger():
     """
     logger = logging.getLogger('robot')
     logger.setLevel(logging.DEBUG)
+    # Prevent double logging
+    logger.propogate = False
 
     # Stream Handler
     fmt = logging.Formatter(fmt='%(asctime)s - %(name)s: %(levelname)s: %(message)s', datefmt='%d/%m/%y @ %H:%M:%S')
