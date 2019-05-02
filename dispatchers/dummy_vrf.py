@@ -6,6 +6,7 @@ from cloudcix.api import IAAS
 import metrics
 import state
 import utils
+from celery_app import tracer
 from cloudcix_token import Token
 
 
@@ -132,7 +133,8 @@ class DummyVrf:
             vrf = utils.api_read(IAAS.vrf, vrf_id)
             if vrf is None:
                 return
-            utils.project_delete(vrf['idProject'])
+            with tracer.start_span('dummy_vrf_project_delete') as span:
+                utils.project_delete(vrf['idProject'], span)
 
     def update(self, vrf_id: int):
         """

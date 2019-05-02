@@ -50,7 +50,6 @@ class Token:
         """
         if (datetime.utcnow() - self._created).seconds / 60 > self.THRESHOLD:
             # We need to regenerate the token
-            old_token = self._token
             self._token = get_admin_token()
             self._created = datetime.utcnow()
             logging.getLogger('robot.cloudcix_token').debug('Generated new token')

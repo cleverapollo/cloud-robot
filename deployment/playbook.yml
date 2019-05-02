@@ -44,6 +44,21 @@
       shell: "docker rmi $(docker images -q)"
       ignore_errors: yes
 
+    - name: Deploy Jaeger Agent for reporting Spans to Jaeger
+      docker_container:
+        name: "jaeger-agent"
+        image: "jaegertracing/jaeger-agent:1.10.1"
+        state: started
+        pull: true
+        restart_policy: "unless-stopped"
+        ports:
+          - "5775:5775/udp"
+          - "6831:6831/udp"
+          - "6832:6832/udp"
+          - "5778:5778/tcp"
+        env:
+          COLLECTOR_HOST_PORT: "[2a02:2078:0:cb00::f12]:14267"
+
     - name: Gracefully shut down last container
       docker_container:
         name: "robot-{{ env }}"

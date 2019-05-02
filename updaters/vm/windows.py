@@ -11,11 +11,13 @@ from collections import deque
 from typing import Any, Deque, Dict, Optional
 # lib
 from cloudcix.api import IAAS
+from jaeger_client import Span
 from netaddr import IPAddress, IPNetwork
 from winrm.exceptions import WinRMError
 # local
 import settings
 import utils
+from celery_app import tracer
 from mixins import WindowsMixin
 
 
@@ -60,22 +62,25 @@ class Windows(WindowsMixin):
     }
 
     @staticmethod
-    def update(vm_data: Dict[str, Any]) -> bool:
+    def update(vm_data: Dict[str, Any], span: Span) -> bool:
         """
         Commence the update of a vm using the data read from the API
         :param vm_data: The result of a read request for the specified VM
+        :param span: The tracing span in use for this update task
         :return: A flag stating whether or not the update was successful
         """
         vm_id = vm_data['idVM']
 
         # Generate the necessary template data
-        template_data = Windows._get_template_data(vm_data)
+        with tracer.start_span('generate_template_data', child_of=span) as child_span:
+            template_data = Windows._get_template_data(vm_data, child_span)
 
         # Check that the data was successfully generated
         if template_data is None:
             Windows.logger.error(
                 f'Failed to retrieve template data for VM #{vm_id}.',
             )
+            span.set_tag('failed_reason', 'template_data_failed')
             return False
 
         # Check that all of the necessary keys are present
@@ -87,23 +92,28 @@ class Windows(WindowsMixin):
                 f'Template Data Error, the following keys were missing from the VM update data: '
                 f'{", ".join(missing_keys)}',
             )
+            span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
         # If everything is okay, commence updating the VM
         host_name = template_data.pop('host_name')
 
         # Render the update command
-        vm_update_cmd = utils.JINJA_ENV.get_template('vm/windows/update_cmd.j2').render(**template_data)
+        with tracer.start_span('generate_command', child_of=span):
+            cmd = utils.JINJA_ENV.get_template('vm/windows/update_cmd.j2').render(**template_data)
 
         # Open a client and run the two necessary commands on the host
         updated = False
         try:
-            response = Windows.deploy(vm_update_cmd, host_name)
+            with tracer.start_span('update_vm', child_of=span) as child_span:
+                response = Windows.deploy(cmd, host_name, child_span)
+            span.set_tag('host', host_name)
         except WinRMError:
             Windows.logger.error(
                 f'Exception occurred while attempting to update VM #{vm_id} on {host_name}',
                 exc_info=True,
             )
+            span.set_tag('failed_reason', 'winrm_error')
         else:
             # Check the stdout and stderr for messages
             if response.std_out:
@@ -117,12 +127,13 @@ class Windows(WindowsMixin):
             return updated
 
     @staticmethod
-    def _get_template_data(vm_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _get_template_data(vm_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
         """
         Given the vm data from the API, create a dictionary that contains all of the necessary keys for the template
         The keys will be checked in the update method and not here, this method is only concerned with fetching the data
         that it can.
         :param vm_data: The data of the VM read from the API
+        :param span: The tracing span in use for this task. In this method just pass it to API calls
         :returns: The data needed for the templates to update a Windows VM
         """
         vm_id = vm_data['idVM']
@@ -140,7 +151,7 @@ class Windows(WindowsMixin):
         drives: Deque[Dict[str, str]] = deque()
         for storage_id, storage_changes in vm_data['changes_this_month'][0]['details']['storages'].items():
             # Read the storage from the API
-            storage = utils.api_read(IAAS.storage, storage_id)
+            storage = utils.api_read(IAAS.storage, storage_id, span=span)
             if storage is None:
                 Windows.logger.error(f'Error fetching Storage #{storage_id} for VM #{vm_id}')
                 return None
@@ -173,13 +184,13 @@ class Windows(WindowsMixin):
         data['drives'] = drives
 
         # Get the Networking details
-        for ip_address in utils.api_list(IAAS.ipaddress, {'vm': vm_id}):
+        for ip_address in utils.api_list(IAAS.ipaddress, {'vm': vm_id}, span=span):
             # The private IP for the VM will be the one we need to pass to the template
             if not IPAddress(ip_address['address']).is_private():
                 continue
             data['ip_address'] = ip_address['address']
             # Read the subnet for the IPAddress to fetch information like the gateway and subnet mask
-            subnet = utils.api_read(IAAS.subnet, ip_address['idSubnet'])
+            subnet = utils.api_read(IAAS.subnet, ip_address['idSubnet'], span=span)
             if subnet is None:
                 return None
             data['gateway'], _ = subnet['addressRange'].split('/')
@@ -187,7 +198,7 @@ class Windows(WindowsMixin):
             data['vlan'] = subnet['vLAN']
 
         # Get the ip address of the host
-        for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer']):
+        for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer'], span=span):
             if mac['status'] is True and mac['ip'] is not None:
                 data['host_name'] = mac['dnsName']
                 break

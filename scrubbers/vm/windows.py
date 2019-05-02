@@ -10,9 +10,11 @@ import logging
 from typing import Any, Dict, Optional
 # lib
 from cloudcix.api import IAAS
+from jaeger_client import Span
 from winrm.exceptions import WinRMError
 # local
 import utils
+from celery_app import tracer
 from mixins import WindowsMixin
 
 
@@ -37,22 +39,25 @@ class Windows(WindowsMixin):
     }
 
     @staticmethod
-    def scrub(vm_data: Dict[str, Any]) -> bool:
+    def scrub(vm_data: Dict[str, Any], span: Span) -> bool:
         """
         Commence the scrub of a vm using the data read from the API
         :param vm_data: The result of a read request for the specified VM
+        :param span: The tracing span in use for this task
         :return: A flag stating whether or not the scrub was successful
         """
         vm_id = vm_data['idVM']
 
         # Generate the necessary template data
-        template_data = Windows._get_template_data(vm_data)
+        with tracer.start_span('generate_template_data', child_of=span) as child_span:
+            template_data = Windows._get_template_data(vm_data, child_span)
 
         # Check that the data was successfully generated
         if template_data is None:
             Windows.logger.error(
                 f'Failed to retrieve template data for VM #{vm_id}.',
             )
+            span.set_tag('failed_reason', 'template_data_failed')
             return False
 
         # Check that all of the necessary keys are present
@@ -64,23 +69,28 @@ class Windows(WindowsMixin):
                 f'Template Data Error, the following keys were missing from the VM scrub data: '
                 f'{", ".join(missing_keys)}',
             )
+            span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
         # If everything is okay, commence scrubbing the VM
         host_name = template_data.pop('host_name')
 
         # Render the scrub command
-        vm_scrub_cmd = utils.JINJA_ENV.get_template('vm/windows/scrub_cmd.j2').render(**template_data)
+        with tracer.start_span('generate_command', child_of=span):
+            cmd = utils.JINJA_ENV.get_template('vm/windows/scrub_cmd.j2').render(**template_data)
 
         # Open a client and run the two necessary commands on the host
         scrubbed = False
         try:
-            response = Windows.deploy(vm_scrub_cmd, host_name)
+            with tracer.start_span('scrub_vm', child_of=span) as child_span:
+                response = Windows.deploy(cmd, host_name, child_span)
+            span.set_tag('host', host_name)
         except WinRMError:
             Windows.logger.error(
                 f'Exception occurred while attempting to scrub VM #{vm_id} on {host_name}',
                 exc_info=True,
             )
+            span.set_tag('failed_reason', 'winrm_error')
         else:
             # Check the stdout and stderr for messages
             if response.std_out:
@@ -94,13 +104,13 @@ class Windows(WindowsMixin):
             return scrubbed
 
     @staticmethod
-    def _get_template_data(vm_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _get_template_data(vm_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
         """
         Given the vm data from the API, create a dictionary that contains all of the necessary keys for the template
         The keys will be checked in the build method and not here, this method is only concerned with fetching the data
         that it can.
         :param vm_data: The data of the VM read from the API
-        :param image_data: The data of the Image for the VM
+        :param span: The tracing span in use for this task. In this method just pass it to API calls
         :returns: The data needed for the templates to build a Windows VM
         """
         vm_id = vm_data['idVM']
@@ -110,7 +120,7 @@ class Windows(WindowsMixin):
         data['vm_identifier'] = f'{vm_data["idProject"]}_{vm_data["idVM"]}'
 
         # Get the ip address of the host
-        for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer']):
+        for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer'], span=span):
             if mac['status'] is True and mac['ip'] is not None:
                 data['host_name'] = mac['dnsName']
                 break

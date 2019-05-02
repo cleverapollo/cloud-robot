@@ -11,11 +11,13 @@ from collections import deque
 from typing import Any, Deque, Dict, Optional, Tuple
 # lib
 from cloudcix.api import IAAS
+from jaeger_client import Span
 from netaddr import IPAddress
 from paramiko import AutoAddPolicy, SSHClient, SSHException
 # local
 import settings
 import utils
+from celery_app import tracer
 from mixins import LinuxMixin
 
 
@@ -52,22 +54,25 @@ class Linux(LinuxMixin):
     }
 
     @staticmethod
-    def scrub(vm_data: Dict[str, Any]) -> bool:
+    def scrub(vm_data: Dict[str, Any], span: Span) -> bool:
         """
         Commence the scrub of a vm using the data read from the API
         :param vm_data: The result of a read request for the specified VM
+        :param span: The tracing span for the scrub task
         :return: A flag stating whether or not the scrub was successful
         """
         vm_id = vm_data['idVM']
 
         # Generate the necessary template data
-        template_data = Linux._get_template_data(vm_data)
+        with tracer.start_span('generate_template_data', child_of=span) as child_span:
+            template_data = Linux._get_template_data(vm_data, child_span)
 
         # Check that the data was successfully generated
         if template_data is None:
             Linux.logger.error(
                 f'Failed to retrieve template data for VM #{vm_id}.',
             )
+            span.set_tag('failed_reason', 'template_data_failed')
             return False
 
         # Check that all of the necessary keys are present
@@ -79,6 +84,7 @@ class Linux(LinuxMixin):
                 f'Template Data Error, the following keys were missing from the VM scrub data: '
                 f'{", ".join(missing_keys)}',
             )
+            span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
         # If everything is okay, commence scrubbing the VM
@@ -86,7 +92,8 @@ class Linux(LinuxMixin):
         delete_bridge = template_data.pop('delete_bridge')
 
         # Generate the two commands that will be run on the host machine directly
-        bridge_scrub_cmd, vm_scrub_cmd = Linux._generate_host_commands(vm_id, template_data)
+        with tracer.start_span('generate_commands', child_of=span):
+            bridge_scrub_cmd, vm_scrub_cmd = Linux._generate_host_commands(vm_id, template_data)
 
         # Open a client and run the two necessary commands on the host
         scrubbed = False
@@ -95,44 +102,51 @@ class Linux(LinuxMixin):
         try:
             # Try connecting to the host and running the necessary commands
             client.connect(hostname=host_ip, username='administrator')  # No need for password as it should have keys
+            span.set_tag('host', host_ip)
 
             # Now attempt to execute the vm scrub command
             Linux.logger.debug(f'Executing vm scrub command for VM #{vm_id}')
-            stdout, stderr = Linux.deploy(vm_scrub_cmd, client)
+            with tracer.start_span('scrub_vm', child_of=span) as child_span:
+                stdout, stderr = Linux.deploy(vm_scrub_cmd, client, child_span)
             if stdout:
                 Linux.logger.debug(f'VM scrub command for VM #{vm_id} generated stdout.\n{stdout}')
                 scrubbed = True
                 # Attempt to delete the config file from the network drive
-                Linux._delete_network_file(vm_id, f'kickstarts/{template_data["vm_identifier"]}.cfg')
+                with tracer.start_span('delete_kickstart_file', child_of=span):
+                    Linux._delete_network_file(vm_id, f'kickstarts/{template_data["vm_identifier"]}.cfg')
             if stderr:
                 Linux.logger.warning(f'VM scrub command for VM #{vm_id} generated stderr.\n{stderr}')
 
             # Check if we also need to run the command to delete the bridge
             if delete_bridge:
                 Linux.logger.debug(f'Deleting bridge for VM #{vm_id}')
-                stdout, stderr = Linux.deploy(bridge_scrub_cmd, client)
+                with tracer.start_span('scrub_bridge', child_of=span) as child_span:
+                    stdout, stderr = Linux.deploy(bridge_scrub_cmd, client, child_span)
                 if stdout:
                     Linux.logger.debug(f'Bridge scrub command for VM #{vm_id} generated stdout\n{stdout}')
                 if stderr:
                     Linux.logger.warning(f'Bridge scrub command for VM #{vm_id} generated stderr\n{stderr}')
                 # Attempt to delete the bridge definition file from the network drive
-                Linux._delete_network_file(vm_id, f'bridge_xmls/br{template_data["vlan"]}.xml')
+                with tracer.start_span('delete_bridge_def_file', child_of=span):
+                    Linux._delete_network_file(vm_id, f'bridge_xmls/br{template_data["vlan"]}.xml')
         except SSHException:
             Linux.logger.error(
                 f'Exception occurred while scrubbing VM #{vm_id} in {host_ip}',
                 exc_info=True,
             )
+            span.set_tag('failed_reason', 'ssh_error')
         finally:
             client.close()
         return scrubbed
 
     @staticmethod
-    def _get_template_data(vm_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _get_template_data(vm_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
         """
         Given the vm data from the API, create a dictionary that contains all of the necessary keys for the template
         The keys will be checked in the build method and not here, this method is only concerned with fetching the data
         that it can.
         :param vm_data: The data of the VM read from the API
+        :param span: The tracing span in use for this task. In this method, just pass it to API calls.
         :returns: The data needed for the templates to build a Linux VM
         """
         vm_id = vm_data['idVM']
@@ -144,7 +158,7 @@ class Linux(LinuxMixin):
 
         # Fetch the drives for the VM and add them to the data
         drives: Deque[Dict[str, str]] = deque()
-        for storage in utils.api_list(IAAS.storage, {}, vm_id=vm_id):
+        for storage in utils.api_list(IAAS.storage, {}, vm_id=vm_id, span=span):
             # Check if the storage is primary
             if storage['primary']:
                 # Determine which field (hdd or ssd) to populate with this storage information
@@ -169,24 +183,25 @@ class Linux(LinuxMixin):
         data['drives'] = drives
 
         # Get the Networking details
-        for ip_address in utils.api_list(IAAS.ipaddress, {'vm': vm_id}):
+        for ip_address in utils.api_list(IAAS.ipaddress, {'vm': vm_id}, span=span):
             # The private IP for the VM will be the one we need to pass to the template
             if not IPAddress(ip_address['address']).is_private():
                 continue
             data['ip_address'] = ip_address['address']
             # Read the subnet for the IPAddress to fetch information like the gateway and subnet mask
-            subnet = utils.api_read(IAAS.subnet, ip_address['idSubnet'])
+            subnet = utils.api_read(IAAS.subnet, ip_address['idSubnet'], span=span)
             if subnet is None:
                 return None
             data['vlan'] = subnet['vLAN']
 
         # Get the ip address of the host
-        for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer']):
+        for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer'], span=span):
             if mac['status'] is True and mac['ip'] is not None:
                 data['host_ip'] = mac['ip']
                 break
 
-        data['delete_bridge'] = Linux._determine_bridge_deletion(vm_data)
+        with tracer.start_span('determine_bridge_deletion', child_of=span) as child_span:
+            data['delete_bridge'] = Linux._determine_bridge_deletion(vm_data, child_span)
         return data
 
     @staticmethod
@@ -228,7 +243,7 @@ class Linux(LinuxMixin):
             )
 
     @staticmethod
-    def _determine_bridge_deletion(vm_data: Dict[str, Any]) -> bool:
+    def _determine_bridge_deletion(vm_data: Dict[str, Any], span: Span) -> bool:
         """
         Given a VM, determine if we need to delete it's bridge.
         We need to delete the bridge if the VM is the last Linux VM left in the Subnet
@@ -243,7 +258,7 @@ class Linux(LinuxMixin):
         """
         vm_id = vm_data['idVM']
         # Get the id of the VM's private IP Address
-        priv_ip = utils.api_list(IAAS.ipaddress, {'vm': vm_id, 'fip_id__isnull': False})[0]
+        priv_ip = utils.api_list(IAAS.ipaddress, {'vm': vm_id, 'fip_id__isnull': False}, span=span)[0]
 
         # Find the other private ip addresses in the subnet
         params = {
@@ -251,15 +266,15 @@ class Linux(LinuxMixin):
             'exclude__idIPAddress': priv_ip['idIPAddress'],
             'subnet__idSubnet': priv_ip['idSubnet'],
         }
-        subnet_ips = utils.api_list(IAAS.ipaddress, params)
+        subnet_ips = utils.api_list(IAAS.ipaddress, params, span=span)
 
         # List the other VMs in the subnet
         subnet_vm_ids = list(map(lambda ip: ip['idVM'], subnet_ips))
-        subnet_vms = utils.api_list(IAAS.vm, {'idVM__in': subnet_vm_ids})
+        subnet_vms = utils.api_list(IAAS.vm, {'idVM__in': subnet_vm_ids}, span=span)
 
         # Get the images from the VMs and check for linux hypervisors
         image_ids = list(set(map(lambda vm: vm['idImage'], subnet_vms)))
-        images = utils.api_list(IAAS.image, {'idImage__in': image_ids})
+        images = utils.api_list(IAAS.image, {'idImage__in': image_ids}, span=span)
 
         # Check the list of images for any linux hypervisor
         # any returns True if any item in the iterable is True

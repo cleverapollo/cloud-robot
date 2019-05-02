@@ -10,6 +10,7 @@ from time import asctime
 from typing import Dict, Optional, Union
 # lib
 from cloudcix.api import IAAS
+from jaeger_client import Span
 from jnpr.junos import Device
 from jnpr.junos.exception import CommitError, ConfigLoadError, ConnectError, LockError, UnlockError
 from jnpr.junos.utils.config import Config
@@ -20,6 +21,8 @@ import utils
 __all__ = [
     'VrfMixin',
 ]
+PortData = Optional[Dict[str, Union[str, bool]]]
+RouterData = Optional[Dict[str, Optional[str]]]
 
 
 class VrfMixin:
@@ -102,34 +105,34 @@ class VrfMixin:
         return True
 
     @classmethod
-    def _get_router_data(cls, router_id: int) -> Optional[Dict[str, Optional[str]]]:
+    def _get_router_data(cls, router_id: int, span: Span) -> RouterData:
         """
-        TODO - Remove this once Compute in Python 3 fixes the mess that is Routers and Ports
+        TODO - Remove this once Compute in Python 3 fixes the mess that is Routers and Ports (if possible)
         This function is a goddamn mess
         """
         manage_ip = None
         router_model = None
-        ports = utils.api_list(IAAS.port, {}, router_id=router_id)
+        ports = utils.api_list(IAAS.port, {}, router_id=router_id, span=span)
         for port in ports:
             # Get the Port names ie xe-0/0/0 etc
-            rmpf = utils.api_read(IAAS.router_model_port_function, pk=port['model_port_id'])
+            rmpf = utils.api_read(IAAS.router_model_port_function, pk=port['model_port_id'], span=span)
             if rmpf is None:
                 # utils method does the logging for us
                 return None
             # Get the router model
-            router_model_response = utils.api_read(IAAS.router_model, pk=rmpf['router_model_id'])
+            router_model_response = utils.api_read(IAAS.router_model, pk=rmpf['router_model_id'], span=span)
             if router_model_response is None:
                 return None
             router_model = str(router_model_response['model'])
             # Get the function names ie 'Management' etc
-            port_func = utils.api_read(IAAS.port_function, pk=rmpf['port_function_id'])
+            port_func = utils.api_read(IAAS.port_function, pk=rmpf['port_function_id'], span=span)
             if port_func is None:
                 return None
             if port_func['function'] == 'Management':
-                port_configs = utils.api_list(IAAS.port_config, {}, port_id=port['port_id'])
+                port_configs = utils.api_list(IAAS.port_config, {}, port_id=port['port_id'], span=span)
                 for port_config in port_configs:
                     # Get the ip address details
-                    ip = utils.api_read(IAAS.ipaddress, pk=port_config['port_ip_id'])
+                    ip = utils.api_read(IAAS.ipaddress, pk=port_config['port_ip_id'], span=span)
                     if ip is None:
                         return None
                     manage_ip = str(ip['address'])
@@ -138,7 +141,7 @@ class VrfMixin:
         return {'management_ip': manage_ip, 'router_model': router_model}
 
     @classmethod
-    def _get_vrf_port_data(cls, vrf_ip_subnet_id: int, router_id: int) -> Optional[Dict[str, Union[str, bool]]]:
+    def _get_vrf_port_data(cls, vrf_ip_subnet_id: int, router_id: int, span: Span) -> PortData:
         """
         TODO - Refactor (or hopefully remove) this method when we bring Compute to Python 3
         It takes vrf ip to find out whether IP belongs to Floating or Floating Pre Filtered so that
@@ -152,23 +155,23 @@ class VrfMixin:
         private_port = None
         address_family = None
         # Get the Ports which are Floating and Floating Pre Filtered of Router
-        for port in utils.api_list(IAAS.port, {}, router_id=router_id):
+        for port in utils.api_list(IAAS.port, {}, router_id=router_id, span=span):
             # Get the Port names ie xe-0/0/0 etc
-            rmpf = utils.api_read(IAAS.router_model_port_function, pk=port['model_port_id'])
+            rmpf = utils.api_read(IAAS.router_model_port_function, pk=port['model_port_id'], span=span)
             if rmpf is None:
                 # utils method handles the error logging
                 return None
             # Get the function names ie 'Management' etc
-            port_func = utils.api_read(IAAS.port_function, pk=rmpf['port_function_id'])
+            port_func = utils.api_read(IAAS.port_function, pk=rmpf['port_function_id'], span=span)
             if port_func is None:
                 return None
             if port_func['function'] == 'Private':
                 private_port = rmpf['port_name']
             elif port_func['function'] == 'Floating Pre Filtered':
-                port_configs = utils.api_list(IAAS.port_config, {}, port_id=port['port_id'])
+                port_configs = utils.api_list(IAAS.port_config, {}, port_id=port['port_id'], span=span)
                 for port_config in port_configs:
                     # Get the ip address details
-                    ip = utils.api_read(IAAS.ipaddress, pk=port_config['port_ip_id'])
+                    ip = utils.api_read(IAAS.ipaddress, pk=port_config['port_ip_id'], span=span)
                     if ip is None:
                         return None
                     if str(ip['idSubnet']) == str(vrf_ip_subnet_id):
@@ -181,10 +184,10 @@ class VrfMixin:
             if firewall and interface is not None and private_port is not None:
                 break  # just exit for loop as we got required data
             elif port_func['function'] == 'Floating':
-                port_configs = utils.api_list(IAAS.port_config, {}, port_id=port['port_id'])
+                port_configs = utils.api_list(IAAS.port_config, {}, port_id=port['port_id'], span=span)
                 for port_config in port_configs:
                     # Get the ip address details
-                    ip = utils.api_read(IAAS.ipaddress, pk=port_config['port_ip_id'])
+                    ip = utils.api_read(IAAS.ipaddress, pk=port_config['port_ip_id'], span=span)
                     if ip is None:
                         return None
                     if str(ip['idSubnet']) == str(vrf_ip_subnet_id):
