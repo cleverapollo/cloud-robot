@@ -32,7 +32,7 @@ class EmailNotifier:
         Given a VM's details, render and send a build success email
         """
         logger = logging.getLogger('robot.email_notifier.build_success')
-        name = vm_data["name"]
+        name = vm_data['name']
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -50,7 +50,7 @@ class EmailNotifier:
         Given a VM's details, render and send a build failure email
         """
         logger = logging.getLogger('robot.email_notifier.build_failure')
-        name = vm_data["name"]
+        name = vm_data['name']
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -72,7 +72,7 @@ class EmailNotifier:
         Given a VM's details, render and send a quiesce success email
         """
         logger = logging.getLogger('robot.email_notifier.quiesce_success')
-        name = vm_data["name"]
+        name = vm_data['name']
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -90,7 +90,7 @@ class EmailNotifier:
         Given a VM's details, render and send a delete_schedule success email
         """
         logger = logging.getLogger('robot.email_notifier.delete_schedule_success')
-        name = vm_data["name"]
+        name = vm_data['name']
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -112,7 +112,7 @@ class EmailNotifier:
         Given a VM's details, render and send a restart success email
         """
         logger = logging.getLogger('robot.email_notifier.restart_success')
-        name = vm_data["name"]
+        name = vm_data['name']
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -130,7 +130,7 @@ class EmailNotifier:
         Given a VM's details, render and send a restart failure email
         """
         logger = logging.getLogger('robot.email_notifier.restart_failure')
-        name = vm_data["name"]
+        name = vm_data['name']
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -152,7 +152,7 @@ class EmailNotifier:
         Given a VM's details, render and send a update success email
         """
         logger = logging.getLogger('robot.email_notifier.update_success')
-        name = vm_data["name"]
+        name = vm_data['name']
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:
@@ -170,7 +170,7 @@ class EmailNotifier:
         Given a VM's details, render and send a update failure email
         """
         logger = logging.getLogger('robot.email_notifier.update_failure')
-        name = vm_data["name"]
+        name = vm_data['name']
         # Check that the data contains an email
         email = vm_data.pop('email', None)
         if email is None:

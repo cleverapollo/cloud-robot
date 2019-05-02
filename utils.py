@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 import jinja2
 from cloudcix.api import IAAS
 from cloudcix.client import Client
+from jaeger_client import Span
 from logstash_async.formatter import LogstashFormatter
 from logstash_async.handler import AsynchronousLogstashHandler
 # local
@@ -85,18 +86,19 @@ def flush_logstash():
             handler.flush()
 
 
-def project_delete(project_id: int):
+def project_delete(project_id: int, span: Span):
     """
     Check if the specified project is ready to be deleted from the API, and delete it if it is
+    :param span: The span currently tracing the job. Just passed into the API calls this function makes
     """
     logger = logging.getLogger('robot.utils.project_delete')
     # Check that list requests for VRF and VM both are empty, and if so, delete the project
-    active_vrfs = len(api_list(IAAS.vrf, {'project': project_id}))
-    active_vms = len(api_list(IAAS.vm, {'project': project_id}))
+    active_vrfs = len(api_list(IAAS.vrf, {'project': project_id}, span=span))
+    active_vms = len(api_list(IAAS.vm, {'project': project_id}, span=span))
     if active_vms == 0 and active_vrfs == 0:
         logger.debug(f'Project #{project_id} is empty. Sending delete request.')
-        response = IAAS.project.delete(token=Token.get_instance().token, pk=project_id)
-        if response.status_code != 204:
+        response = IAAS.project.delete(token=Token.get_instance().token, pk=project_id, span=span)
+        if response.status_code == 204:
             logger.info(f'Successfully deleted Project #{project_id} from the CMDB')
         else:
             logger.error(

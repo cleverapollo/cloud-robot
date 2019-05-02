@@ -11,15 +11,16 @@ import random
 import string
 from collections import deque
 from crypt import crypt, mksalt, METHOD_SHA512
-from time import sleep
 from typing import Any, Deque, Dict, Optional, Tuple
 # lib
 from cloudcix.api import IAAS
+from jaeger_client import Span
 from netaddr import IPAddress, IPNetwork
 from paramiko import AutoAddPolicy, SSHClient, SSHException
 # local
 import settings
 import utils
+from celery_app import tracer
 from mixins import LinuxMixin
 
 
@@ -87,23 +88,26 @@ class Linux(LinuxMixin):
     }
 
     @staticmethod
-    def build(vm_data: Dict[str, Any], image_data: Dict[str, Any]) -> bool:
+    def build(vm_data: Dict[str, Any], image_data: Dict[str, Any], span: Span) -> bool:
         """
         Commence the build of a vm using the data read from the API
         :param vm_data: The result of a read request for the specified VM
         :param image_data: The data of the image for the VM
+        :param span: The tracing span in use for this build task
         :return: A flag stating whether or not the build was successful
         """
         vm_id = vm_data['idVM']
 
         # Generate the necessary template data
-        template_data = Linux._get_template_data(vm_data, image_data)
+        with tracer.start_span('generate_template_data', child_of=span) as child_span:
+            template_data = Linux._get_template_data(vm_data, image_data, child_span)
 
         # Check that the data was successfully generated
         if template_data is None:
             Linux.logger.error(
                 f'Failed to retrieve template data for VM #{vm_id}.',
             )
+            span.set_tag('failed_reason', 'template_data_failed')
             return False
 
         # Check that all of the necessary keys are present
@@ -115,6 +119,7 @@ class Linux(LinuxMixin):
                 f'Template Data Error, the following keys were missing from the VM build data: '
                 f'{", ".join(missing_keys)}',
             )
+            span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
         # If everything is okay, commence building the VM
@@ -122,13 +127,16 @@ class Linux(LinuxMixin):
         image_id = template_data.pop('image_id')
 
         # Write necessary files into the network drive
-        file_write_success = Linux._generate_network_drive_files(vm_id, image_id, template_data)
+        with tracer.start_span('write_files_to_network_drive', child_of=span):
+            file_write_success = Linux._generate_network_drive_files(vm_id, image_id, template_data)
         if not file_write_success:
             # The method will log which part failed, so we can just exit
+            span.set_tag('failed_reason', 'network_drive_files_failed_to_write')
             return False
 
         # Generate the two commands that will be run on the host machine directly
-        bridge_build_cmd, vm_build_cmd = Linux._generate_host_commands(vm_id, template_data)
+        with tracer.start_span('generate_commands', child_of=span):
+            bridge_build_cmd, vm_build_cmd = Linux._generate_host_commands(vm_id, template_data)
 
         # Open a client and run the two necessary commands on the host
         built = False
@@ -137,10 +145,12 @@ class Linux(LinuxMixin):
         try:
             # Try connecting to the host and running the necessary commands
             client.connect(hostname=host_ip, username='administrator')  # No need for password as it should have keys
+            span.set_tag('host', host_ip)
 
             # Attempt to execute the bridge build command
             Linux.logger.debug(f'Executing bridge build command for VM #{vm_id}')
-            stdout, stderr = Linux.deploy(bridge_build_cmd, client)
+            with tracer.start_span('build_bridge', child_of=span) as child_span:
+                stdout, stderr = Linux.deploy(bridge_build_cmd, client, child_span)
             if stdout:
                 Linux.logger.debug(f'Bridge build command for VM #{vm_id} generated stdout.\n{stdout}')
             if stderr:
@@ -148,7 +158,8 @@ class Linux(LinuxMixin):
 
             # Now attempt to execute the vm build command
             Linux.logger.debug(f'Executing vm build command for VM #{vm_id}')
-            stdout, stderr = Linux.deploy(vm_build_cmd, client)
+            with tracer.start_span('build_vm', child_of=span) as child_span:
+                stdout, stderr = Linux.deploy(vm_build_cmd, client, child_span)
             if stdout:
                 Linux.logger.debug(f'VM build command for VM #{vm_id} generated stdout.\n{stdout}')
             if stderr:
@@ -159,18 +170,20 @@ class Linux(LinuxMixin):
                 f'Exception occurred while building VM #{vm_id} in {host_ip}',
                 exc_info=True,
             )
+            span.set_tag('failed_reason', 'ssh_error')
         finally:
             client.close()
         return built
 
     @staticmethod
-    def _get_template_data(vm_data: Dict[str, Any], image_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _get_template_data(vm_data: Dict[str, Any], image_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
         """
         Given the vm data from the API, create a dictionary that contains all of the necessary keys for the template
         The keys will be checked in the build method and not here, this method is only concerned with fetching the data
         that it can.
         :param vm_data: The data of the VM read from the API
         :param image_data: The data of the Image for the VM
+        :param span: The tracing span in use for this task. In this method, just pass it to API calls.
         :returns: The data needed for the templates to build a Linux VM
         """
         vm_id = vm_data['idVM']
@@ -194,7 +207,7 @@ class Linux(LinuxMixin):
 
         # Fetch the drives for the VM and add them to the data
         drives: Deque[Dict[str, str]] = deque()
-        for storage in utils.api_list(IAAS.storage, {}, vm_id=vm_id):
+        for storage in utils.api_list(IAAS.storage, {}, vm_id=vm_id, span=span):
             # Check if the storage is primary
             if storage['primary']:
                 # Determine which field (hdd or ssd) to populate with this storage information
@@ -219,13 +232,13 @@ class Linux(LinuxMixin):
         data['drives'] = drives
 
         # Get the Networking details
-        for ip_address in utils.api_list(IAAS.ipaddress, {'vm': vm_id}):
+        for ip_address in utils.api_list(IAAS.ipaddress, {'vm': vm_id}, span=span):
             # The private IP for the VM will be the one we need to pass to the template
             if not IPAddress(ip_address['address']).is_private():
                 continue
             data['ip_address'] = ip_address['address']
             # Read the subnet for the IPAddress to fetch information like the gateway and subnet mask
-            subnet = utils.api_read(IAAS.subnet, ip_address['idSubnet'])
+            subnet = utils.api_read(IAAS.subnet, ip_address['idSubnet'], span=span)
             if subnet is None:
                 return None
             net = IPNetwork(subnet['addressRange'])
@@ -238,7 +251,7 @@ class Linux(LinuxMixin):
         data['timezone'] = 'Europe/Dublin'
 
         # Get the ip address of the host
-        for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer']):
+        for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer'], span=span):
             if mac['status'] is True and mac['ip'] is not None:
                 data['host_ip'] = mac['ip']
                 break
