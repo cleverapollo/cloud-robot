@@ -8,7 +8,6 @@ methods included;
 import logging
 from base64 import b64encode
 # lib
-from jaeger_client import Span
 from winrm import Response, Session
 # local
 import settings

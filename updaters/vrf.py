@@ -9,8 +9,6 @@ updater class for vrfs
 # stdlib
 import logging
 from typing import Any, Dict
-# lib
-from jaeger_client import Span
 # local
 import utils
 from builders import Vrf as VrfBuilder

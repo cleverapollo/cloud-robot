@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Optional
 import jinja2
 from cloudcix.api import IAAS
 from cloudcix.client import Client
-from jaeger_client import Span
 from logstash_async.formatter import LogstashFormatter
 from logstash_async.handler import AsynchronousLogstashHandler
 # local

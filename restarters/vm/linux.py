@@ -10,7 +10,6 @@ import logging
 from typing import Any, Dict, Optional
 # lib
 from cloudcix.api import IAAS
-from jaeger_client import Span
 from paramiko import AutoAddPolicy, SSHClient, SSHException
 # local
 import settings

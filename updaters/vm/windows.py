@@ -11,7 +11,6 @@ from collections import deque
 from typing import Any, Deque, Dict, Optional
 # lib
 from cloudcix.api import IAAS
-from jaeger_client import Span
 from netaddr import IPAddress, IPNetwork
 from winrm.exceptions import WinRMError
 # local

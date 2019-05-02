@@ -9,8 +9,6 @@ quiescer class for vrfs
 # stdlib
 import logging
 from typing import Any, Dict, Optional
-# lib
-from jaeger_client import Span
 # local
 import utils
 from mixins import VrfMixin
