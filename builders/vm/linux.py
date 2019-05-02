@@ -99,8 +99,9 @@ class Linux(LinuxMixin):
         vm_id = vm_data['idVM']
 
         # Generate the necessary template data
-        with tracer.start_span('generate_template_data', child_of=span) as child_span:
-            template_data = Linux._get_template_data(vm_data, image_data, child_span)
+        child_span = tracer.start_span('generate_template_data', child_of=span)
+        template_data = Linux._get_template_data(vm_data, image_data, child_span)
+        child_span.finish()
 
         # Check that the data was successfully generated
         if template_data is None:
@@ -127,16 +128,19 @@ class Linux(LinuxMixin):
         image_id = template_data.pop('image_id')
 
         # Write necessary files into the network drive
-        with tracer.start_span('write_files_to_network_drive', child_of=span):
-            file_write_success = Linux._generate_network_drive_files(vm_id, image_id, template_data)
+        child_span = tracer.start_span('write_files_to_network_drive', child_of=span)
+        file_write_success = Linux._generate_network_drive_files(vm_id, image_id, template_data)
+        child_span.finish()
+
         if not file_write_success:
             # The method will log which part failed, so we can just exit
             span.set_tag('failed_reason', 'network_drive_files_failed_to_write')
             return False
 
         # Generate the two commands that will be run on the host machine directly
-        with tracer.start_span('generate_commands', child_of=span):
-            bridge_build_cmd, vm_build_cmd = Linux._generate_host_commands(vm_id, template_data)
+        child_span = tracer.start_span('generate_commands', child_of=span)
+        bridge_build_cmd, vm_build_cmd = Linux._generate_host_commands(vm_id, template_data)
+        child_span.finish()
 
         # Open a client and run the two necessary commands on the host
         built = False
@@ -149,8 +153,11 @@ class Linux(LinuxMixin):
 
             # Attempt to execute the bridge build command
             Linux.logger.debug(f'Executing bridge build command for VM #{vm_id}')
-            with tracer.start_span('build_bridge', child_of=span) as child_span:
-                stdout, stderr = Linux.deploy(bridge_build_cmd, client, child_span)
+
+            child_span = tracer.start_span('build_bridge', child_of=span)
+            stdout, stderr = Linux.deploy(bridge_build_cmd, client, child_span)
+            child_span.finish()
+
             if stdout:
                 Linux.logger.debug(f'Bridge build command for VM #{vm_id} generated stdout.\n{stdout}')
             if stderr:
@@ -158,8 +165,11 @@ class Linux(LinuxMixin):
 
             # Now attempt to execute the vm build command
             Linux.logger.debug(f'Executing vm build command for VM #{vm_id}')
-            with tracer.start_span('build_vm', child_of=span) as child_span:
-                stdout, stderr = Linux.deploy(vm_build_cmd, client, child_span)
+
+            child_span = tracer.start_span('build_vm', child_of=span)
+            stdout, stderr = Linux.deploy(vm_build_cmd, client, child_span)
+            child_span.finish()
+
             if stdout:
                 Linux.logger.debug(f'VM build command for VM #{vm_id} generated stdout.\n{stdout}')
             if stderr:

@@ -21,8 +21,10 @@ def update_vrf(vrf_id: int):
     """
     Helper function that wraps the actual task in a span, meaning we don't have to remember to call .finish
     """
-    with tracer.start_span('update_vrf') as span:
-        _update_vrf(vrf_id, span)
+    span = tracer.start_span('update_vrf')
+    _update_vrf(vrf_id, span)
+    span.finish()
+
     # Flush the loggers here so it's not in the span
     utils.flush_logstash()
 
@@ -35,8 +37,9 @@ def _update_vrf(vrf_id: int, span: Span):
     logger.info(f'Commencing update of VRF #{vrf_id}')
 
     # Read the VRF
-    with tracer.start_span('read_vrf', child_of=span) as child_span:
-        vrf = utils.api_read(IAAS.vrf, vrf_id, span=child_span)
+    child_span = tracer.start_span('read_vrf', child_of=span)
+    vrf = utils.api_read(IAAS.vrf, vrf_id, span=child_span)
+    child_span.finish()
 
     # Ensure it is not none
     if vrf is None:
@@ -53,13 +56,15 @@ def _update_vrf(vrf_id: int, span: Span):
         return
 
     # If all is well and good here, update the VRF state to UPDATING and pass the data to the updater
-    with tracer.start_span('update_to_updating', child_of=span) as child_span:
-        response = IAAS.vrf.partial_update(
-            token=Token.get_instance().token,
-            pk=vrf_id,
-            data={'state': state.UPDATING},
-            span=child_span,
-        )
+    child_span = tracer.start_span('update_to_updating', child_of=span)
+    response = IAAS.vrf.partial_update(
+        token=Token.get_instance().token,
+        pk=vrf_id,
+        data={'state': state.UPDATING},
+        span=child_span,
+    )
+    child_span.finish()
+
     if response.status_code != 204:
         logger.error(
             f'Could not update VRF #{vrf_id} to state UPDATING. Response: {response.content.decode()}.',
@@ -69,22 +74,26 @@ def _update_vrf(vrf_id: int, span: Span):
         span.set_tag('return_reason', 'could_not_update_state')
         return
 
-    with tracer.start_span('update', child_of=span) as child_span:
-        success = VrfUpdater.update(vrf, child_span)
+    child_span = tracer.start_span('update', child_of=span)
+    success = VrfUpdater.update(vrf, child_span)
+    child_span.finish()
 
     span.set_tag('return_reason', f'success: {success}')
 
     if success:
         logger.info(f'Successfully updated VRF #{vrf_id}')
         metrics.vrf_update_success()
+
         # Update state to RUNNING in the API
-        with tracer.start_span('update_to_running', child_of=span) as child_span:
-            response = IAAS.vrf.partial_update(
-                token=Token.get_instance().token,
-                pk=vrf_id,
-                data={'state': state.RUNNING},
-                span=child_span,
-            )
+        child_span = tracer.start_span('update_to_running', child_of=span)
+        response = IAAS.vrf.partial_update(
+            token=Token.get_instance().token,
+            pk=vrf_id,
+            data={'state': state.RUNNING},
+            span=child_span,
+        )
+        child_span.finish()
+
         if response.status_code != 204:
             logger.error(
                 f'Could not update VRF #{vrf_id} to state RUNNING. Response: {response.content.decode()}.',
