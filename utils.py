@@ -42,10 +42,12 @@ def setup_root_logger():
     instead of having that old bad system
     :param level: The level at which to log messages
     """
+    # set root logger level to critical to prevent double logging
+    logging.getLogger().setLevel(logging.CRITICAL)
+
+    # Set up robot parent logger
     logger = logging.getLogger('robot')
     logger.setLevel(logging.DEBUG)
-    # Prevent double logging
-    logger.propogate = False
 
     # Stream Handler
     fmt = logging.Formatter(fmt='%(asctime)s - %(name)s: %(levelname)s: %(message)s', datefmt='%d/%m/%y @ %H:%M:%S')
