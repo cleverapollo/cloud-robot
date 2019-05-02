@@ -133,9 +133,7 @@ class DummyVrf:
             vrf = utils.api_read(IAAS.vrf, vrf_id)
             if vrf is None:
                 return
-            span = tracer.start_span('dummy_vrf_project_delete')
-            utils.project_delete(vrf['idProject'], span)
-            span.finish()
+            utils.project_delete(vrf['idProject'])
 
     def update(self, vrf_id: int):
         """

@@ -19,33 +19,18 @@ __all__ = [
 @app.task
 def restart_vrf(vrf_id: int):
     """
-    Helper function that wraps the actual task in a span, meaning we don't have to remember to call .finish
-    """
-    span = tracer.start_span('restart_vrf')
-    _restart_vrf(vrf_id, span)
-    span.finish()
-
-    # Flush the loggers here so it's not in the span
-    utils.flush_logstash()
-
-
-def _restart_vrf(vrf_id: int, span: Span):
-    """
     Task to restart the specified vrf
     """
     logger = logging.getLogger('robot.tasks.vrf.restart')
     logger.info(f'Commencing restart of VRF #{vrf_id}')
 
     # Read the VRF
-    child_span = tracer.start_span('read_vrf', child_of=span)
-    vrf = utils.api_read(IAAS.vrf, vrf_id, span=child_span)
-    child_span.finish()
+    vrf = utils.api_read(IAAS.vrf, vrf_id)
 
     # Ensure it is not none
     if vrf is None:
         # Rely on the utils method for logging
         metrics.vrf_restart_failure()
-        span.set_tag('return_reason', 'invalid_vrf_id')
         return
 
     # Ensure that the state of the vrf is still currently SCRUBBING or QUIESCING
@@ -54,29 +39,19 @@ def _restart_vrf(vrf_id: int, span: Span):
             f'Cancelling restart of VRF #{vrf_id}. Expected state to be RESTARTING, found {vrf["state"]}.',
         )
         # Return out of this function without doing anything
-        span.set_tag('return_reason', 'not_in_valid_state')
         return
 
     # There's no in-between state for Restart tasks, just jump straight to doing the work
-    child_span = tracer.start_span('restart', child_of=span)
-    success = VrfRestarter.restart(vrf, child_span)
-    child_span.finish()
-
-    span.set_tag('return_reason', f'success: {success}')
-
-    if success:
+    if VrfRestarter.restart(vrf):
         logger.info(f'Successfully restarted VRF #{vrf_id}')
         metrics.vrf_restart_success()
 
         # Update state to RUNNING in the API
-        child_span = tracer.start_span('update_to_running', child_of=span)
         response = IAAS.vrf.partial_update(
             token=Token.get_instance().token,
             pk=vrf_id,
             data={'state': state.RUNNING},
-            span=child_span,
         )
-        child_span.finish()
 
         if response.status_code != 204:
             logger.error(
@@ -86,3 +61,6 @@ def _restart_vrf(vrf_id: int, span: Span):
         logger.error(f'Failed to restart VRF #{vrf_id}')
         metrics.vrf_restart_failure()
         # There's no fail state here either
+
+    # Flush the logs
+    utils.flush_logstash()

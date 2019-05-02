@@ -62,26 +62,22 @@ class Vrf(VrfMixin):
     }
 
     @staticmethod
-    def build(vrf_data: Dict[str, Any], span: Span) -> bool:
+    def build(vrf_data: Dict[str, Any]) -> bool:
         """
         Commence the build of a vrf using the data read from the API
         :param vrf_data: The result of a read request for the specified VRF
-        :param span: The tracing span in use for this build task
         :return: A flag stating whether or not the build was successful
         """
         vrf_id = vrf_data['idVRF']
 
         # Start by generating the proper dict of data needed by the template
-        child_span = tracer.start_span('generate_template_data', child_of=span)
-        template_data = Vrf._get_template_data(vrf_data, child_span)
-        child_span.finish()
+        template_data = Vrf._get_template_data(vrf_data)
 
         # Check that the template data was successfully retrieved
         if template_data is None:
             Vrf.logger.error(
                 f'Failed to retrieve template data for VRF #{vrf_data["idVRF"]}.',
             )
-            span.set_tag('failed_reason', 'template_data_failed')
             return False
 
         # Check that all of the necessary keys are present
@@ -93,41 +89,32 @@ class Vrf(VrfMixin):
                 f'Template Data Error, the following keys were missing from the VRF build data: '
                 f'{", ".join(missing_keys)}',
             )
-            span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
         # If everything is okay, commence building the VRF
         router_model = template_data.pop('router_model')
         management_ip = template_data.pop('management_ip')
         try:
-            child_span = tracer.start_span('generate_setconf', child_of=span)
             template_name = f'vrf/build_{router_model}.j2'
-            child_span.set_tag('template_name', template_name)
             conf = utils.JINJA_ENV.get_template(template_name).render(**template_data)
-            child_span.finish()
         except Exception:
             Vrf.logger.error(
                 f'Unable to find the build template for {router_model} Routers',
                 exc_info=True,
             )
-            span.set_tag('failed_reason', 'invalid_template_name')
             return False
         Vrf.logger.debug(f'Generated setconf for VRF #{vrf_id}\n{conf}')
 
         # Deploy the generated setconf to the router
-        child_span = tracer.start_span('deploy_setconf', child_of=span)
-        success = Vrf.deploy(conf, management_ip)
-        child_span.finish()
-        return success
+        return Vrf.deploy(conf, management_ip)
 
     @staticmethod
-    def _get_template_data(vrf_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
+    def _get_template_data(vrf_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Given the vrf data from the API, create a dictionary that contains all of the necessary keys for the template
         The keys will be checked in the build method and not here, this method is only concerned with fetching the data
         that it can.
         :param vrf_data: The data on the vrf that was retrieved from the API
-        :param span: The tracing span in use for this task. In this method just pass it to API calls
         :returns: Constructed template data, or None if something went wrong
         """
         vrf_id = vrf_data['idVRF']
@@ -138,7 +125,7 @@ class Vrf(VrfMixin):
         data['project_id'] = project_id
 
         # Read the project to get the customer idAddress for vxlan
-        project = utils.api_read(IAAS.project, project_id, span=span)
+        project = utils.api_read(IAAS.project, project_id)
         if project is None:
             # An error will have been logged by the utils function, so we can just exit
             return None
@@ -148,7 +135,7 @@ class Vrf(VrfMixin):
         vlans: Deque[Dict[str, str]] = deque()
         nats: Deque[Dict[str, str]] = deque()
         # Iterate through subnets for the vrf and check vlans and nat rules
-        subnets = utils.api_list(IAAS.subnet, {'vrf': vrf_id}, span=span)
+        subnets = utils.api_list(IAAS.subnet, {'vrf': vrf_id})
         for subnet in subnets:
             if not is_valid_vlan(subnet['vLAN']):
                 Vrf.logger.error(
@@ -174,7 +161,7 @@ class Vrf(VrfMixin):
                 'fip_id__isnull': False,
                 'subnet__idSubnet': subnet['idSubnet'],
             }
-            for ip in utils.api_list(IAAS.ipaddress, params, span=span):
+            for ip in utils.api_list(IAAS.ipaddress, params):
                 nats.append({
                     'private_address': ip['address'],
                     'public_address': ip['fip']['address'],
@@ -185,12 +172,12 @@ class Vrf(VrfMixin):
 
         # Retrieve the IP Address and Subnet Mask for the VRF
         # Get the IP Address of the VRF
-        vrf_ip = utils.api_read(IAAS.ipaddress, vrf_data['idIPVrf'], span=span)
+        vrf_ip = utils.api_read(IAAS.ipaddress, vrf_data['idIPVrf'])
         if vrf_ip is None:
             # The utils method will have logged an error
             return None
         # Get the Subnet for the VRF to get the subnet mask
-        vrf_subnet = utils.api_read(IAAS.subnet, vrf_ip['idSubnet'], span=span)
+        vrf_subnet = utils.api_read(IAAS.subnet, vrf_ip['idSubnet'])
         if vrf_subnet is None:
             # The utils method will have logged an error
             return None
@@ -199,9 +186,7 @@ class Vrf(VrfMixin):
 
         # Get the management ip address and the router model
         # These are used to determine the template to use and where to connect
-        child_span = tracer.start_span('get_router_data', child_of=span)
-        router_data = Vrf._get_router_data(vrf_data['idRouter'], child_span)
-        child_span.finish()
+        router_data = Vrf._get_router_data(vrf_data['idRouter'])
 
         if router_data is None:
             return None
@@ -209,9 +194,7 @@ class Vrf(VrfMixin):
         data['router_model'] = router_data['router_model']
 
         # Get the port data for the VRF
-        child_span = tracer.start_span('get_vrf_port_data', child_of=span)
-        port_data = Vrf._get_vrf_port_data(vrf_ip['idSubnet'], vrf_data['idRouter'], child_span)
-        child_span.finish()
+        port_data = Vrf._get_vrf_port_data(vrf_ip['idSubnet'], vrf_data['idRouter'])
 
         if port_data is None:
             # The function will have done the logging so we should be okay to just return
@@ -223,7 +206,7 @@ class Vrf(VrfMixin):
 
         # Finally, get the VPNs for the Project
         vpns: Deque[Dict[str, Any]] = deque()
-        for vpn in utils.api_list(IAAS.vpn_tunnel, {'vrf': vrf_id}, span=span):
+        for vpn in utils.api_list(IAAS.vpn_tunnel, {'vrf': vrf_id}):
             vpn_data = {
                 'vlan': '',
                 'site_to_site': vpn['siteToSite'],
@@ -235,18 +218,18 @@ class Vrf(VrfMixin):
             }
             # Gather the required data for the vpns
             # Fetch the subnet
-            subnet = utils.api_read(IAAS.subnet, vpn['vpnLocalSubnet'], span=span)
+            subnet = utils.api_read(IAAS.subnet, vpn['vpnLocalSubnet'])
             vpn_data['vlan'] = subnet['vLAN']
             vpn_data['remote_subnet'] = IPNetwork(
                 f'{vpn["vpnRemoteSubnetIP"]}/{vpn["vpnRemoteSubnetMask"]}',
             ).cidr
             # Fetch the IKE name
-            ike = utils.api_read(IAAS.ike, vpn['ike_id'], span=span)
+            ike = utils.api_read(IAAS.ike, vpn['ike_id'])
             if ike is None:
                 return None
             vpn['ike'] = ike['name']
             # Fetch the IPSec Name
-            ipsec = utils.api_read(IAAS.ipsec, vpn['ipsec_id'], span=span)
+            ipsec = utils.api_read(IAAS.ipsec, vpn['ipsec_id'])
             if ipsec is None:
                 return None
             vpn['ipsec'] = ipsec['name']

@@ -19,19 +19,16 @@ class WindowsMixin:
     logger: logging.Logger
 
     @classmethod
-    def deploy(cls, cmd: str, management_ip: str, span: Span) -> Response:
+    def deploy(cls, cmd: str, management_ip: str) -> Response:
         """
         Deploy the given command to the specified Windows host.
-        :param span: The span used for tracing the task that's currently running
         """
         cls.logger.debug(f'Deploying command to Windows Host {management_ip}\n{cmd}')
         session = Session(management_ip, auth=('administrator', settings.NETWORK_PASSWORD))
         encoded_cmd = b64encode(cmd.encode('utf_16_le')).decode('ascii')
-        child_span = tracer.start_span('run_command', child_of=span)
         response = session.run_cmd(f'powershell -encodedcommand {encoded_cmd}')
         if len(response.std_err):
             response.std_err = session._clean_error_msg(response.std_err)
-        child_span.finish()
 
         # Decode out and err
         if hasattr(response.std_out, 'decode'):

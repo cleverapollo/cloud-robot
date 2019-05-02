@@ -41,31 +41,23 @@ class LinuxMixin:
         return ''.join(fragments)
 
     @classmethod
-    def deploy(cls, command: str, client: SSHClient, span: Span) -> Tuple[str, str]:
+    def deploy(cls, command: str, client: SSHClient) -> Tuple[str, str]:
         """
         Deploy the given `command` to the Linux host accessible via the supplied `client`
         :param command: The command to run on the host
         :param client: A paramiko.Client instance that is connected to the host
             The client is passed instead of the host_ip so we can avoid having to open multiple connections
-        :param span: The span used for tracing the task that's currently running
         :return: The messages retrieved from stdout and stderr of the command
         """
         hostname = client.get_transport().sock.getpeername()[0]
         cls.logger.debug(f'Deploying command to Linux Host {hostname}')
 
         # Run the command via the client
-        child_span = tracer.start_span('exec_command', child_of=span)
         _, stdout, stderr = client.exec_command(command)
         # Block until command finishes
         stdout.channel.recv_exit_status()
-        child_span.finish()
 
         # Read the full response from both channels
-        child_span = tracer.start_span('read_stdout', child_of=span)
         output = cls.get_full_response(stdout.channel)
-        child_span.finish()
-
-        child_span = tracer.start_span('read_stderr', child_of=span)
         error = cls.get_full_response(stderr.channel)
-        child_span.finish()
         return output, error
