@@ -36,22 +36,26 @@ class Vrf(VrfMixin):
     }
 
     @staticmethod
-    def quiesce(vrf_data: Dict[str, Any]) -> bool:
+    def quiesce(vrf_data: Dict[str, Any], span: Span) -> bool:
         """
         Commence the quiesce of a vrf using the data read from the API
         :param vrf_data: The result of a read request for the specified VRF
+        :param span: The tracing span in use for this quiesce task
         :return: A flag stating whether or not the quiesce was successful
         """
         vrf_id = vrf_data['idVRF']
 
         # Start by generating the proper dict of data needed by the template
-        template_data = Vrf._get_template_data(vrf_data)
+        child_span = tracer.start_span('generate_template_data', child_of=span)
+        template_data = Vrf._get_template_data(vrf_data, child_span)
+        child_span.finish()
 
         # Check that the template data was successfully retrieved
         if template_data is None:
             Vrf.logger.error(
                 f'Failed to retrieve template data for VRF #{vrf_data["idVRF"]}.',
             )
+            span.set_tag('failed_reason', 'template_data_failed')
             return False
 
         # Check that all of the necessary keys are present
@@ -63,23 +67,32 @@ class Vrf(VrfMixin):
                 f'Template Data Error, the following keys were missing from the VRF quiesce data: '
                 f'{", ".join(missing_keys)}',
             )
+            span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
         # If everything is okay, commence quiescing the VRF
         management_ip = template_data.pop('management_ip')
+
+        child_span = tracer.start_span('generate_setconf', child_of=span)
         conf = utils.JINJA_ENV.get_template('vrf/quiesce.j2').render(**template_data)
+        child_span.finish()
+
         Vrf.logger.debug(f'Generated setconf for VRF #{vrf_id}\n{conf}')
 
         # Deploy the generated setconf to the router
-        return Vrf.deploy(conf, management_ip)
+        child_span = tracer.start_span('deploy_setconf', child_of=span)
+        success = Vrf.deploy(conf, management_ip)
+        child_span.finish()
+        return success
 
     @staticmethod
-    def _get_template_data(vrf_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _get_template_data(vrf_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
         """
         Given the vrf data from the API, create a dictionary that contains all of the necessary keys for the template
         The keys will be checked in the quiesce method and not here, this method is only concerned with fetching the
         data that it can.
         :param vrf_data: The data on the vrf that was retrieved from the API
+        :param span: The tracing span in use for this task. In this method just pass it to API calls
         :returns: Constructed template data, or None if something went wrong
         """
         vrf_id = vrf_data['idVRF']
@@ -89,7 +102,7 @@ class Vrf(VrfMixin):
         data['project_id'] = vrf_data['idProject']
 
         # Get the management ip address
-        router_data = Vrf._get_router_data(vrf_data['idRouter'])
+        router_data = Vrf._get_router_data(vrf_data['idRouter'], span)
         if router_data is None:
             # We can't unresource this, so just return
             return None

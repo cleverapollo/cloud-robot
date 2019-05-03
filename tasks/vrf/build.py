@@ -19,50 +19,78 @@ __all__ = [
 @app.task
 def build_vrf(vrf_id: int):
     """
+    Helper function that wraps the actual task in a span, meaning we don't have to remember to call .finish
+    """
+    span = tracer.start_span('build_vrf')
+    _build_vrf(vrf_id, span)
+    span.finish()
+    # Flush the loggers here so it's not in the span
+    utils.flush_logstash()
+
+
+def _build_vrf(vrf_id: int, span: Span):
+    """
     Task to build the specified vrf
     """
     logger = logging.getLogger('robot.tasks.vrf.build')
     logger.info(f'Commencing build of VRF #{vrf_id}')
 
     # Read the VRF
-    vrf = utils.api_read(IAAS.vrf, vrf_id)
+    child_span = tracer.start_span('read_vrf', child_of=span)
+    vrf = utils.api_read(IAAS.vrf, vrf_id, span=child_span)
+    child_span.finish()
 
     # Ensure it is not none
     if vrf is None:
         # Rely on the utils method for logging
         metrics.vrf_build_failure()
+        span.set_tag('return_reason', 'invalid_vrf_id')
         return
 
     # Ensure that the state of the vrf is still currently REQUESTED (it hasn't been picked up by another runner)
     if vrf['state'] != state.REQUESTED:
         logger.warn(f'Cancelling build of VRF #{vrf_id}. Expected state to be {state.REQUESTED}, found {vrf["state"]}.')
         # Return out of this function without doing anything as it was already handled
+        span.set_tag('return_reason', 'not_in_valid_state')
         return
 
     # If all is well and good here, update the VRF state to BUILDING and pass the data to the builder
+    child_span = tracer.start_span('update_to_building', child_of=span)
     response = IAAS.vrf.partial_update(
         token=Token.get_instance().token,
         pk=vrf_id,
         data={'state': state.BUILDING},
+        span=child_span,
     )
+    child_span.finish()
 
     if response.status_code != 204:
         logger.error(
             f'Could not update VRF #{vrf_id} to state BUILDING. Response: {response.content.decode()}.',
         )
         metrics.vrf_build_failure()
+        span.set_tag('return_reason', 'could_not_update_state')
         return
 
-    if VrfBuilder.build(vrf):
+    child_span = tracer.start_span('build', child_of=span)
+    success = VrfBuilder.build(vrf, child_span)
+    child_span.finish()
+
+    span.set_tag('return_reason', f'success: {success}')
+
+    if success:
         logger.info(f'Successfully built VRF #{vrf_id}')
         metrics.vrf_build_success()
 
         # Update state to RUNNING in the API
+        child_span = tracer.start_span('update_to_running', child_of=span)
         response = IAAS.vrf.partial_update(
             token=Token.get_instance().token,
             pk=vrf_id,
             data={'state': state.RUNNING},
+            span=child_span,
         )
+        child_span.finish()
 
         if response.status_code != 204:
             logger.error(
@@ -73,16 +101,16 @@ def build_vrf(vrf_id: int):
         metrics.vrf_build_failure()
 
         # Update state to UNRESOURCED in the API
+        child_span = tracer.start_span('update_to_unresourced', child_of=span)
         response = IAAS.vrf.partial_update(
             token=Token.get_instance().token,
             pk=vrf_id,
             data={'state': state.UNRESOURCED},
+            span=child_span,
         )
+        child_span.finish()
 
         if response.status_code != 204:
             logger.error(
                 f'Could not update VRF #{vrf_id} to state UNRESOURCED. Response: {response.content.decode()}.',
             )
-
-    # Flush the logs
-    utils.flush_logstash()
