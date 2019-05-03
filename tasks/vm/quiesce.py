@@ -27,6 +27,7 @@ def quiesce_vm(vm_id: int):
     Helper function that wraps the actual task in a span, meaning we don't have to remember to call .finish
     """
     span = tracer.start_span('tasks.quiesce_vm')
+    span.set_tag('vm_id', vm_id)
     _quiesce_vm(vm_id, span)
     span.finish()
 
