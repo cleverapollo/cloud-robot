@@ -11,6 +11,7 @@ from collections import deque
 from typing import Any, Deque, Dict, Optional, Tuple
 # lib
 from cloudcix.api import IAAS
+from jaeger_client import Span
 from netaddr import IPAddress
 from paramiko import AutoAddPolicy, SSHClient, SSHException
 # local

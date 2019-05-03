@@ -10,6 +10,7 @@ import logging
 from typing import Any, Dict, Optional
 # lib
 from cloudcix.api import IAAS
+from jaeger_client import Span
 from winrm.exceptions import WinRMError
 # local
 import utils

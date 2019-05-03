@@ -3,6 +3,7 @@ Celery main runner
 """
 # lib
 from celery import Celery
+from jaeger_client import Config
 # local
 import settings
 import utils

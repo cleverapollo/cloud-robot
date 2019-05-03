@@ -10,6 +10,7 @@ from collections import deque
 from time import sleep
 from typing import Deque, Tuple
 # lib
+from jaeger_client import Span
 from paramiko import Channel, SSHClient
 
 __all__ = [

@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any, Dict
 # lib
 from cloudcix.api import IAAS
+from jaeger_client import Span
 # local
 import metrics
 import state

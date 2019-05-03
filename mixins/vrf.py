@@ -10,6 +10,7 @@ from time import asctime
 from typing import Dict, Optional, Union
 # lib
 from cloudcix.api import IAAS
+from jaeger_client import Span
 from jnpr.junos import Device
 from jnpr.junos.exception import CommitError, ConfigLoadError, ConnectError, LockError, UnlockError
 from jnpr.junos.utils.config import Config

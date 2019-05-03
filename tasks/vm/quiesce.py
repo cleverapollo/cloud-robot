@@ -3,6 +3,7 @@ import logging
 from datetime import datetime, timedelta
 # lib
 from cloudcix.api import IAAS
+from jaeger_client import Span
 # local
 import metrics
 import state

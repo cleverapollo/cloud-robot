@@ -12,6 +12,7 @@ from collections import deque
 from typing import Any, Deque, Dict, Optional
 # lib
 from cloudcix.api import IAAS
+from jaeger_client import Span
 from netaddr import IPNetwork
 # local
 import utils
