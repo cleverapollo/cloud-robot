@@ -46,7 +46,7 @@ def _scrub_vm(vm_id: int, span: Span):
         pk=vm_id,
         span=child_span,
     )
-    child_span.close()
+    child_span.finish()
 
     if response.status_code == 404:
         logger.info(
