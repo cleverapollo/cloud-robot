@@ -42,6 +42,9 @@ def setup_root_logger():
     instead of having that old bad system
     :param level: The level at which to log messages
     """
+    # Add null handler to root logger to avoid basicConfig from running
+    logging.getLogger().handlers = []
+
     # Set up robot parent logger
     logger = logging.getLogger('robot')
     logger.setLevel(logging.DEBUG)

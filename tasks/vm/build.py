@@ -58,7 +58,10 @@ def build_vm(vm_id: int):
     span.finish()
 
     # Flush the loggers here so it's not in the span
+    l = logging.getLogger('robot.tasks.vm.build')
+    l.debug('flush logs')
     utils.flush_logstash()
+    l.debug('logs flushed')
 
 
 def _build_vm(vm_id: int, span: Span):
@@ -189,10 +192,10 @@ def _build_vm(vm_id: int, span: Span):
 
         # Calculate the total time it took to build the VM entirely
         # uctnow - vm created time
-        logger.debug('Creating metrics')
-        total_time = datetime.utcnow() - datetime.strptime(vm['created'], '%Y-%m-%dT%H:%M:%S.%fZ')
+        total_time = datetime.utcnow() - datetime.strptime(vm['created'], '%Y-%m-%dT%H:%M:%S.%f')
         metrics.vm_build_success(total_time.seconds)
-        logger.debug('Metrics sent')
     else:
         logger.error(f'Failed to build VM #{vm_id}')
+        logger.debug('Unresource call')
         _unresource(vm, span)
+        logger.debug('Unresource call finished')
