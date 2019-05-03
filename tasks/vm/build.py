@@ -187,6 +187,7 @@ def _build_vm(vm_id: int, span: Span):
         # Calculate the total time it took to build the VM entirely
         # uctnow - vm created time
         total_time = datetime.utcnow() - datetime.strptime(vm['created'], '%Y-%m-%dT%H:%M:%S.%f')
+        logger.debug(f'Finished building VM #{vm_id} in {total_time.seconds} seconds')
         metrics.vm_build_success(total_time.seconds)
     else:
         logger.error(f'Failed to build VM #{vm_id}')
