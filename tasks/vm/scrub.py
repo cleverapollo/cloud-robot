@@ -41,7 +41,7 @@ def _scrub_vm(vm_id: int, span: Span):
     # Read the VM
     # Don't use utils so we can check the response code
     child_span = tracer.start_span('read_vm', child_of=span)
-    response = IAAS.vrf.read(
+    response = IAAS.vm.read(
         token=Token.get_instance().token,
         pk=vm_id,
         span=child_span,
