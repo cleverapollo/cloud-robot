@@ -21,7 +21,7 @@ def update_vrf(vrf_id: int):
     """
     Helper function that wraps the actual task in a span, meaning we don't have to remember to call .finish
     """
-    span = tracer.start_span('update_vrf')
+    span = tracer.start_span('tasks.update_vrf')
     _update_vrf(vrf_id, span)
     span.finish()
 

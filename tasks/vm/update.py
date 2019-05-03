@@ -25,7 +25,7 @@ def update_vm(vm_id: int):
     """
     Helper function that wraps the actual task in a span, meaning we don't have to remember to call .finish
     """
-    span = tracer.start_span('update_vm')
+    span = tracer.start_span('tasks.update_vm')
     _update_vm(vm_id, span)
     span.finish()
 

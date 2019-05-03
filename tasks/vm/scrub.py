@@ -24,7 +24,7 @@ def scrub_vm(vm_id: int):
     """
     Helper function that wraps the actual task in a span, meaning we don't have to remember to call .finish
     """
-    span = tracer.start_span('scrub_vm')
+    span = tracer.start_span('tasks.scrub_vm')
     _scrub_vm(vm_id, span)
     span.finish()
     # Flush the loggers here so it's not in the span

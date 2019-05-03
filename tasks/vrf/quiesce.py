@@ -21,7 +21,7 @@ def quiesce_vrf(vrf_id: int):
     """
     Helper function that wraps the actual task in a span, meaning we don't have to remember to call .finish
     """
-    span = tracer.start_span('quiesce_vrf')
+    span = tracer.start_span('tasks.quiesce_vrf')
     _quiesce_vrf(vrf_id, span)
     span.finish()
 

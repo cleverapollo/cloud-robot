@@ -21,7 +21,7 @@ def scrub_vrf(vrf_id: int):
     """
     Helper function that wraps the actual task in a span, meaning we don't have to remember to call .finish
     """
-    span = tracer.start_span('scrub_vrf')
+    span = tracer.start_span('tasks.scrub_vrf')
     _scrub_vrf(vrf_id, span)
     span.finish()
 
