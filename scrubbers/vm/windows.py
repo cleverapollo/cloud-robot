@@ -100,7 +100,8 @@ class Windows(WindowsMixin):
                 msg = response.std_out.strip()
                 Windows.logger.debug(f'VM scrub command for VM #{vm_id} generated stdout\n{msg}')
                 scrubbed = f'{template_data["vm_identifier"]} Successfully Deleted' in msg
-            if response.std_err:
+            # Check if the error was parsed to ensure we're not logging invalid std_err output
+            if response.std_err and '#< CLIXML\r\n' not in response.std_err:
                 msg = response.std_err.strip()
                 Windows.logger.warning(f'VM scrub command for VM #{vm_id} generated stderr\n{msg}')
         finally:
