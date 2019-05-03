@@ -220,7 +220,7 @@ class EmailNotifier:
         """
         logger = logging.getLogger('robot.email_notifier.send_email')
         try:
-            server = smtplib.SMTP(settings.CLOUDCIX_EMAIL_HOST)
+            server = smtplib.SMTP(settings.CLOUDCIX_EMAIL_HOST, timeout=10)
             # Log in to the server
             server.starttls()
             server.login(settings.CLOUDCIX_EMAIL_USERNAME, settings.CLOUDCIX_EMAIL_PASSWORD)
