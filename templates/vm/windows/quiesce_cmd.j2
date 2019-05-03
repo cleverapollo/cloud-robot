@@ -1,4 +1,6 @@
 try {
+  # Set the script to stop at the first error
+  $ErrorActionPreference = "Stop"
   $VMName = '{{ vm_identifier }}'
   Stop-VM -Name $VMName
   Write-Host "$VMName Successfully Quiesced."

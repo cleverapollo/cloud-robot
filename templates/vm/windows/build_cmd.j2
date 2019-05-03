@@ -1,4 +1,6 @@
 try {
+  # Set the script to stop at the first error
+  $ErrorActionPreference = "Stop"
   cmd.exe /c "mount -o nolock {{ freenas_url }} Z:"
   Test-Path -Path Z:\HyperV\
   & Z:\HyperV\scripts\VMCreator.ps1 -VMName {{ vm_identifier }} -Gen 1 -OSName {{ image_filename }} -ProcessorCount {{ cpu }} -Dynamic 1 -Ram {{ ram }} -Hdd {{ hdd }} -Ssd {{ ssd }} -MulDrive {{ drives }} -VlanId {{ vlan }} -Verbose;

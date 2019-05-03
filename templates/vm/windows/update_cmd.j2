@@ -1,4 +1,6 @@
 try {
+  # Set the script to stop at the first error
+  $ErrorActionPreference = "Stop"
   $VMName = '{{ vm_identifier }}'
 
   {# 0. Update the IPAddress if any #}
