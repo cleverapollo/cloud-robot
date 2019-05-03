@@ -182,7 +182,7 @@ def _build_vm(vm_id: int, span: Span):
 
         child_span = tracer.start_span('send_email', child_of=span)
         EmailNotifier.build_success(vm)
-        child_span.finished()
+        child_span.finish()
 
         # Calculate the total time it took to build the VM entirely
         # uctnow - vm created time
