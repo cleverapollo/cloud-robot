@@ -58,10 +58,7 @@ def build_vm(vm_id: int):
     span.finish()
 
     # Flush the loggers here so it's not in the span
-    l = logging.getLogger('robot.tasks.vm.build')
-    l.debug('flush logs')
     utils.flush_logstash()
-    l.debug('logs flushed')
 
 
 def _build_vm(vm_id: int, span: Span):
@@ -168,7 +165,6 @@ def _build_vm(vm_id: int, span: Span):
         logger.info(f'Successfully built VM #{vm_id}')
 
         # Update state to RUNNING in the API
-        logger.debug('Sending state update')
         child_span = tracer.start_span('update_to_running', child_of=span)
         response = IAAS.vm.partial_update(
             token=Token.get_instance().token,
@@ -177,18 +173,15 @@ def _build_vm(vm_id: int, span: Span):
             span=child_span,
         )
         child_span.finish()
-        logger.debug('State update finshed')
 
         if response.status_code != 204:
             logger.error(
                 f'Could not update VM #{vm_id} to state RUNNING. Response: {response.content.decode()}.',
             )
 
-        logger.debug('Sending email')
         child_span = tracer.start_span('send_email', child_of=span)
         EmailNotifier.build_success(vm)
         child_span.finished()
-        logger.debug('Email sent')
 
         # Calculate the total time it took to build the VM entirely
         # uctnow - vm created time
@@ -196,6 +189,4 @@ def _build_vm(vm_id: int, span: Span):
         metrics.vm_build_success(total_time.seconds)
     else:
         logger.error(f'Failed to build VM #{vm_id}')
-        logger.debug('Unresource call')
         _unresource(vm, span)
-        logger.debug('Unresource call finished')
