@@ -6,6 +6,7 @@ from cloudcix.api import IAAS
 import metrics
 import state
 import utils
+from celery_app import tracer
 from cloudcix_token import Token
 
 

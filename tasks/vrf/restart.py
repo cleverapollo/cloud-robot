@@ -8,7 +8,7 @@ import metrics
 import state
 import utils
 from restarters import Vrf as VrfRestarter
-from celery_app import app
+from celery_app import app, tracer
 from cloudcix_token import Token
 
 __all__ = [

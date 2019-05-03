@@ -13,7 +13,7 @@ from builders.vm import (
     Linux as LinuxVmBuilder,
     Windows as WindowsVmBuilder,
 )
-from celery_app import app
+from celery_app import app, tracer
 from cloudcix_token import Token
 from email_notifier import EmailNotifier
 

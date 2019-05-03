@@ -13,6 +13,7 @@ from typing import Any, Dict
 from jaeger_client import Span
 # local
 import utils
+from celery_app import tracer
 from builders import Vrf as VrfBuilder
 
 __all__ = [

@@ -7,7 +7,7 @@ from jaeger_client import Span
 import metrics
 import state
 import utils
-from celery_app import app
+from celery_app import app, tracer
 from cloudcix_token import Token
 from scrubbers.vm import (
     Linux as LinuxVmScrubber,

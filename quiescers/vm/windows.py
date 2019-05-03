@@ -14,6 +14,7 @@ from jaeger_client import Span
 from winrm.exceptions import WinRMError
 # local
 import utils
+from celery_app import tracer
 from mixins import WindowsMixin
 
 
