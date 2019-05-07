@@ -47,7 +47,8 @@
     - name: Deploy Jaeger Agent for reporting Spans to Jaeger
       docker_container:
         name: "jaeger-agent"
-        image: "jaegertracing/jaeger-agent:1.10.1"
+        image: "gitlab.cloudcix.com:5005/dockerproxy/jaeger-agent"
+        pull: true
         state: started
         restart_policy: "unless-stopped"
         network_mode: host
