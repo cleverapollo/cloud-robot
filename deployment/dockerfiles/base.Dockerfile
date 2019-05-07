@@ -15,4 +15,4 @@ ENV CLOUDCIX_SETTINGS_MODULE settings
 ENV ROBOT_ENV dev
 
 # Set the entry point as the robot script
-ENTRYPOINT ["/bin/bash", "entrypoint.sh"]
+CMD ["/bin/bash", "entrypoint.sh"]

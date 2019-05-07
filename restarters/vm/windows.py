@@ -1,50 +1,132 @@
-# libs
-import winrm
+"""
+restarter class for windows vms
+
+- gathers template data
+- generates necessary files
+- connects to the vm's server and deploys the vm to it
+"""
+# stdlib
+import logging
+from typing import Any, Dict, Optional
+# lib
+from cloudcix.api import IAAS
+from jaeger_client import Span
+from winrm.exceptions import WinRMError
 # local
 import utils
-from ro import fix_run_ps
+from celery_app import tracer
+from mixins import WindowsMixin
 
 
-class Windows:
+__all__ = [
+    'Windows',
+]
+
+
+class Windows(WindowsMixin):
     """
-    Restarter class for restarting Windows VMs
-    Restarter: Restarts the VM
+    Class that handles the restarting of the specified VM
+    When we get to this point, we can be sure that the VM is a windows VM
     """
-    logger = utils.get_logger_for_name('restarters.vm.windows')
+    # Keep a logger for logging messages from this class
+    logger = logging.getLogger('robot.restarters.vm.windows')
+    # Keep track of the keys necessary for the template, so we can ensure that all keys are present before restarting
+    template_keys = {
+        # the DNS hostname for the host machine, as WinRM cannot use IPv6
+        'host_name',
+        # an identifier that uniquely identifies the vm
+        'vm_identifier',
+    }
 
     @staticmethod
-    def restart(vm: dict, password: str) -> bool:
+    def restart(vm_data: Dict[str, Any], span: Span) -> bool:
         """
-        Given data from the VM dispatcher, request for a Windows VM to be restarted in the specified HyperV host and
-        return a flag indicating whether or not the restart was successful.
-        :param vm: The data about the VM from the dispatcher
-        :param password: The password used to log in to the host to restart the VM
+        Commence the restart of a vm using the data read from the API
+        :param vm_data: The result of a read request for the specified VM
+        :param span: The span in use for this restart task
         :return: A flag stating whether or not the restart was successful
         """
-        restarted = False
-        # Attempt to connect to the host to begin restarting the VM
-        Windows.logger.info(f'Attempting to connect to host @ {vm["host_name"]} to restart VM #{vm["idVM"]}')
-        try:
-            # Generate the command that restart the VM
-            cmd = utils.jinja_env.get_template('windows_vm_restart_cmd.j2').render(
-                **vm,
-            )
-            Windows.logger.debug(f'Generated restart command for VM #{vm["idVM"]}\n{cmd}')
-            Windows.logger.info(f'Attempting to execute the command to restart VM #{vm["idVM"]}')
-            # Connecting HyperV host with session
-            session = winrm.Session(vm['host_name'], auth=('administrator', password))
-            response = fix_run_ps(self=session, script=cmd)
-            if response.status_code == 0:
-                msg = response.std_out.strip()
-                Windows.logger.info(f'VM restart command for VM #{vm["idVM"]} generated stdout\n{msg}')
-                restarted = f'{vm["vm_identifier"]} Successfully Rebooted.' in msg.decode()
-            else:
-                msg = response.std_err.strip()
-                Windows.logger.warning(f'VM restart command for VM #{vm["idVM"]} generated stderr\n{msg}')
-        except winrm.exceptions.WinRMError:
+        vm_id = vm_data['idVM']
+
+        # Generate the necessary template data
+        child_span = tracer.start_span('generate_template_data', child_of=span)
+        template_data = Windows._get_template_data(vm_data, child_span)
+        child_span.finish()
+
+        # Check that the data was successfully generated
+        if template_data is None:
             Windows.logger.error(
-                f'Exception occurred while connected to host server @ {vm["host_ip"]} for the restart of VM '
-                f'#{vm["idVM"]}',
+                f'Failed to retrieve template data for VM #{vm_id}.',
+            )
+            span.set_tag('failed_reason', 'template_data_failed')
+            return False
+
+        # Check that all of the necessary keys are present
+        if not all(template_data[key] is not None for key in Windows.template_keys):
+            missing_keys = [
+                f'"{key}"' for key in Windows.template_keys if template_data[key] is None
+            ]
+            Windows.logger.error(
+                f'Template Data Error, the following keys were missing from the VM restart data: '
+                f'{", ".join(missing_keys)}',
+            )
+            span.set_tag('failed_reason', 'template_data_keys_missing')
+            return False
+
+        # If everything is okay, commence restarting the VM
+        host_name = template_data.pop('host_name')
+
+        # Render the restart command
+        child_span = tracer.start_span('generate_command', child_of=span)
+        cmd = utils.JINJA_ENV.get_template('vm/windows/restart_cmd.j2').render(**template_data)
+        child_span.finish()
+
+        # Open a client and run the two necessary commands on the host
+        restarted = False
+        try:
+            child_span = tracer.start_span('restart_vm', child_of=span)
+            response = Windows.deploy(cmd, host_name, child_span)
+            span.set_tag('host', host_name)
+            child_span.finish()
+        except WinRMError:
+            Windows.logger.error(
+                f'Exception occurred while attempting to restart VM #{vm_id} on {host_name}',
                 exc_info=True,
             )
-        return restarted
+            span.set_tag('failed_reason', 'winrm_error')
+        else:
+            # Check the stdout and stderr for messages
+            if response.std_out:
+                msg = response.std_out.strip()
+                Windows.logger.debug(f'VM restart command for VM #{vm_id} generated stdout\n{msg}')
+                restarted = f'{template_data["vm_identifier"]} Successfully Rebooted' in msg
+            # Check if the error was parsed to ensure we're not logging invalid std_err output
+            if response.std_err and '#< CLIXML\r\n' not in response.std_err:
+                msg = response.std_err.strip()
+                Windows.logger.warning(f'VM restart command for VM #{vm_id} generated stderr\n{msg}')
+        finally:
+            return restarted
+
+    @staticmethod
+    def _get_template_data(vm_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
+        """
+        Given the vm data from the API, create a dictionary that contains all of the necessary keys for the template
+        The keys will be checked in the build method and not here, this method is only concerned with fetching the data
+        that it can.
+        :param vm_data: The data of the VM read from the API
+        :param span: The tracing span in use for this task. In this method, just pass it to API calls
+        :returns: The data needed for the templates to build a Windows VM
+        """
+        vm_id = vm_data['idVM']
+        Windows.logger.debug(f'Compiling template data for VM #{vm_id}')
+        data: Dict[str, Any] = {key: None for key in Windows.template_keys}
+
+        data['vm_identifier'] = f'{vm_data["idProject"]}_{vm_data["idVM"]}'
+
+        # Get the ip address of the host
+        for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer'], span=span):
+            if mac['status'] is True and mac['ip'] is not None:
+                data['host_name'] = mac['dnsName']
+                break
+
+        return data

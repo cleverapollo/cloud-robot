@@ -14,6 +14,17 @@ lint:
     - master
     - stable
 
+mypy:
+  image: python:3.7
+  stage: lint
+  script:
+    - pip3 install mypy
+    - mypy --ignore-missing-imports builders dispatchers metrics net_builders quiescers restarters scrubbers tasks updaters celery_app.py cloudcix_token.py email_notifier.py robot.py state.py utils.py
+  except:
+    - master
+    - stable
+
+
 build_base:
   stage: base
   tags:
@@ -23,10 +34,9 @@ build_base:
   script:
     - docker build -f deployment/dockerfiles/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/base:latest --no-cache .
     - docker push gitlab.cloudcix.com:5005/cloudcix/robot/base:latest
-  after_script:
-    - docker system prune -f
   only:
     - master
+
 
 build_alpha:
   stage: build

@@ -1,55 +1,141 @@
-# python
+"""
+quiescer class for linux vms
+
+- gathers template data
+- generates necessary files
+- connects to the vm's server and deploys the vm to it
+"""
+# stdlib
+import logging
+from typing import Any, Dict, Optional
 # lib
-import paramiko
+from cloudcix.api import IAAS
+from jaeger_client import Span
+from paramiko import AutoAddPolicy, SSHClient, SSHException
 # local
+import settings
 import utils
-from ro import get_full_response
+from celery_app import tracer
+from mixins import LinuxMixin
 
 
-class Linux:
+__all__ = [
+    'Linux',
+]
+
+
+class Linux(LinuxMixin):
     """
-    Quiescer class for Linux VMs
-    Quiesce: Shuts down the VM in host server
+    Class that handles the quiescing of the specified VM
+    When we get to this point, we can be sure that the VM is a linux VM
     """
-    logger = utils.get_logger_for_name('quiescers.vm.linux')
+    # Keep a logger for logging messages from this class
+    logger = logging.getLogger('robot.quiescers.vm.linux')
+    # Keep track of the keys necessary for the template, so we can ensure that all keys are present before quiescing
+    template_keys = {
+        # the ip address of the host that the VM to quiesce is running on
+        'host_ip',
+        # the sudo password of the host, used to run some commands
+        'host_sudo_passwd',
+        # an identifier that uniquely identifies the vm
+        'vm_identifier',
+    }
 
     @staticmethod
-    def quiesce(vm: dict, password: str) -> bool:
+    def quiesce(vm_data: Dict[str, Any], span: Span) -> bool:
         """
-        Given data from the VM dispatcher, request for a Linux VM to be quiesced in the specified KVM host and return a
-        flag indicating whether or not the quiesce was successful.
-        :param vm: The data about the VM from the dispatcher
-        :param password: The password used to log in to the host to quiesce the VM
+        Commence the quiesce of a vm using the data read from the API
+        :param vm_data: The result of a read request for the specified VM
+        :param span: The tracing span in use for this quiesce task
         :return: A flag stating whether or not the quiesce was successful
         """
-        quiesced = False
-        # Attempt to connect to the host server
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        try:
-            Linux.logger.info(f'Attempting to connect to host server @ {vm["host_ip"]}')
-            client.connect(hostname=vm['host_ip'], username='administrator', password=password)
-            # Generate and execute the command to quiesce the actual VM
-            Linux.logger.info(f'Attempting to quiesce the VM #{vm["idVM"]}')
-            cmd = utils.jinja_env.get_template('linux_vm_quiesce_cmd.j2').render(
-                vm_identifier=vm['vm_identifier'],
-            )
-            Linux.logger.debug(f'Generated VM quiesce command for VM #{vm["idVM"]}\n{cmd}')
+        vm_id = vm_data['idVM']
 
-            # Run the command and log the output and err.
-            _, stdout, stderr = client.exec_command(cmd)
-            output = get_full_response(stdout.channel)
-            if output:
-                Linux.logger.info(f'VM quiesce command for VM #{vm["idVM"]} generated stdout.\n{output}')
-                quiesced = True
-            err = get_full_response(stderr.channel)
-            if err:
-                Linux.logger.warning(f'VM quiesce command for VM #{vm["idVM"]} generated stderr.\n{err}')
-        except paramiko.SSHException:
+        # Generate the necessary template data
+        child_span = tracer.start_span('generate_template_data', child_of=span)
+        template_data = Linux._get_template_data(vm_data, child_span)
+        child_span.finish()
+
+        # Check that the data was successfully generated
+        if template_data is None:
             Linux.logger.error(
-                f'Exception occurred while connected to host server @ {vm["host_ip"]} for the quiesce of VM '
-                f'#{vm["idVM"]}',
+                f'Failed to retrieve template data for VM #{vm_id}.',
+            )
+            span.set_tag('failed_reason', 'template_data_failed')
+            return False
+
+        # Check that all of the necessary keys are present
+        if not all(template_data[key] is not None for key in Linux.template_keys):
+            missing_keys = [
+                f'"{key}"' for key in Linux.template_keys if template_data[key] is None
+            ]
+            Linux.logger.error(
+                f'Template Data Error, the following keys were missing from the VM quiesce data: '
+                f'{", ".join(missing_keys)}',
+            )
+            span.set_tag('failed_reason', 'template_data_keys_missing')
+            return False
+
+        # If everything is okay, commence quiescing the VM
+        host_ip = template_data.pop('host_ip')
+
+        # Generate the quiesce command using the template data
+        child_span = tracer.start_span('generate_command', child_of=span)
+        cmd = utils.JINJA_ENV.get_template('vm/linux/quiesce_cmd.j2').render(**template_data)
+        child_span.finish()
+        Linux.logger.debug(f'Generated VM quiesce command for VM #{vm_data["idVM"]}\n{cmd}')
+
+        # Open a client and run the two necessary commands on the host
+        quiesced = False
+        client = SSHClient()
+        client.set_missing_host_key_policy(AutoAddPolicy())
+        try:
+            # Try connecting to the host and running the necessary commands
+            client.connect(hostname=host_ip, username='administrator')  # No need for password as it should have keys
+            span.set_tag('host', host_ip)
+
+            # Attempt to execute the quiesce command
+            Linux.logger.debug(f'Executing quiesce command for VM #{vm_id}')
+            child_span = tracer.start_span('quiesce_vm', child_of=span)
+            stdout, stderr = Linux.deploy(cmd, client, child_span)
+            child_span.finish()
+
+            if stdout:
+                Linux.logger.debug(f'VM quiesce command for VM #{vm_id} generated stdout.\n{stdout}')
+                quiesced = True
+            if stderr:
+                Linux.logger.warning(f'VM quiesce command for VM #{vm_id} generated stderr.\n{stderr}')
+        except SSHException:
+            Linux.logger.error(
+                f'Exception occurred while quiescing VM #{vm_id} in {host_ip}',
                 exc_info=True,
             )
-        client.close()
+            span.set_tag('failed_reason', 'ssh_error')
+        finally:
+            client.close()
         return quiesced
+
+    @staticmethod
+    def _get_template_data(vm_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
+        """
+        Given the vm data from the API, create a dictionary that contains all of the necessary keys for the template
+        The keys will be checked in the quiesce method and not here, this method is only concerned with fetching the
+        data that it can.
+        :param vm_data: The data of the VM read from the API
+        :param span: The tracing span in use for this task. In this method, just pass it to API calls
+        :returns: The data needed for the templates to quiesce a Linux VM
+        """
+        vm_id = vm_data['idVM']
+        Linux.logger.debug(f'Compiling template data for VM #{vm_id}')
+        data: Dict[str, Any] = {key: None for key in Linux.template_keys}
+
+        data['vm_identifier'] = f'{vm_data["idProject"]}_{vm_data["idVM"]}'
+        data['host_sudo_passwd'] = settings.NETWORK_PASSWORD
+
+        # Get the ip address of the host
+        for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer'], span=span):
+            if mac['status'] is True and mac['ip'] is not None:
+                data['host_ip'] = mac['ip']
+                break
+
+        return data
