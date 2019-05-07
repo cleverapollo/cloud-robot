@@ -10,7 +10,7 @@ set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} routing-o
 {% endif %}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Define VRF public IP on ge-0/0/0.0 interface #}
-set groups vrf-{{ project_id }} interfaces {{ public_port }} unit 0 family {{ type'] }} address {{ vrf_ip }}/{{ vrf_subnet_mask }}
+set groups vrf-{{ project_id }} interfaces {{ public_port }} unit 0 family {{ port_address_family }} address {{ vrf_ip }}/{{ vrf_subnet_mask }}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Create southbound sub interface and gateway for each VLAN and attach them to the VRF #}
 {% for vlan in vlans %}
