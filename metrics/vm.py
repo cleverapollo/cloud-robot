@@ -1,5 +1,5 @@
-from cloudcix_metrics import prepare_metrics, Metric
 from settings import REGION_NAME
+from .sender import prepare_metrics, Metric
 
 
 def build_success(total_secs: int):
