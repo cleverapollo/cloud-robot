@@ -72,6 +72,6 @@
         restart_policy: "no"
         env:
           ROBOT_ENV: "{{ env }}"
-        command: "worker -O fair"
+        command: "worker -O fair -l info"
         volumes:
           - "/mnt:/mnt"
