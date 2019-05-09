@@ -49,6 +49,7 @@ def setup_root_logger():
     logger = logging.getLogger('robot')
     if len(logger.handlers) > 0:
         logger.debug('utils.setup_root_logger found handlers already in the root logger')
+        return
     logger.setLevel(logging.DEBUG)
 
     # Stream Handler
