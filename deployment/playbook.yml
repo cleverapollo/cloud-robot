@@ -82,4 +82,4 @@
         env:
           ROBOT_ENV: "{{ env }}"
         volumes:
-          - "/home/administrator/celerybeat.schedule:/opt/robot/celerybeat.schedule"
+          - "/home/administrator/celerybeat:/opt/robot/celerybeat"
