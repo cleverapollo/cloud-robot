@@ -51,7 +51,7 @@ def setup_logger(*args, **kwargs):
 
 # Sleep after each task to try and flush spans
 @task_postrun.connect
-def sleep_to_flush_spans():
+def sleep_to_flush_spans(*args, **kwargs):
     """
     Flush spans by passing to IO loop, just to be safe
     """
