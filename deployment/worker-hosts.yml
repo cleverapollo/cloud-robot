@@ -4,14 +4,14 @@ all:
   children:
     alpha:
       hosts:
-        worker0:
+        alpha-worker0:
           ansible_host: "2a02:2078:3::3"
       vars:
         env: alpha
         ansible_become_pass: J1t3nd3r1sKw3l
     cork01:
       hosts:
-        worker0:
+        cork01-worker0:
           ansible_host: "2a02:2078:4::3"
       vars:
         env: cork01
