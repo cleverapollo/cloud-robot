@@ -7,7 +7,8 @@ In this file, we define the robot based tasks that will be run by celery beat
 from datetime import datetime, timedelta
 # local
 import settings
-from celery_app import app, robot
+from celery_app import app
+from robot import Robot
 
 
 @app.task
@@ -15,6 +16,7 @@ def mainloop():
     """
     Run one instance of the Robot mainloop
     """
+    robot = Robot.get_instance()
     robot()
 
 
@@ -26,7 +28,8 @@ def scrub_loop():
     robot.logger.info('Commencing scrub task')
     # Add the Scrub timestamp when the region isn't Alpha
     timestamp = None
-    if settings.REGION_NAME != 'alpha':
-        timestamp = (datetime.now() - timedelta(days=30)).isoformat()
+    # if settings.REGION_NAME != 'alpha':
+    #     timestamp = (datetime.now() - timedelta(days=30)).isoformat()
+    robot = Robot.get_instance()
     robot.vrf_scrub(timestamp)
     robot.vm_scrub(timestamp)

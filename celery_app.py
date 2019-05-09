@@ -12,17 +12,11 @@ from jaeger_client import Config
 import metrics
 import settings
 import utils
-from robot import Robot
-
 
 __all__ = [
     'app',
-    'robot',
     'tracer',
 ]
-
-# Instantiate a Robot instance here that can be used by certain tasks
-robot = Robot()
 
 
 app = Celery(
