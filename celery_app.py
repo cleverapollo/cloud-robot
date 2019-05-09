@@ -4,7 +4,6 @@ Celery main runner
 # stdlib
 import atexit
 import time
-from datetime import timedelta
 # lib
 from celery import Celery
 from celery.schedules import crontab
@@ -37,7 +36,7 @@ app.conf.beat_schedule = {
     },
     'mainloop': {
         'task': 'tasks.mainloop',
-        'schedule': timedelta(seconds=20),  # every 20 seconds
+        'schedule': crontab(),  # every minute
     },
 }
 
