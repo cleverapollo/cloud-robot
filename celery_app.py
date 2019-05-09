@@ -21,7 +21,7 @@ __all__ = [
 
 app = Celery(
     'robot',
-    broker=f'amqp://{settings.CELERY_HOST}:5672',
+    broker=f'amqp://[{settings.CELERY_HOST}]:5672',
     include=['tasks'],
 )
 # Optional config
