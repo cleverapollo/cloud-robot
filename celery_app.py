@@ -3,11 +3,12 @@ Celery main runner
 """
 # stdlib
 import atexit
+import time
 from datetime import timedelta
 # lib
 from celery import Celery
 from celery.schedules import crontab
-from celery.signals import task_prerun
+from celery.signals import task_prerun, task_postrun
 from jaeger_client import Config
 # local
 import metrics
@@ -48,6 +49,14 @@ def setup_logger(*args, **kwargs):
     """
     # Just ensure the root logger is set up
     utils.setup_root_logger()
+
+# Sleep after each task to try and flush spans
+@task_postrun.connect
+def sleep_to_flush_spans():
+    """
+    Flush spans by passing to IO loop, just to be safe
+    """
+    time.sleep(5)
 
 # Jaeger tracer
 tracer = Config(
