@@ -10,6 +10,9 @@ RUN ssh-keyscan gitlab.cloudcix.com > ~/.ssh/known_hosts
 # Install requirements
 RUN pip3 install -r deployment/requirements.txt
 
+# Create the celerybeat schedule file
+RUN touch /opt/robot/celerybeat.schedule
+
 # Set up ENV vars for the Robot script
 ENV CLOUDCIX_SETTINGS_MODULE settings
 ENV ROBOT_ENV dev
