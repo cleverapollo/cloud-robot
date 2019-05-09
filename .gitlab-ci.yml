@@ -57,6 +57,7 @@ deploy_alpha:
   stage: deploy
   script:
     - ansible-playbook -i deployment/hosts.yml deployment/playbook.yml
+    - ansible-playbook -i deployment/worker-hosts.yml deployment/worker-playbook.yml
   only:
     - master
 
@@ -107,5 +108,8 @@ deploy_production:
   stage: deploy
   script:
     - ansible-playbook -i deployment/hosts.yml deployment/playbook.yml --extra-vars="deployment_host=production"
+    # Deploy workers
+    # Cork01
+    - ansible-playbook -i deployment/worker-hosts.yml deployment/worker-playbook.yml --extra-vars="deployment_host=cork01"
   only:
     - stable
