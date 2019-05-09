@@ -42,7 +42,7 @@ app.conf.beat_schedule = {
 
 # Ensure the loggers are set up before each task is run
 @task_prerun.connect
-def setup_logger(*args):
+def setup_logger(*args, **kwargs):
     """
     Set up the logger before each task is run, in the hopes that it will fix our logging issue
     """
