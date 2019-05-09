@@ -1,4 +1,6 @@
-# Alpha Robot Settings
+# Cork01 Robot Settings
+# Celery host, IP of the machine where the MQ is running
+CELERY_HOST = '2a02:2078:4::3'
 
 # CloudCIX API Settings
 # Login username

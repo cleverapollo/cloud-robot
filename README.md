@@ -1,31 +1,23 @@
 # CloudCIX Robot
 
-Our little Robot script that is the backbone of the CloudCIX project, and handles the building of infrastructure.
+This project is the backbone of the CloudCIX project, handling deployment of infrastructure.
+Robot is built entirely on top of [celery](http://www.celeryproject.org/), using `beat` to handle the periodic tasks, and `workers` to handle the actual infrastructure jobs.
+Familiarising yourself with celery is recommended when attempting to work on Robot.
 
-## Getting Started
+## Architecture
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+Robot itself is split into two major parts, both run by celery;
 
-### Prerequisites
+1. `celery beat`
+    - This part of Robot handles periodic tasks.
+    - Robot has two main periodic tasks;
+        - `mainloop`, which runs every 20 seconds, sends requests to the API for requests to build, quiesce, restart and update infrastructure, and passes appropriate tasks to the workers
+        - `scrub_loop`, which runs once a day at midnight, does the same except only looks for infrastructure that is ready to be completely deleted, and passes scrub tasks to the workers
+2. `celery worker`
+    - Each robot has potentially multiple worker containers deployed with it, which handle running the actual infrastructure tasks asyncronously from the mainloop
 
-- Docker
+## Celery Setup
 
-### Installing
+Some things to take note of regarding our set up for Celery;
 
-Download the Alpha container from the registry;
-
-```bash
-docker pull gitlab.cloudcix.com:5005/cloudcix/robot:alpha
-```
-
-You can load local code into the container using the `-v` flag.
-
-Robot's code is stored in `/opt/robot` on the container.
-
-## Running the tests
-
-Currently don't have tests. Maybe we could come up with some?
-
-## Deployment
-
-The `deployment` directory contains ansible-playbooks that will deploy the system for us to different servers so there's no need to worry
+- `-Ofair` causes celery to distribute tasks to workers that are ready, not as soon as they are received. This means workers that get short running tasks can handle the next task as soon as they are done, instead of piling work onto a worker that is running a long job [see here](https://medium.com/@taylorhughes/three-quick-tips-from-two-years-with-celery-c05ff9d7f9eb)

@@ -1,6 +1,7 @@
 import os
 
 __all__ = [
+    'CELERY_HOST',
     'CLOUDCIX_API_KEY',
     'CLOUDCIX_API_PASSWORD',
     'CLOUDCIX_API_URL',
@@ -24,6 +25,8 @@ __all__ = [
 ]
 
 # Gov Robot Settings
+# Celery host, IP of the machine where the MQ is running
+CELERY_HOST = '10.13.1.3'
 
 # CloudCIX API Settings
 # Member ID

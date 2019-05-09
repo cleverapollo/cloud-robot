@@ -3,10 +3,7 @@ new robot that uses a class, methods and instance variables to clean up the code
 """
 # stdlib
 import logging
-import signal
-import sys
-import time
-from typing import Union
+from typing import Dict, Optional, Union
 # lib
 from cloudcix.api import IAAS
 # local
@@ -19,7 +16,7 @@ import utils
 BUILD_FILTERS = {'state': 1}
 QUIESCE_FILTERS = {'state__in': [5, 8]}
 RESTART_FILTERS = {'state': 7}
-SCRUB_FILTERS = {'state': 9}
+SCRUB_FILTERS: Dict[str, Union[str, int]] = {'state': 9}
 UPDATE_FILTERS = {'state': 10}
 
 
@@ -52,75 +49,37 @@ class Robot:
         This is the main looping part of the robot.
         This method will loop until an exception occurs or a sigterm is received
         """
-        # Send a log message regarding startup
-        self.logger.info(f'Robot {settings.ROBOT_ENV} starting at {utils.get_current_git_sha()}')
-        # Record the loop start time
-        last = time.time()
-        while not self.sigterm_recv:
-            # Send info about uptime
-            metrics.heartbeat()
-            self.logger.info('Commencing loop.')
-            # Handle loop events in separate functions
+        # Send info about uptime
+        metrics.heartbeat()
+        self.logger.info('Commencing loop.')
+        # Handle loop events in separate functions
 
-            # ############################################################## #
-            #                              BUILD                             #
-            # ############################################################## #
-            self._vrf_build()
-            self._vm_build()
+        # ############################################################## #
+        #                              BUILD                             #
+        # ############################################################## #
+        self._vrf_build()
+        self._vm_build()
 
-            # ############################################################## #
-            #                             QUIESCE                            #
-            # ############################################################## #
-            self._vrf_quiesce()
-            self._vm_quiesce()
+        # ############################################################## #
+        #                             QUIESCE                            #
+        # ############################################################## #
+        self._vrf_quiesce()
+        self._vm_quiesce()
 
-            # ############################################################## #
-            #                              SCRUB                             #
-            # ############################################################## #
-            # Update the timestamp in the scrub filters
-            """
-            TODO - Move scrub to a celery beat call that happens once per day
-            # Add the Scrub timestamp when the region isn't Alpha
-            if settings.REGION_NAME != 'alpha':
-                # This needs to be calculated at every loop
-                SCRUB_FILTERS['updated__lte'] = (datetime.now() - timedelta(days=30)).isoformat()
-            """
-            self._vrf_scrub()
-            self._vm_scrub()
+        # ############################################################## #
+        #                             UPDATE                             #
+        # ############################################################## #
+        self._vrf_update()
+        self._vm_update()
 
-            # ############################################################## #
-            #                             UPDATE                             #
-            # ############################################################## #
-            self._vrf_update()
-            self._vm_update()
+        # ############################################################## #
+        #                             RESTART                            #
+        # ############################################################## #
+        self._vrf_restart()
+        self._vm_restart()
 
-            # ############################################################## #
-            #                             RESTART                            #
-            # ############################################################## #
-            self._vrf_restart()
-            self._vm_restart()
-
-            # Flush the loggers
-            utils.flush_logstash()
-
-            # Wait 20 seconds (TODO - Move to celery beat?)
-            while last > time.time() - 20:
-                time.sleep(1)
-            last = time.time()
-
-    def handle_sigterm(self, *args):
-        """
-        Method called when a SIGTERM is received.
-        Switches the sigterm_recv flag in the instance to stop the loop
-        """
-        self.sigterm_recv = True
-        self.logger.info('SIGTERM received. Commencing graceful shutdown of Robot.')
-
-    def handle_exception(self):
-        """
-        If an exception is thrown in the main loop of the system, log it appropriately
-        """
-        self.logger.error('Exception detected in robot mainloop. Exiting.', exc_info=True)
+        # Flush the loggers
+        utils.flush_logstash()
 
     # ############################################################## #
     #                              BUILD                             #
@@ -208,12 +167,20 @@ class Robot:
 
     # ############################################################## #
     #                              SCRUB                             #
+    # Scrub methods are not run every loop, they are run at midnight #
     # ############################################################## #
 
-    def _vrf_scrub(self):
+    def vrf_scrub(self, timestamp: Optional[str]):
         """
         Check the API for VRFs to scrub, and asyncronously scrub them
+        :param timestamp: The timestamp to use when listing VRFs to delete
         """
+        # Add the timestamp to the filters
+        if timestamp is not None:
+            SCRUB_FILTERS['updated__lte'] = timestamp
+        else:
+            SCRUB_FILTERS.pop('updated__lte', None)
+
         # Retrive the VRFs from the API
         to_scrub = utils.api_list(IAAS.vrf, SCRUB_FILTERS)
         if len(to_scrub) == 0:
@@ -222,10 +189,17 @@ class Robot:
         for vrf in to_scrub:
             self.vrf_dispatcher.scrub(vrf['idVRF'])
 
-    def _vm_scrub(self):
+    def vm_scrub(self, timestamp: Optional[str]):
         """
         Check the API for VMs to scrub, and asyncronously scrub them
+        :param timestamp: The timestamp to use when listing VRFs to delete
         """
+        # Add the timestamp to the filters
+        if timestamp is not None:
+            SCRUB_FILTERS['updated__lte'] = timestamp
+        else:
+            SCRUB_FILTERS.pop('updated__lte', None)
+
         # Retrive the VMs from the API
         to_scrub = utils.api_list(IAAS.vm, SCRUB_FILTERS)
         if len(to_scrub) == 0:
@@ -261,28 +235,3 @@ class Robot:
             return
         for vm in to_update:
             self.vm_dispatcher.update(vm['idVM'])
-
-
-if __name__ == '__main__':
-    # set up the root logger
-    utils.setup_root_logger()
-    if settings.ROBOT_ENV != 'dev':
-        metrics.current_commit()
-    # Create the robot instance
-    robot = Robot()
-
-    # Set up a sigterm listener to handle graceful shutdown of the system
-    signal.signal(signal.SIGTERM, robot.handle_sigterm)
-
-    # Run the main robot loop
-    exit_code = 0
-    try:
-        robot()
-    except Exception:
-        # Have robot report the error and then exit with error code 1
-        robot.handle_exception()
-        exit_code = 1
-    finally:
-        # Send a heartbeat metric to tell influx that the robot has gone down
-        metrics.heartbeat(0)
-        sys.exit(exit_code)
