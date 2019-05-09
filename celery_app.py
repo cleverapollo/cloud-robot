@@ -7,6 +7,7 @@ from datetime import timedelta
 # lib
 from celery import Celery
 from celery.schedules import crontab
+from celery.signals import task_prerun
 from jaeger_client import Config
 # local
 import metrics
@@ -39,6 +40,15 @@ app.conf.beat_schedule = {
     },
 }
 
+# Ensure the loggers are set up before each task is run
+@task_prerun.connect
+def setup_logger(*args):
+    """
+    Set up the logger before each task is run, in the hopes that it will fix our logging issue
+    """
+    # Just ensure the root logger is set up
+    utils.setup_root_logger()
+
 # Jaeger tracer
 tracer = Config(
     config={
@@ -58,6 +68,4 @@ atexit.register(tracer.close)
 if __name__ == '__main__':
     if settings.ROBOT_ENV != 'dev':
         metrics.current_commit()
-    # Just ensure the root logger is set up
-    utils.setup_root_logger()
     app.start()
