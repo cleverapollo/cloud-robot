@@ -16,4 +16,4 @@ ENV ROBOT_ENV dev
 
 # Set the entry point as the robot script
 ENTRYPOINT ["celery", "-A", "celery_app"]
-CMD ["beat", "-s", "/opt/robot/celerybeat-schedule"]
+CMD ["beat", "-s", "/opt/robot/celerybeat.schedule"]
