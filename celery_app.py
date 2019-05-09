@@ -22,7 +22,7 @@ __all__ = [
 app = Celery(
     'robot',
     broker=f'amqp://{settings.CELERY_HOST}:5672',
-    include=['.tasks'],
+    include=['tasks'],
 )
 # Optional config
 app.conf.timezone = 'Europe/Dublin'
