@@ -193,6 +193,8 @@ class Robot:
         self.logger.info(f'Commencing scrub checks with updated__lte={timestamp}')
         self._vrf_scrub(timestamp)
         self._vm_scrub(timestamp)
+        # Flush the loggers
+        utils.flush_logstash()
 
     def _vrf_scrub(self, timestamp: Optional[str]):
         """
