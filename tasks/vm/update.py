@@ -1,9 +1,9 @@
 # stdlib
 import logging
 # lib
+import opentracing
 from cloudcix.api import IAAS
 from jaeger_client import Span
-from opentracing import tracer
 # local
 import metrics
 import state
@@ -26,7 +26,7 @@ def update_vm(vm_id: int):
     """
     Helper function that wraps the actual task in a span, meaning we don't have to remember to call .finish
     """
-    span = tracer.start_span('tasks.update_vm')
+    span = opentracing.tracer.start_span('tasks.update_vm')
     span.set_tag('vm_id', vm_id)
     _update_vm(vm_id, span)
     span.finish()
@@ -43,7 +43,7 @@ def _update_vm(vm_id: int, span: Span):
     logger.info(f'Commencing update of VM #{vm_id}')
 
     # Read the VM
-    child_span = tracer.start_span('read_vm', child_of=span)
+    child_span = opentracing.tracer.start_span('read_vm', child_of=span)
     vm = utils.api_read(IAAS.vm, vm_id, span=child_span)
     child_span.finish()
 
@@ -64,7 +64,7 @@ def _update_vm(vm_id: int, span: Span):
         return
 
     # If all is well and good here, update the VM state to UPDATING and pass the data to the updater
-    child_span = tracer.start_span('update_to_updating', child_of=span)
+    child_span = opentracing.tracer.start_span('update_to_updating', child_of=span)
     response = IAAS.vm.partial_update(
         token=Token.get_instance().token,
         pk=vm_id,
@@ -83,7 +83,7 @@ def _update_vm(vm_id: int, span: Span):
 
     success: bool = False
     # Read the VM image to get the hypervisor id
-    child_span = tracer.start_span('read_vm_image', child_of=span)
+    child_span = opentracing.tracer.start_span('read_vm_image', child_of=span)
     image = utils.api_read(IAAS.image, vm['idImage'], span=child_span)
     child_span.finish()
 
@@ -95,7 +95,7 @@ def _update_vm(vm_id: int, span: Span):
         return
 
     hypervisor = image['idHypervisor']
-    child_span = tracer.start_span('update', child_of=span)
+    child_span = opentracing.tracer.start_span('update', child_of=span)
     if hypervisor == 1:  # HyperV -> Windows
         success = WindowsVmUpdater.update(vm, child_span)
         child_span.set_tag('hypervisor', 'windows')
@@ -114,7 +114,7 @@ def _update_vm(vm_id: int, span: Span):
     if success:
         logger.info(f'Successfully updated VM #{vm_id} from hardware.')
         # Update back to RUNNING
-        child_span = tracer.start_span('update_to_running', child_of=span)
+        child_span = opentracing.tracer.start_span('update_to_running', child_of=span)
         response = IAAS.vm.partial_update(
             token=Token.get_instance().token,
             pk=vm_id,
@@ -132,14 +132,14 @@ def _update_vm(vm_id: int, span: Span):
         metrics.vm_update_success()
 
         # Email the user
-        child_span = tracer.start_span('send_email', child_of=span)
+        child_span = opentracing.tracer.start_span('send_email', child_of=span)
         EmailNotifier.update_success(vm)
         child_span.finish()
     else:
         logger.error(f'Failed to update VM #{vm_id}')
         metrics.vm_update_failure()
 
-        child_span = tracer.start_span('send_email', child_of=span)
+        child_span = opentracing.tracer.start_span('send_email', child_of=span)
         EmailNotifier.update_failure(vm)
         child_span.finish()
         # There's no fail state here either

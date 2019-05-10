@@ -1,9 +1,9 @@
 # stdlib
 import logging
 # lib
+import opentracing
 from cloudcix.api import IAAS
 from jaeger_client import Span
-from opentracing import tracer
 # local
 import metrics
 import state
@@ -22,7 +22,7 @@ def scrub_vrf(vrf_id: int):
     """
     Helper function that wraps the actual task in a span, meaning we don't have to remember to call .finish
     """
-    span = tracer.start_span('tasks.scrub_vrf')
+    span = opentracing.tracer.start_span('tasks.scrub_vrf')
     span.set_tag('vrf_id', vrf_id)
     _scrub_vrf(vrf_id, span)
     span.finish()
@@ -40,7 +40,7 @@ def _scrub_vrf(vrf_id: int, span: Span):
 
     # Read the VRF
     # Don't use utils so we can check the response code
-    child_span = tracer.start_span('read_vrf', child_of=span)
+    child_span = opentracing.tracer.start_span('read_vrf', child_of=span)
     response = IAAS.vrf.read(
         token=Token.get_instance().token,
         pk=vrf_id,
@@ -73,7 +73,7 @@ def _scrub_vrf(vrf_id: int, span: Span):
         return
 
     # There's no in-between state for Scrub tasks, just jump straight to doing the work
-    child_span = tracer.start_span('scrub', child_of=span)
+    child_span = opentracing.tracer.start_span('scrub', child_of=span)
     success = VrfScrubber.scrub(vrf, child_span)
     child_span.finish()
 
@@ -83,7 +83,7 @@ def _scrub_vrf(vrf_id: int, span: Span):
         logger.info(f'Successfully scrubbed VRF #{vrf_id}')
         metrics.vrf_scrub_success()
         # Delete the VRF from the DB
-        child_span = tracer.start_span('delete_vrf_from_api', child_of=span)
+        child_span = opentracing.tracer.start_span('delete_vrf_from_api', child_of=span)
         response = IAAS.vrf.delete(
             token=Token.get_instance().token,
             pk=vrf_id,
@@ -99,7 +99,7 @@ def _scrub_vrf(vrf_id: int, span: Span):
                 f'Response Text: {response.content.decode()}',
             )
 
-        child_span = tracer.start_span('delete_project_from_api', child_of=span)
+        child_span = opentracing.tracer.start_span('delete_project_from_api', child_of=span)
         utils.project_delete(vrf['idProject'], child_span)
         child_span.finish()
     else:

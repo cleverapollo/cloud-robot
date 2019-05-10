@@ -10,8 +10,8 @@ restarter class for vrfs
 import logging
 from typing import Any, Dict, Optional
 # lib
+import opentracing
 from jaeger_client import Span
-from opentracing import tracer
 # local
 import utils
 from mixins import VrfMixin
@@ -46,7 +46,7 @@ class Vrf(VrfMixin):
         vrf_id = vrf_data['idVRF']
 
         # Start by generating the proper dict of data needed by the template
-        child_span = tracer.start_span('generate_template_data', child_of=span)
+        child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
         template_data = Vrf._get_template_data(vrf_data, child_span)
         child_span.finish()
 
@@ -73,14 +73,14 @@ class Vrf(VrfMixin):
         # If everything is okay, commence restarting the VRF
         management_ip = template_data.pop('management_ip')
 
-        child_span = tracer.start_span('generate_setconf', child_of=span)
+        child_span = opentracing.tracer.start_span('generate_setconf', child_of=span)
         conf = utils.JINJA_ENV.get_template('vrf/restart.j2').render(**template_data)
         child_span.finish()
 
         Vrf.logger.debug(f'Generated setconf for VRF #{vrf_id}\n{conf}')
 
         # Deploy the generated setconf to the router
-        child_span = tracer.start_span('deploy_setconf', child_of=span)
+        child_span = opentracing.tracer.start_span('deploy_setconf', child_of=span)
         success = Vrf.deploy(conf, management_ip)
         child_span.finish()
         return success

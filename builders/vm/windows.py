@@ -12,10 +12,10 @@ import string
 from collections import deque
 from typing import Any, Deque, Dict, Optional
 # lib
+import opentracing
 from cloudcix.api import IAAS
 from jaeger_client import Span
 from netaddr import IPAddress
-from opentracing import tracer
 from winrm.exceptions import WinRMError
 # local
 import settings
@@ -90,7 +90,7 @@ class Windows(WindowsMixin):
         vm_id = vm_data['idVM']
 
         # Generate the necessary template data
-        child_span = tracer.start_span('generate_template_data', child_of=span)
+        child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
         template_data = Windows._get_template_data(vm_data, image_data, child_span)
         child_span.finish()
 
@@ -119,7 +119,7 @@ class Windows(WindowsMixin):
         image_id = template_data.pop('image_id')
 
         # Write necessary files into the network drive
-        child_span = tracer.start_span('write_files_to_network_drive', child_of=span)
+        child_span = opentracing.tracer.start_span('write_files_to_network_drive', child_of=span)
         file_write_success = Windows._generate_network_drive_files(vm_id, image_id, template_data)
         child_span.finish()
 
@@ -129,14 +129,14 @@ class Windows(WindowsMixin):
             return False
 
         # Render the build command
-        child_span = tracer.start_span('generate_command', child_of=span)
+        child_span = opentracing.tracer.start_span('generate_command', child_of=span)
         cmd = utils.JINJA_ENV.get_template('vm/windows/build_cmd.j2').render(**template_data)
         child_span.finish()
 
         # Open a client and run the two necessary commands on the host
         built = False
         try:
-            child_span = tracer.start_span('build_vm', child_of=span)
+            child_span = opentracing.tracer.start_span('build_vm', child_of=span)
             response = Windows.deploy(cmd, host_name, child_span)
             child_span.finish()
             span.set_tag('host', host_name)

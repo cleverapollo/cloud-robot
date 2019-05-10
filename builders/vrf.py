@@ -11,10 +11,10 @@ import logging
 from collections import deque
 from typing import Any, Deque, Dict, Optional
 # lib
+import opentracing
 from cloudcix.api import IAAS
 from jaeger_client import Span
 from netaddr import IPNetwork
-from opentracing import tracer
 # local
 import utils
 from mixins import VrfMixin
@@ -72,7 +72,7 @@ class Vrf(VrfMixin):
         vrf_id = vrf_data['idVRF']
 
         # Start by generating the proper dict of data needed by the template
-        child_span = tracer.start_span('generate_template_data', child_of=span)
+        child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
         template_data = Vrf._get_template_data(vrf_data, child_span)
         child_span.finish()
 
@@ -100,7 +100,7 @@ class Vrf(VrfMixin):
         router_model = template_data.pop('router_model')
         management_ip = template_data.pop('management_ip')
         try:
-            child_span = tracer.start_span('generate_setconf', child_of=span)
+            child_span = opentracing.tracer.start_span('generate_setconf', child_of=span)
             template_name = f'vrf/build_{router_model}.j2'
             child_span.set_tag('template_name', template_name)
             conf = utils.JINJA_ENV.get_template(template_name).render(**template_data)
@@ -115,7 +115,7 @@ class Vrf(VrfMixin):
         Vrf.logger.debug(f'Generated setconf for VRF #{vrf_id}\n{conf}')
 
         # Deploy the generated setconf to the router
-        child_span = tracer.start_span('deploy_setconf', child_of=span)
+        child_span = opentracing.tracer.start_span('deploy_setconf', child_of=span)
         success = Vrf.deploy(conf, management_ip)
         child_span.finish()
         return success
@@ -199,7 +199,7 @@ class Vrf(VrfMixin):
 
         # Get the management ip address and the router model
         # These are used to determine the template to use and where to connect
-        child_span = tracer.start_span('get_router_data', child_of=span)
+        child_span = opentracing.tracer.start_span('get_router_data', child_of=span)
         router_data = Vrf._get_router_data(vrf_data['idRouter'], child_span)
         child_span.finish()
 
@@ -209,7 +209,7 @@ class Vrf(VrfMixin):
         data['router_model'] = router_data['router_model']
 
         # Get the port data for the VRF
-        child_span = tracer.start_span('get_vrf_port_data', child_of=span)
+        child_span = opentracing.tracer.start_span('get_vrf_port_data', child_of=span)
         port_data = Vrf._get_vrf_port_data(vrf_ip['idSubnet'], vrf_data['idRouter'], child_span)
         child_span.finish()
 

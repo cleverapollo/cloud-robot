@@ -1,9 +1,9 @@
 # stdlib
 import logging
 # lib
+import opentracing
 from cloudcix.api import IAAS
 from jaeger_client import Span
-from opentracing import tracer
 # local
 import metrics
 import state
@@ -22,7 +22,7 @@ def build_vrf(vrf_id: int):
     """
     Helper function that wraps the actual task in a span, meaning we don't have to remember to call .finish
     """
-    span = tracer.start_span('tasks.build_vrf')
+    span = opentracing.tracer.start_span('tasks.build_vrf')
     span.set_tag('vrf_id', vrf_id)
     _build_vrf(vrf_id, span)
     span.finish()
@@ -38,7 +38,7 @@ def _build_vrf(vrf_id: int, span: Span):
     logger.info(f'Commencing build of VRF #{vrf_id}')
 
     # Read the VRF
-    child_span = tracer.start_span('read_vrf', child_of=span)
+    child_span = opentracing.tracer.start_span('read_vrf', child_of=span)
     vrf = utils.api_read(IAAS.vrf, vrf_id, span=child_span)
     child_span.finish()
 
@@ -57,7 +57,7 @@ def _build_vrf(vrf_id: int, span: Span):
         return
 
     # If all is well and good here, update the VRF state to BUILDING and pass the data to the builder
-    child_span = tracer.start_span('update_to_building', child_of=span)
+    child_span = opentracing.tracer.start_span('update_to_building', child_of=span)
     response = IAAS.vrf.partial_update(
         token=Token.get_instance().token,
         pk=vrf_id,
@@ -74,7 +74,7 @@ def _build_vrf(vrf_id: int, span: Span):
         span.set_tag('return_reason', 'could_not_update_state')
         return
 
-    child_span = tracer.start_span('build', child_of=span)
+    child_span = opentracing.tracer.start_span('build', child_of=span)
     success = VrfBuilder.build(vrf, child_span)
     child_span.finish()
 
@@ -85,7 +85,7 @@ def _build_vrf(vrf_id: int, span: Span):
         metrics.vrf_build_success()
 
         # Update state to RUNNING in the API
-        child_span = tracer.start_span('update_to_running', child_of=span)
+        child_span = opentracing.tracer.start_span('update_to_running', child_of=span)
         response = IAAS.vrf.partial_update(
             token=Token.get_instance().token,
             pk=vrf_id,
@@ -103,7 +103,7 @@ def _build_vrf(vrf_id: int, span: Span):
         metrics.vrf_build_failure()
 
         # Update state to UNRESOURCED in the API
-        child_span = tracer.start_span('update_to_unresourced', child_of=span)
+        child_span = opentracing.tracer.start_span('update_to_unresourced', child_of=span)
         response = IAAS.vrf.partial_update(
             token=Token.get_instance().token,
             pk=vrf_id,

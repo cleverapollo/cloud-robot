@@ -10,10 +10,10 @@ import os
 from collections import deque
 from typing import Any, Deque, Dict, Optional, Tuple
 # lib
+import opentracing
 from cloudcix.api import IAAS
 from jaeger_client import Span
 from netaddr import IPAddress
-from opentracing import tracer
 from paramiko import AutoAddPolicy, SSHClient, SSHException
 # local
 import settings
@@ -64,7 +64,7 @@ class Linux(LinuxMixin):
         vm_id = vm_data['idVM']
 
         # Generate the necessary template data
-        child_span = tracer.start_span('generate_template_data', child_of=span)
+        child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
         template_data = Linux._get_template_data(vm_data, child_span)
         child_span.finish()
 
@@ -93,7 +93,7 @@ class Linux(LinuxMixin):
         delete_bridge = template_data.pop('delete_bridge')
 
         # Generate the two commands that will be run on the host machine directly
-        child_span = tracer.start_span('generate_commands', child_of=span)
+        child_span = opentracing.tracer.start_span('generate_commands', child_of=span)
         bridge_scrub_cmd, vm_scrub_cmd = Linux._generate_host_commands(vm_id, template_data)
         child_span.finish()
 
@@ -109,7 +109,7 @@ class Linux(LinuxMixin):
             # Now attempt to execute the vm scrub command
             Linux.logger.debug(f'Executing vm scrub command for VM #{vm_id}')
 
-            child_span = tracer.start_span('scrub_vm', child_of=span)
+            child_span = opentracing.tracer.start_span('scrub_vm', child_of=span)
             stdout, stderr = Linux.deploy(vm_scrub_cmd, client, child_span)
             child_span.finish()
 
@@ -117,7 +117,7 @@ class Linux(LinuxMixin):
                 Linux.logger.debug(f'VM scrub command for VM #{vm_id} generated stdout.\n{stdout}')
                 scrubbed = True
                 # Attempt to delete the config file from the network drive
-                child_span = tracer.start_span('delete_kickstart_file', child_of=span)
+                child_span = opentracing.tracer.start_span('delete_kickstart_file', child_of=span)
                 Linux._delete_network_file(vm_id, f'kickstarts/{template_data["vm_identifier"]}.cfg')
                 child_span.finish()
             if stderr:
@@ -127,7 +127,7 @@ class Linux(LinuxMixin):
             if delete_bridge:
                 Linux.logger.debug(f'Deleting bridge for VM #{vm_id}')
 
-                child_span = tracer.start_span('scrub_bridge', child_of=span)
+                child_span = opentracing.tracer.start_span('scrub_bridge', child_of=span)
                 stdout, stderr = Linux.deploy(bridge_scrub_cmd, client, child_span)
                 child_span.finish()
 
@@ -136,7 +136,7 @@ class Linux(LinuxMixin):
                 if stderr:
                     Linux.logger.warning(f'Bridge scrub command for VM #{vm_id} generated stderr\n{stderr}')
                 # Attempt to delete the bridge definition file from the network drive
-                child_span = tracer.start_span('delete_bridge_def_file', child_of=span)
+                child_span = opentracing.tracer.start_span('delete_bridge_def_file', child_of=span)
                 Linux._delete_network_file(vm_id, f'bridge_xmls/br{template_data["vlan"]}.xml')
                 child_span.finish()
         except SSHException:
@@ -210,7 +210,7 @@ class Linux(LinuxMixin):
                 data['host_ip'] = mac['ip']
                 break
 
-        child_span = tracer.start_span('determine_bridge_deletion', child_of=span)
+        child_span = opentracing.tracer.start_span('determine_bridge_deletion', child_of=span)
         data['delete_bridge'] = Linux._determine_bridge_deletion(vm_data, child_span)
         child_span.finish()
         return data

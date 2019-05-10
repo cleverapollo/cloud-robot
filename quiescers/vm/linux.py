@@ -9,9 +9,9 @@ quiescer class for linux vms
 import logging
 from typing import Any, Dict, Optional
 # lib
+import opentracing
 from cloudcix.api import IAAS
 from jaeger_client import Span
-from opentracing import tracer
 from paramiko import AutoAddPolicy, SSHClient, SSHException
 # local
 import settings
@@ -52,7 +52,7 @@ class Linux(LinuxMixin):
         vm_id = vm_data['idVM']
 
         # Generate the necessary template data
-        child_span = tracer.start_span('generate_template_data', child_of=span)
+        child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
         template_data = Linux._get_template_data(vm_data, child_span)
         child_span.finish()
 
@@ -80,7 +80,7 @@ class Linux(LinuxMixin):
         host_ip = template_data.pop('host_ip')
 
         # Generate the quiesce command using the template data
-        child_span = tracer.start_span('generate_command', child_of=span)
+        child_span = opentracing.tracer.start_span('generate_command', child_of=span)
         cmd = utils.JINJA_ENV.get_template('vm/linux/quiesce_cmd.j2').render(**template_data)
         child_span.finish()
         Linux.logger.debug(f'Generated VM quiesce command for VM #{vm_data["idVM"]}\n{cmd}')
@@ -96,7 +96,7 @@ class Linux(LinuxMixin):
 
             # Attempt to execute the quiesce command
             Linux.logger.debug(f'Executing quiesce command for VM #{vm_id}')
-            child_span = tracer.start_span('quiesce_vm', child_of=span)
+            child_span = opentracing.tracer.start_span('quiesce_vm', child_of=span)
             stdout, stderr = Linux.deploy(cmd, client, child_span)
             child_span.finish()
 

@@ -1,9 +1,9 @@
 # stdlib
 import logging
 # lib
+import opentracing
 from cloudcix.api import IAAS
 from jaeger_client import Span
-from opentracing import tracer
 # local
 import metrics
 import state
@@ -25,7 +25,7 @@ def scrub_vm(vm_id: int):
     """
     Helper function that wraps the actual task in a span, meaning we don't have to remember to call .finish
     """
-    span = tracer.start_span('tasks.scrub_vm')
+    span = opentracing.tracer.start_span('tasks.scrub_vm')
     span.set_tag('vm_id', vm_id)
     _scrub_vm(vm_id, span)
     span.finish()
@@ -42,7 +42,7 @@ def _scrub_vm(vm_id: int, span: Span):
 
     # Read the VM
     # Don't use utils so we can check the response code
-    child_span = tracer.start_span('read_vm', child_of=span)
+    child_span = opentracing.tracer.start_span('read_vm', child_of=span)
     response = IAAS.vm.read(
         token=Token.get_instance().token,
         pk=vm_id,
@@ -78,7 +78,7 @@ def _scrub_vm(vm_id: int, span: Span):
     success: bool = False
 
     # Read the VM image to get the hypervisor id
-    child_span = tracer.start_span('read_vm_image', child_of=span)
+    child_span = opentracing.tracer.start_span('read_vm_image', child_of=span)
     image = utils.api_read(IAAS.image, vm['idImage'], span=child_span)
     child_span.finish()
 
@@ -90,7 +90,7 @@ def _scrub_vm(vm_id: int, span: Span):
         return
 
     hypervisor = image['idHypervisor']
-    child_span = tracer.start_span('scrub', child_of=span)
+    child_span = opentracing.tracer.start_span('scrub', child_of=span)
     if hypervisor == 1:  # HyperV -> Windows
         success = WindowsVmScrubber.scrub(vm, child_span)
         child_span.set_tag('hypervisor', 'windows')
@@ -112,7 +112,7 @@ def _scrub_vm(vm_id: int, span: Span):
         # Do API deletions
         logger.debug(f'Deleting VM #{vm_id} from the CMDB')
 
-        child_span = tracer.start_span('delete_vm_from_api', child_of=span)
+        child_span = opentracing.tracer.start_span('delete_vm_from_api', child_of=span)
         response = IAAS.vm.delete(token=Token.get_instance().token, pk=vm_id, span=child_span)
         child_span.finish()
 
@@ -124,7 +124,7 @@ def _scrub_vm(vm_id: int, span: Span):
             return
         logger.info(f'Successfully deleted VM #{vm_id} from the CMDB.')
 
-        child_span = tracer.start_span('delete_project_from_api', child_of=span)
+        child_span = opentracing.tracer.start_span('delete_project_from_api', child_of=span)
         utils.project_delete(vm['idProject'], child_span)
         child_span.finish()
     else:

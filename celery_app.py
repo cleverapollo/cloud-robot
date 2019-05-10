@@ -19,8 +19,8 @@ __all__ = [
     'app',
 ]
 
-# Jaeger tracer config
-tracer_config = Config(
+# Jaeger opentracing.tracer config
+opentracing.tracer_config = Config(
     config={
         'logging': True,
         'sampler': {
@@ -55,16 +55,16 @@ app.conf.beat_schedule = {
 
 # Ensure the loggers are set up before each task is run
 @task_prerun.connect
-def setup_logger_and_tracer(*args, **kwargs):
+def setup_logger_and_opentracing.tracer(*args, **kwargs):
     """
     Set up the logger before each task is run, in the hopes that it will fix our logging issue.
-    Also ensure that the tracer is setup for this environment
+    Also ensure that the opentracing.tracer is setup for this environment
     """
     # Ensure the root logger is set up
     utils.setup_root_logger()
-    # Also check to ensure we have a tracer initialized in the forked process
-    if opentracing.tracer is None:
-        tracer_config.initialize_tracer()
+    # Also check to ensure we have a opentracing.tracer initialized in the forked process
+    if opentracing.opentracing.tracer is None:
+        opentracing.tracer_config.initialize_opentracing.tracer()
 
 # Sleep after each task to try and flush spans
 @task_postrun.connect

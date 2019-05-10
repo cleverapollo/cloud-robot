@@ -1,8 +1,8 @@
 # stdlib
 import logging
 # lib
+import opentracing
 from cloudcix.api import IAAS
-from opentracing import tracer
 # local
 import metrics
 import state
@@ -133,7 +133,7 @@ class DummyVrf:
             vrf = utils.api_read(IAAS.vrf, vrf_id)
             if vrf is None:
                 return
-            span = tracer.start_span('dummy_vrf_project_delete')
+            span = opentracing.tracer.start_span('dummy_vrf_project_delete')
             utils.project_delete(vrf['idProject'], span)
             span.finish()
 
