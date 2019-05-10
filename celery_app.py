@@ -63,8 +63,9 @@ def setup_logger_and_tracer(*args, **kwargs):
     # Ensure the root logger is set up
     utils.setup_root_logger()
     # Also check to ensure we have a opentracing.tracer initialized in the forked process
-    if opentracing.tracer is None:
-        opentracing.tracer_config.initialize_opentracing.tracer()
+    if not opentracing.is_tracer_registered:
+        tracer_config.initialize_tracer()
+        atexit.register(opentracing.tracer.close)
 
 # Sleep after each task to try and flush spans
 @task_postrun.connect
