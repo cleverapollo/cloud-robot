@@ -185,7 +185,16 @@ class Robot:
     # Scrub methods are not run every loop, they are run at midnight #
     # ############################################################## #
 
-    def vrf_scrub(self, timestamp: Optional[str]):
+    def scrub(self, timestamp: Optional[str]):
+        """
+        Handle the scrub part of Robot by checking for infrastructure that needs to be scrubbed.
+        This gets run once a day at midnight, once we're sure it works
+        """
+        self.logger.info('Commencing scrub checks')
+        self._vrf_scrub(timestamp)
+        self._vm_scrub(timestamp)
+
+    def _vrf_scrub(self, timestamp: Optional[str]):
         """
         Check the API for VRFs to scrub, and asyncronously scrub them
         :param timestamp: The timestamp to use when listing VRFs to delete
@@ -204,7 +213,7 @@ class Robot:
         for vrf in to_scrub:
             self.vrf_dispatcher.scrub(vrf['idVRF'])
 
-    def vm_scrub(self, timestamp: Optional[str]):
+    def _vm_scrub(self, timestamp: Optional[str]):
         """
         Check the API for VMs to scrub, and asyncronously scrub them
         :param timestamp: The timestamp to use when listing VRFs to delete

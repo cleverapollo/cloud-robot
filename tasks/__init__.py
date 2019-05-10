@@ -31,5 +31,4 @@ def scrub_loop():
     # if settings.REGION_NAME != 'alpha':
     #     timestamp = (datetime.now() - timedelta(days=30)).isoformat()
     robot = Robot.get_instance()
-    robot.vrf_scrub(timestamp)
-    robot.vm_scrub(timestamp)
+    robot.scrub(timestamp)
