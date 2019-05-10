@@ -25,7 +25,6 @@ def scrub():
     """
     Once per day, at midnight, call the robot scrub methods to delete hardware
     """
-    robot.logger.info('Commencing scrub task')
     # Add the Scrub timestamp when the region isn't Alpha
     timestamp = None
     # if settings.REGION_NAME != 'alpha':
