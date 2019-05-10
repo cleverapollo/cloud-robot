@@ -20,7 +20,7 @@ __all__ = [
 ]
 
 # Jaeger opentracing.tracer config
-opentracing.tracer_config = Config(
+tracer_config = Config(
     config={
         'logging': True,
         'sampler': {
