@@ -15,11 +15,11 @@ from typing import Any, Deque, Dict, Optional
 from cloudcix.api import IAAS
 from jaeger_client import Span
 from netaddr import IPAddress
+from opentracing import tracer
 from winrm.exceptions import WinRMError
 # local
 import settings
 import utils
-from celery_app import tracer
 from mixins import WindowsMixin
 
 

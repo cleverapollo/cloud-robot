@@ -5,6 +5,7 @@ Celery main runner
 import atexit
 import time
 # lib
+import opentracing
 from celery import Celery
 from celery.schedules import crontab
 from celery.signals import task_prerun, task_postrun
@@ -16,8 +17,20 @@ import utils
 
 __all__ = [
     'app',
-    'tracer',
 ]
+
+# Jaeger tracer config
+tracer_config = Config(
+    config={
+        'logging': True,
+        'sampler': {
+            'type': 'const',
+            'param': 1,
+        },
+    },
+    service_name=f'robot_{settings.REGION_NAME}',
+    validate=True,
+)
 
 
 app = Celery(
@@ -42,12 +55,16 @@ app.conf.beat_schedule = {
 
 # Ensure the loggers are set up before each task is run
 @task_prerun.connect
-def setup_logger(*args, **kwargs):
+def setup_logger_and_tracer(*args, **kwargs):
     """
-    Set up the logger before each task is run, in the hopes that it will fix our logging issue
+    Set up the logger before each task is run, in the hopes that it will fix our logging issue.
+    Also ensure that the tracer is setup for this environment
     """
-    # Just ensure the root logger is set up
+    # Ensure the root logger is set up
     utils.setup_root_logger()
+    # Also check to ensure we have a tracer initialized in the forked process
+    if opentracing.tracer is None:
+        tracer_config.initialize_tracer()
 
 # Sleep after each task to try and flush spans
 @task_postrun.connect
@@ -57,20 +74,6 @@ def sleep_to_flush_spans(*args, **kwargs):
     """
     time.sleep(5)
 
-# Jaeger tracer
-tracer = Config(
-    config={
-        'logging': True,
-        'sampler': {
-            'type': 'const',
-            'param': 1,
-        },
-    },
-    service_name=f'robot_{settings.REGION_NAME}',
-    validate=True,
-).initialize_tracer()
-# Close the tracer at exit
-atexit.register(tracer.close)
 
 # Run the app if this is the main script
 if __name__ == '__main__':

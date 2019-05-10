@@ -8,10 +8,10 @@ methods included;
 import logging
 # lib
 from jaeger_client import Span
+from opentracing import tracer
 from winrm import Response, Session
 # local
 import settings
-from celery_app import tracer
 
 
 class WindowsMixin:

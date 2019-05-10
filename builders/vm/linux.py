@@ -16,11 +16,11 @@ from typing import Any, Deque, Dict, Optional, Tuple
 from cloudcix.api import IAAS
 from jaeger_client import Span
 from netaddr import IPAddress, IPNetwork
+from opentracing import tracer
 from paramiko import AutoAddPolicy, SSHClient, SSHException
 # local
 import settings
 import utils
-from celery_app import tracer
 from mixins import LinuxMixin
 
 

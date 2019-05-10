@@ -5,6 +5,7 @@ from typing import Any, Dict
 # lib
 from cloudcix.api import IAAS
 from jaeger_client import Span
+from opentracing import tracer
 # local
 import metrics
 import state
@@ -13,7 +14,7 @@ from builders.vm import (
     Linux as LinuxVmBuilder,
     Windows as WindowsVmBuilder,
 )
-from celery_app import app, tracer
+from celery_app import app
 from cloudcix_token import Token
 from email_notifier import EmailNotifier
 

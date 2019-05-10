@@ -3,12 +3,13 @@ import logging
 # lib
 from cloudcix.api import IAAS
 from jaeger_client import Span
+from opentracing import tracer
 # local
 import metrics
 import state
 import utils
 from restarters import Vrf as VrfRestarter
-from celery_app import app, tracer
+from celery_app import app
 from cloudcix_token import Token
 
 __all__ = [

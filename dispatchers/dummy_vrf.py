@@ -2,11 +2,11 @@
 import logging
 # lib
 from cloudcix.api import IAAS
+from opentracing import tracer
 # local
 import metrics
 import state
 import utils
-from celery_app import tracer
 from cloudcix_token import Token
 
 

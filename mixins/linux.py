@@ -11,9 +11,9 @@ from time import sleep
 from typing import Deque, Tuple
 # lib
 from jaeger_client import Span
+from opentracing import tracer
 from paramiko import Channel, SSHClient
 # local
-from celery_app import tracer
 
 __all__ = [
     'LinuxMixin',

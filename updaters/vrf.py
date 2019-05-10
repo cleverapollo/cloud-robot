@@ -11,9 +11,9 @@ import logging
 from typing import Any, Dict
 # lib
 from jaeger_client import Span
+from opentracing import tracer
 # local
 import utils
-from celery_app import tracer
 from builders import Vrf as VrfBuilder
 
 __all__ = [

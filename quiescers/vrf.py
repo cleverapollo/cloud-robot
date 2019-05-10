@@ -11,9 +11,9 @@ import logging
 from typing import Any, Dict, Optional
 # lib
 from jaeger_client import Span
+from opentracing import tracer
 # local
 import utils
-from celery_app import tracer
 from mixins import VrfMixin
 
 __all__ = [

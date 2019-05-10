@@ -11,10 +11,10 @@ from typing import Any, Dict, Optional
 # lib
 from cloudcix.api import IAAS
 from jaeger_client import Span
+from opentracing import tracer
 from winrm.exceptions import WinRMError
 # local
 import utils
-from celery_app import tracer
 from mixins import WindowsMixin
 
 
