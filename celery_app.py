@@ -45,7 +45,7 @@ app.conf.timezone = 'Europe/Dublin'
 app.conf.beat_schedule = {
     'scrub-at-midnight': {
         'task': 'tasks.scrub',
-        'schedule': crontab()  # crontab(minute=0, hour=0),  # daily at midnight, like Jerry asked
+        'schedule': crontab(minute=0, hour=0),  # daily at midnight, like Jerry asked
     },
     'mainloop': {
         'task': 'tasks.mainloop',
