@@ -55,7 +55,7 @@ app.conf.beat_schedule = {
 
 # Ensure the loggers are set up before each task is run
 @task_prerun.connect
-def setup_logger_and_opentracing.tracer(*args, **kwargs):
+def setup_logger_and_tracer(*args, **kwargs):
     """
     Set up the logger before each task is run, in the hopes that it will fix our logging issue.
     Also ensure that the opentracing.tracer is setup for this environment
@@ -63,7 +63,7 @@ def setup_logger_and_opentracing.tracer(*args, **kwargs):
     # Ensure the root logger is set up
     utils.setup_root_logger()
     # Also check to ensure we have a opentracing.tracer initialized in the forked process
-    if opentracing.opentracing.tracer is None:
+    if opentracing.tracer is None:
         opentracing.tracer_config.initialize_opentracing.tracer()
 
 # Sleep after each task to try and flush spans
