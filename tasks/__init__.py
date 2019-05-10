@@ -21,7 +21,7 @@ def mainloop():
 
 
 @app.task
-def scrub_loop():
+def scrub():
     """
     Once per day, at midnight, call the robot scrub methods to delete hardware
     """
