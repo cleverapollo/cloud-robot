@@ -22,7 +22,7 @@ InfluxData = Dict[str, Any]
 Metric = namedtuple('Metric', ['table', 'value', 'tags'])
 
 
-def _generate_data_packet(measurement: str, fields: dict, tags: dict={}) -> List[InfluxData]:
+def _generate_data_packet(measurement: str, fields: dict, tags: dict = {}) -> List[InfluxData]:
     """
     Generates a data packet for the current region with the given measure name
     and whatever fields are passed to this method, and turns it into a format to be sent to influx
@@ -71,7 +71,7 @@ def prepare_metrics(preprocess: Callable[..., Optional[Metric]], **kwargs):
     _post_metrics(metric.table, metric.value, metric.tags)
 
 
-def _post_metrics(measurement: str, value, tags: dict=None):
+def _post_metrics(measurement: str, value, tags: dict = None):
     """
     Sends the given k-v pair (measurement->value) to influx
     along with the given tags

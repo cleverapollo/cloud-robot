@@ -6,7 +6,7 @@ methods included;
 """
 # stdlib
 import logging
-from time import asctime
+from time import asctime, time
 from typing import Dict, Optional, Union
 # lib
 from cloudcix.api import IAAS
@@ -48,9 +48,16 @@ class VrfMixin:
             cls.logger.error(f'Unable to connect to Router {management_ip}', exc_info=True)
             return False
         cls.logger.debug(f'Successfully connected to Router {management_ip}, now attempting to lock configuration')
-        try:
-            config.lock()
-        except LockError:
+        # wait for a while until(max of 60 sec) lock is released by already working session
+        unlock = False
+        begin = time()
+        while not unlock and time() - begin < 60:
+            try:
+                config.lock()
+                unlock = True
+            except LockError:
+                pass
+        if not unlock:
             cls.logger.error(f'Unable to lock configuration in Router {management_ip}', exc_info=True)
             return False
         cls.logger.debug(f'Successfully locked config in Router {management_ip}, now attempting to apply config')
