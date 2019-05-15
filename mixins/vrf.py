@@ -67,10 +67,9 @@ class VrfMixin:
                 else:
                     config.commit(comment=commit_msg, ignore_warning=['statement not found'])
             except CommitError:
-                cls.logger.error(f'Unable to commit changes onto Router {management_ip}', exc_info=True)
-
-            router.close()
-            return False
+                cls.logger.error(f'Unable to commit changes onto Router {management_ip}', exc_info=True)m
+                router.close()
+                return False
 
         cls.logger.debug(f'Changes successfully committed onto Router {management_ip}')
         router.close()
