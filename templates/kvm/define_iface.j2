@@ -1,0 +1,14 @@
+{#
+  This include template contains some bash scripts that will define a variable called IFACE, which is the name of the
+  main interface that will be used to connect VMs to.
+  This variable will be generated as follows;
+    - List all interfaces that are currently up using `ip addr`
+    - Get all interface names that begin with `enp` as that is / will be the naming scheme used for the interfaces
+    - Sort the lines in order from lowest number to highest number
+    - Retrieve the interface with the lowest number, as by pattern this is the interface that is used
+#}
+
+{# First, do the pipe commands to fetch the interface name with a colon (:) at the end #}
+IFACE=$(ip addr | grep enp | awk '{print $2}' | sort | head -n 1)
+{# Now strip the colon (:) from the end of the name #}
+IFACE=${IFACE%?}

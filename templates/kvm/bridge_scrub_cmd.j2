@@ -1,8 +1,11 @@
+{# 0. Define IFACE #}
+{% include 'kvm/define_iface.j2' %}
+
 {# 1. Destroy or Stop the bridge interface first #}
 echo {{ host_sudo_passwd }} | sudo -S virsh iface-destroy br{{ vlan }}
 
 {# 2. Undefine or delete the bridge instance from the system #}
 echo {{ host_sudo_passwd }} | sudo -S virsh iface-undefine br{{ vlan }}
 
-{# 3. Undefine or delete the enp8s0f0.vlan instace from the system #}
-echo {{ host_sudo_passwd }} | sudo -S virsh iface-undefine enp8s0f0.{{ vlan }}
+{# 3. Undefine or delete the vlan interface from the system #}
+echo {{ host_sudo_passwd }} | sudo -S virsh iface-undefine "$IFACE.{{ vlan }}"
