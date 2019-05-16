@@ -1,14 +1,8 @@
-{# 0. Define IFACE #}
-{% include 'kvm/define_iface.j2' %}
-
-{# 1. Replace the INTERFACE_NAME string in the bridge def file with the correct interface name #}
-sed -i "s/INTERFACE_NAME/$IFACE/g" {{ network_drive_path }}/bridge_xmls/br{{ vlan }}.xml
-
-{# 2. Define the bridge using the definition file we generated #}
+{# 1. Define the bridge using the definition file we generated #}
 echo {{ host_sudo_passwd }} | sudo -S virsh iface-define --file {{ network_drive_path }}/bridge_xmls/br{{ vlan }}.xml
 
-{# 3. Bring up the interface #}
-echo {{ host_sudo_passwd }} | sudo -S ifup "$IFACE.{{ vlan }}"
+{# 2. Bring up the interface #}
+echo {{ host_sudo_passwd }} | sudo -S ifup cloud0.{{ vlan }}
 
-{# 4. Start the interface #}
+{# 3. Start the interface #}
 echo {{ host_sudo_passwd }} | sudo -S virsh iface-start br{{ vlan }}
