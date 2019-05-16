@@ -184,6 +184,8 @@ class Windows(WindowsMixin):
 
         # Generate encrypted passwords
         data['admin_password'] = Windows._password_generator(size=8)
+        # Also save the password back to the VM data dict
+        vm_data['admin_password'] = data['admin_password']
 
         # Fetch the drives for the VM and add them to the data
         drives: Deque[str] = deque()

@@ -211,6 +211,8 @@ class Linux(LinuxMixin):
         # Generate encrypted passwords
         admin_password = Linux._password_generator(size=8)
         data['admin_password'] = admin_password
+        # Also save the password back to the VM data dict
+        vm_data['admin_password'] = admin_password
         data['crypted_admin_password'] = str(crypt(admin_password, mksalt(METHOD_SHA512)))
         root_password = Linux._password_generator(size=128)
         data['crypted_root_password'] = str(crypt(root_password, mksalt(METHOD_SHA512)))
