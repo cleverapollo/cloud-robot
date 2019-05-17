@@ -144,8 +144,8 @@ class Linux(LinuxMixin):
         data: Dict[str, Any] = {key: None for key in Linux.template_keys}
 
         data['vm_identifier'] = f'{vm_data["idProject"]}_{vm_data["idVM"]}'
-        # RAM is needed in MB for the updater but we take it in in GB
-        data['ram'] = vm_data['ram'] * 1000
+        # RAM is needed in MB for the updater but we take it in in GB (1024, not 1000)
+        data['ram'] = vm_data['ram'] * 1024
         data['cpu'] = vm_data['cpu']
 
         # Fetch the drives for the VM and add them to the data

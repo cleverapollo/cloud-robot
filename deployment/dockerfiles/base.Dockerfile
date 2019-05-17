@@ -10,10 +10,9 @@ RUN ssh-keyscan gitlab.cloudcix.com > ~/.ssh/known_hosts
 # Install requirements
 RUN pip3 install -r deployment/requirements.txt
 
+# Move the supervisor conf to the correct place
+RUN mv deployment/supervisord.conf /etc
+
 # Set up ENV vars for the Robot script
 ENV CLOUDCIX_SETTINGS_MODULE settings
 ENV ROBOT_ENV dev
-
-# Set the entry point as the robot script
-ENTRYPOINT ["celery", "-A", "celery_app"]
-CMD ["beat", "-s", "/opt/robot/celerybeat/schedule", "-l", "info"]

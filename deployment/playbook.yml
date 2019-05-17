@@ -79,6 +79,7 @@
         pull: true
         network_mode: host
         restart_policy: "no"
+        command: /usr/bin/supervisord
         env:
           ROBOT_ENV: "{{ env }}"
         volumes:
