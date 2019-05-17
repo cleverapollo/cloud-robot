@@ -7,11 +7,11 @@ methods included;
 # stdlib
 import logging
 # lib
+import opentracing
 from jaeger_client import Span
 from winrm import Response, Session
 # local
 import settings
-from celery_app import tracer
 
 
 class WindowsMixin:
@@ -25,7 +25,7 @@ class WindowsMixin:
         """
         cls.logger.debug(f'Deploying command to Windows Host {management_ip}\n{cmd}')
         session = Session(management_ip, auth=('administrator', settings.NETWORK_PASSWORD))
-        child_span = tracer.start_span('run_ps', child_of=span)
+        child_span = opentracing.tracer.start_span('run_ps', child_of=span)
         response = session.run_ps(cmd)
         child_span.finish()
         # Decode out and err

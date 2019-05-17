@@ -4,7 +4,7 @@ WORKDIR /opt/robot
 COPY . .
 
 # SSH Stuff
-RUN mkdir -p ~/.ssh && install -o $(id -u) -g $(id -g) -m 600 id_rsa ~/.ssh/id_rsa && install -o $(id -u) -g $(id -g) -m 600 ssh-config ~/.ssh/config
+RUN mkdir -p ~/.ssh && install -o $(id -u) -g $(id -g) -m 600 id_rsa ~/.ssh/id_rsa && install -o $(id -u) -g $(id -g) -m 600 deployment/ssh-config ~/.ssh/config
 RUN ssh-keyscan gitlab.cloudcix.com > ~/.ssh/known_hosts
 
 # Install requirements
@@ -15,4 +15,5 @@ ENV CLOUDCIX_SETTINGS_MODULE settings
 ENV ROBOT_ENV dev
 
 # Set the entry point as the robot script
-CMD ["/bin/bash", "entrypoint.sh"]
+ENTRYPOINT ["celery", "-A", "celery_app"]
+CMD ["beat", "-s", "/opt/robot/celerybeat/schedule", "-l", "info"]

@@ -24,8 +24,7 @@ class Vm:
         logging.getLogger('robot.dispatchers.vm.build').debug(
             f'Passing VM #{vm_id} to the build task queue',
         )
-        vm_tasks.build_vm(vm_id)
-        # vm_tasks.build_vm.delay(vm_id)
+        vm_tasks.build_vm.delay(vm_id)
 
     def quiesce(self, vm_id: int):
         """
@@ -36,8 +35,7 @@ class Vm:
         logging.getLogger('robot.dispatchers.vm.quiesce').debug(
             f'Passing VM #{vm_id} to the quiesce task queue',
         )
-        vm_tasks.quiesce_vm(vm_id)
-        # vm_tasks.quiesce_vm.delay(vm_id)
+        vm_tasks.quiesce_vm.delay(vm_id)
 
     def restart(self, vm_id: int):
         """
@@ -48,8 +46,7 @@ class Vm:
         logging.getLogger('robot.dispatchers.vm.restart').debug(
             f'Passing VM #{vm_id} to the restart task queue',
         )
-        vm_tasks.restart_vm(vm_id)
-        # vm_tasks.restart_vm.delay(vm_id)
+        vm_tasks.restart_vm.delay(vm_id)
 
     def scrub(self, vm_id: int):
         """
@@ -60,8 +57,7 @@ class Vm:
         logging.getLogger('robot.dispatchers.vm.scrub').debug(
             f'Passing VM #{vm_id} to the scrub task queue',
         )
-        vm_tasks.scrub_vm(vm_id)
-        # vm_tasks.scrub_vm.delay(vm_id)
+        vm_tasks.scrub_vm.delay(vm_id)
 
     def update(self, vm_id: int):
         """
@@ -72,5 +68,4 @@ class Vm:
         logging.getLogger('robot.dispatchers.vm.update').debug(
             f'Passing VM #{vm_id} to the update task queue',
         )
-        vm_tasks.update_vm(vm_id)
-        # vm_tasks.update_vm.delay(vm_id)
+        vm_tasks.update_vm.delay(vm_id)

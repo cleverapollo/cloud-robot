@@ -10,10 +10,10 @@ from collections import deque
 from time import sleep
 from typing import Deque, Tuple
 # lib
+import opentracing
 from jaeger_client import Span
 from paramiko import Channel, SSHClient
 # local
-from celery_app import tracer
 
 __all__ = [
     'LinuxMixin',
@@ -54,18 +54,18 @@ class LinuxMixin:
         cls.logger.debug(f'Deploying command to Linux Host {hostname}')
 
         # Run the command via the client
-        child_span = tracer.start_span('exec_command', child_of=span)
+        child_span = opentracing.tracer.start_span('exec_command', child_of=span)
         _, stdout, stderr = client.exec_command(command)
         # Block until command finishes
         stdout.channel.recv_exit_status()
         child_span.finish()
 
         # Read the full response from both channels
-        child_span = tracer.start_span('read_stdout', child_of=span)
+        child_span = opentracing.tracer.start_span('read_stdout', child_of=span)
         output = cls.get_full_response(stdout.channel)
         child_span.finish()
 
-        child_span = tracer.start_span('read_stderr', child_of=span)
+        child_span = opentracing.tracer.start_span('read_stderr', child_of=span)
         error = cls.get_full_response(stderr.channel)
         child_span.finish()
         return output, error

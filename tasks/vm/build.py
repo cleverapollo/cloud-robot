@@ -3,6 +3,7 @@ import logging
 from datetime import datetime
 from typing import Any, Dict
 # lib
+import opentracing
 from cloudcix.api import IAAS
 from jaeger_client import Span
 # local
@@ -13,7 +14,7 @@ from builders.vm import (
     Linux as LinuxVmBuilder,
     Windows as WindowsVmBuilder,
 )
-from celery_app import app, tracer
+from celery_app import app
 from cloudcix_token import Token
 from email_notifier import EmailNotifier
 
@@ -30,7 +31,7 @@ def _unresource(vm: Dict[str, Any], span: Span):
     metrics.vm_build_failure()
 
     # Update state to UNRESOURCED in the API
-    child_span = tracer.start_span('update_to_unresourced', child_of=span)
+    child_span = opentracing.tracer.start_span('update_to_unresourced', child_of=span)
     response = IAAS.vm.partial_update(
         token=Token.get_instance().token,
         pk=vm_id,
@@ -43,7 +44,7 @@ def _unresource(vm: Dict[str, Any], span: Span):
         logging.getLogger('robot.tasks.vm.build').error(
             f'Could not update VM #{vm_id} to state UNRESOURCED. Response: {response.content.decode()}.',
         )
-    child_span = tracer.start_span('send_email', child_of=span)
+    child_span = opentracing.tracer.start_span('send_email', child_of=span)
     EmailNotifier.build_failure(vm)
     child_span.finish()
 
@@ -53,7 +54,7 @@ def build_vm(vm_id: int):
     """
     Helper function that wraps the actual task in a span, meaning we don't have to remember to call .finish
     """
-    span = tracer.start_span('tasks.build_vm')
+    span = opentracing.tracer.start_span('tasks.build_vm')
     span.set_tag('vm_id', vm_id)
     _build_vm(vm_id, span)
     span.finish()
@@ -70,7 +71,7 @@ def _build_vm(vm_id: int, span: Span):
     logger.info(f'Commencing build of VM #{vm_id}')
 
     # Read the VM
-    child_span = tracer.start_span('read_vm', child_of=span)
+    child_span = opentracing.tracer.start_span('read_vm', child_of=span)
     vm = utils.api_read(IAAS.vm, vm_id, span=child_span)
     child_span.finish()
 
@@ -89,7 +90,7 @@ def _build_vm(vm_id: int, span: Span):
         return
 
     # Also ensure that the VRF is built for the VM
-    child_span = tracer.start_span('read_project_vrf', child_of=span)
+    child_span = opentracing.tracer.start_span('read_project_vrf', child_of=span)
     vrf_request_data = {'project': vm['idProject']}
     vm_vrf = utils.api_list(IAAS.vrf, vrf_request_data, span=child_span)[0]
     child_span.finish()
@@ -112,7 +113,7 @@ def _build_vm(vm_id: int, span: Span):
         return
 
     # If all is well and good here, update the VM state to BUILDING and pass the data to the builder
-    child_span = tracer.start_span('update_to_building', child_of=span)
+    child_span = opentracing.tracer.start_span('update_to_building', child_of=span)
     response = IAAS.vm.partial_update(
         token=Token.get_instance().token,
         pk=vm_id,
@@ -133,7 +134,7 @@ def _build_vm(vm_id: int, span: Span):
     success: bool = False
 
     # Read the VM image to get the hypervisor id
-    child_span = tracer.start_span('read_vm_image', child_of=span)
+    child_span = opentracing.tracer.start_span('read_vm_image', child_of=span)
     image = utils.api_read(IAAS.image, vm['idImage'], span=child_span)
     child_span.finish()
 
@@ -146,7 +147,7 @@ def _build_vm(vm_id: int, span: Span):
         return
 
     hypervisor = image['idHypervisor']
-    child_span = tracer.start_span('build', child_of=span)
+    child_span = opentracing.tracer.start_span('build', child_of=span)
     if hypervisor == 1:  # HyperV -> Windows
         success = WindowsVmBuilder.build(vm, image, child_span)
         child_span.set_tag('hypervisor', 'windows')
@@ -166,7 +167,7 @@ def _build_vm(vm_id: int, span: Span):
         logger.info(f'Successfully built VM #{vm_id}')
 
         # Update state to RUNNING in the API
-        child_span = tracer.start_span('update_to_running', child_of=span)
+        child_span = opentracing.tracer.start_span('update_to_running', child_of=span)
         response = IAAS.vm.partial_update(
             token=Token.get_instance().token,
             pk=vm_id,
@@ -180,7 +181,7 @@ def _build_vm(vm_id: int, span: Span):
                 f'Could not update VM #{vm_id} to state RUNNING. Response: {response.content.decode()}.',
             )
 
-        child_span = tracer.start_span('send_email', child_of=span)
+        child_span = opentracing.tracer.start_span('send_email', child_of=span)
         EmailNotifier.build_success(vm)
         child_span.finish()
 

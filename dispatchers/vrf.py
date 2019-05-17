@@ -24,8 +24,7 @@ class Vrf:
         logging.getLogger('robot.dispatchers.vrf.build').debug(
             f'Passing VRF #{vrf_id} to the build task queue',
         )
-        vrf_tasks.build_vrf(vrf_id)
-        # vrf_tasks.build_vrf.delay(vrf_id)
+        vrf_tasks.build_vrf.delay(vrf_id)
 
     def quiesce(self, vrf_id: int):
         """
@@ -36,8 +35,7 @@ class Vrf:
         logging.getLogger('robot.dispatchers.vrf.quiesce').debug(
             f'Passing VRF #{vrf_id} to the quiesce task queue',
         )
-        vrf_tasks.quiesce_vrf(vrf_id)
-        # vrf_tasks.quiesce_vrf.delay(vrf_id)
+        vrf_tasks.quiesce_vrf.delay(vrf_id)
 
     def restart(self, vrf_id: int):
         """
@@ -48,8 +46,7 @@ class Vrf:
         logging.getLogger('robot.dispatchers.vrf.restart').debug(
             f'Passing VRF #{vrf_id} to the restart task queue',
         )
-        vrf_tasks.restart_vrf(vrf_id)
-        # vrf_tasks.restart_vrf.delay(vrf_id)
+        vrf_tasks.restart_vrf.delay(vrf_id)
 
     def scrub(self, vrf_id: int):
         """
@@ -60,8 +57,7 @@ class Vrf:
         logging.getLogger('robot.dispatchers.vrf.scrub').debug(
             f'Passing VRF #{vrf_id} to the scrub task queue',
         )
-        vrf_tasks.scrub_vrf(vrf_id)
-        # vrf_tasks.scrub_vrf.delay(vrf_id)
+        vrf_tasks.scrub_vrf.delay(vrf_id)
 
     def update(self, vrf_id: int):
         """
@@ -72,5 +68,4 @@ class Vrf:
         logging.getLogger('robot.dispatchers.vrf.update').debug(
             f'Passing VRF #{vrf_id} to the update task queue',
         )
-        vrf_tasks.update_vrf(vrf_id)
-        # vrf_tasks.update_vrf.delay(vrf_id)
+        vrf_tasks.update_vrf.delay(vrf_id)

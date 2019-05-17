@@ -2,6 +2,7 @@
 import os
 # Import the specific settings
 from settings_local import (
+    CELERY_HOST,
     CLOUDCIX_API_PASSWORD,
     CLOUDCIX_API_USERNAME,
     CLOUDCIX_EMAIL_PASSWORD,
@@ -13,6 +14,7 @@ from settings_local import (
 )
 
 __all__ = [
+    'CELERY_HOST',
     'CLOUDCIX_API_KEY',
     'CLOUDCIX_API_PASSWORD',
     'CLOUDCIX_API_URL',

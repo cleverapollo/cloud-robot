@@ -10,10 +10,10 @@ updater class for vrfs
 import logging
 from typing import Any, Dict
 # lib
+import opentracing
 from jaeger_client import Span
 # local
 import utils
-from celery_app import tracer
 from builders import Vrf as VrfBuilder
 
 __all__ = [
@@ -48,7 +48,7 @@ class Vrf(VrfBuilder):
         vrf_id = vrf_data['idVRF']
 
         # Start by generating the proper dict of data needed by the template
-        child_span = tracer.start_span('generate_template_data', child_of=span)
+        child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
         template_data = Vrf._get_template_data(vrf_data, child_span)
         child_span.finish()
 
@@ -76,7 +76,7 @@ class Vrf(VrfBuilder):
         router_model = template_data.pop('router_model')
         management_ip = template_data.pop('management_ip')
         try:
-            child_span = tracer.start_span('generate_setconf', child_of=span)
+            child_span = opentracing.tracer.start_span('generate_setconf', child_of=span)
             template_name = f'vrf/update_{router_model}.j2'
             child_span.set_tag('template_name', template_name)
             conf = utils.JINJA_ENV.get_template(template_name).render(**template_data)
@@ -91,7 +91,7 @@ class Vrf(VrfBuilder):
         Vrf.logger.debug(f'Generated setconf for VRF #{vrf_id}\n{conf}')
 
         # Deploy the generated setconf to the router
-        child_span = tracer.start_span('deploy_setconf', child_of=span)
+        child_span = opentracing.tracer.start_span('deploy_setconf', child_of=span)
         success = Vrf.deploy(conf, management_ip)
         child_span.finish()
         return success

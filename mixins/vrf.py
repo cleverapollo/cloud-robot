@@ -12,7 +12,7 @@ from typing import Dict, Optional, Union
 from cloudcix.api import IAAS
 from jaeger_client import Span
 from jnpr.junos import Device
-from jnpr.junos.exception import CommitError, ConfigLoadError, ConnectError, LockError, UnlockError
+from jnpr.junos.exception import CommitError, ConfigLoadError, ConnectError
 from jnpr.junos.utils.config import Config
 from netaddr import IPAddress
 # local
@@ -39,7 +39,6 @@ class VrfMixin:
         """
         cls.logger.debug(f'Attempting to connect to Router {management_ip} to deploy')
         router = Device(host=management_ip, user='robot', port=22)
-        config = Config(router)
         try:
             router.open()
             # Set the RPC timeout to be 2 minutes
@@ -47,61 +46,33 @@ class VrfMixin:
         except ConnectError:
             cls.logger.error(f'Unable to connect to Router {management_ip}', exc_info=True)
             return False
-        cls.logger.debug(f'Successfully connected to Router {management_ip}, now attempting to lock configuration')
-        try:
-            config.lock()
-        except LockError:
-            cls.logger.error(f'Unable to lock configuration in Router {management_ip}', exc_info=True)
-            return False
-        cls.logger.debug(f'Successfully locked config in Router {management_ip}, now attempting to apply config')
-        try:
-            for cmd in setconf.split('\n'):
-                config.load(cmd, format='set', merge=True, ignore_warning=scrub)
-        except ConfigLoadError:
-            cls.logger.error(f'Unable to load configuration changes onto Router {management_ip}', exc_info=True)
-            # Try to unlock after failing to load
-            cls.logger.debug(f'Attempting to unlock configuration after error on Router {management_ip}')
+        cls.logger.debug(f'Successfully connected to Router {management_ip}, now attempting to load config')
+        with Config(router, mode='private') as config:
             try:
-                config.unlock()
-            except UnlockError:
-                cls.logger.error(f'Unable to unlock configuration after error on Router {management_ip}', exc_info=True)
-            router.close()
-            return False
+                for cmd in setconf.split('\n'):
+                    config.load(cmd, format='set', merge=True, ignore_warning=scrub)
+            except ConfigLoadError:
+                cls.logger.error(f'Unable to load configuration changes onto Router {management_ip}', exc_info=True)
+                router.close()
+                return False
 
-        # Attempt to commit
-        cls.logger.debug(
-            f'All commands successfully loaded onto Router {management_ip}, now attempting to commit changes',
-        )
-        try:
-            commit_msg = f'Loaded by robot at {asctime()}.'
-            if not scrub:
-                config.commit(comment=commit_msg)
-            else:
-                config.commit(comment=commit_msg, ignore_warning=['statement not found'])
-        except CommitError:
-            cls.logger.error(f'Unable to commit changes onto Router {management_ip}', exc_info=True)
-            # Unlock configuration before exiting
-            cls.logger.debug(f'Attempting to unlock configuration commit failure on Router {management_ip}')
+            # Attempt to commit
+            cls.logger.debug(
+                f'All commands successfully loaded onto Router {management_ip}, now attempting to commit changes',
+            )
             try:
-                config.unlock()
-            except UnlockError:
-                cls.logger.error(f'Unable to unlock configuration after error on Router {management_ip}', exc_info=True)
-            router.close()
-            return False
-        except Exception:
-            cls.logger.error(
-                f'An unexpected error occurred while committing changes onto Router {management_ip}',
-                exc_info=True,
-            )
-        cls.logger.debug(f'Changes successfully committed onto Router {management_ip}, now attempting to unlock config')
-        try:
-            config.unlock()
-        except UnlockError:
-            cls.logger.error(
-                f'Unable to unlock configuration after successful commit on Router {management_ip}',
-                exc_info=True,
-            )
-            router.close()
+                commit_msg = f'Loaded by robot at {asctime()}.'
+                if not scrub:
+                    config.commit(comment=commit_msg)
+                else:
+                    config.commit(comment=commit_msg, ignore_warning=['statement not found'])
+            except CommitError:
+                cls.logger.error(f'Unable to commit changes onto Router {management_ip}', exc_info=True)
+                router.close()
+                return False
+
+        cls.logger.debug(f'Changes successfully committed onto Router {management_ip}')
+        router.close()
         return True
 
     @classmethod

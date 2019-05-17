@@ -2,9 +2,9 @@
 <interface type="bridge" name="br{{ vlan }}">
   <start mode="onboot" />
   <bridge stp="on" delay="0.0">
-    <interface type="vlan" name="enp8s0f0.{{ vlan }}">
+    <interface type="vlan" name="cloud0.{{ vlan }}">
       <vlan tag="{{ vlan }}">
-        <interface name="enp8s0f0" />
+        <interface name="cloud0" />
       </vlan>
     </interface>
   </bridge>

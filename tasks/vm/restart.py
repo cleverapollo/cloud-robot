@@ -1,13 +1,14 @@
 # stdlib
 import logging
 # lib
+import opentracing
 from cloudcix.api import IAAS
 from jaeger_client import Span
 # local
 import metrics
 import state
 import utils
-from celery_app import app, tracer
+from celery_app import app
 from cloudcix_token import Token
 from email_notifier import EmailNotifier
 from restarters.vm import (
@@ -25,7 +26,7 @@ def restart_vm(vm_id: int):
     """
     Helper function that wraps the actual task in a span, meaning we don't have to remember to call .finish
     """
-    span = tracer.start_span('tasks.restart_vm')
+    span = opentracing.tracer.start_span('tasks.restart_vm')
     span.set_tag('vm_id', vm_id)
     _restart_vm(vm_id, span)
     span.finish()
@@ -41,7 +42,7 @@ def _restart_vm(vm_id: int, span: Span):
     logger.info(f'Commencing restart of VM #{vm_id}')
 
     # Read the VM
-    child_span = tracer.start_span('read_vm', child_of=span)
+    child_span = opentracing.tracer.start_span('read_vm', child_of=span)
     vm = utils.api_read(IAAS.vm, vm_id, span=child_span)
     child_span.finish()
 
@@ -64,7 +65,7 @@ def _restart_vm(vm_id: int, span: Span):
     # There's no in-between state for restart tasks, just jump straight to doing the work
     success: bool = False
     # Read the VM image to get the hypervisor id
-    child_span = tracer.start_span('read_vm_image', child_of=span)
+    child_span = opentracing.tracer.start_span('read_vm_image', child_of=span)
     image = utils.api_read(IAAS.image, vm['idImage'], span=child_span)
     child_span.finish()
 
@@ -76,7 +77,7 @@ def _restart_vm(vm_id: int, span: Span):
         return
 
     hypervisor = image['idHypervisor']
-    child_span = tracer.start_span('restart', child_of=span)
+    child_span = opentracing.tracer.start_span('restart', child_of=span)
     if hypervisor == 1:  # HyperV -> Windows
         success = WindowsVmRestarter.restart(vm, child_span)
         child_span.set_tag('hypervisor', 'windows')
@@ -96,7 +97,7 @@ def _restart_vm(vm_id: int, span: Span):
         logger.info(f'Successfully restarted VM #{vm_id}')
         metrics.vm_restart_success()
         # Update state back to RUNNING
-        child_span = tracer.start_span('update_to_running', child_of=span)
+        child_span = opentracing.tracer.start_span('update_to_running', child_of=span)
         response = IAAS.vm.partial_update(
             token=Token.get_instance().token,
             pk=vm_id,
@@ -109,7 +110,7 @@ def _restart_vm(vm_id: int, span: Span):
             )
 
         # Email the user
-        child_span = tracer.start_span('send_email', child_of=span)
+        child_span = opentracing.tracer.start_span('send_email', child_of=span)
         EmailNotifier.restart_success(vm)
         child_span.finish()
     else:
@@ -117,7 +118,7 @@ def _restart_vm(vm_id: int, span: Span):
         metrics.vm_restart_failure()
 
         # Email the user
-        child_span = tracer.start_span('send_email', child_of=span)
+        child_span = opentracing.tracer.start_span('send_email', child_of=span)
         EmailNotifier.restart_failure(vm)
         child_span.finish()
         # There's no fail state here either

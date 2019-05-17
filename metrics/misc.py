@@ -1,8 +1,7 @@
-# lib
-from cloudcix_metrics import prepare_metrics, Metric
 # local
 from settings import REGION_NAME
 from utils import get_current_git_sha
+from .sender import prepare_metrics, Metric
 
 
 def current_commit():

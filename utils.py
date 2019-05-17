@@ -47,26 +47,18 @@ def setup_root_logger():
 
     # Set up robot parent logger
     logger = logging.getLogger('robot')
+    if len(logger.handlers) > 0:
+        return
     logger.setLevel(logging.DEBUG)
-
-    # Stream Handler
-    fmt = logging.Formatter(fmt='%(asctime)s - %(name)s: %(levelname)s: %(message)s', datefmt='%d/%m/%y @ %H:%M:%S')
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(fmt)
-    stream_handler.setLevel(logging.DEBUG)
-    logger.addHandler(stream_handler)
 
     # Logstash Handler
     logstash_fmt = LogstashFormatter(extra={'application': 'robot', 'region': REGION_NAME})
     logstash_handler = AsynchronousLogstashHandler(LOGSTASH_IP, 5959, 'log.db')
     logstash_handler.setFormatter(logstash_fmt)
-    logstash_handler.setLevel(logging.INFO)
     logger.addHandler(logstash_handler)
 
     # At exit, flush all logs to logstash
     atexit.register(logstash_handler.flush)
-
-    # Hide other logs
 
 
 def get_current_git_sha() -> str:

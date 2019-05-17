@@ -13,6 +13,7 @@ from collections import deque
 from crypt import crypt, mksalt, METHOD_SHA512
 from typing import Any, Deque, Dict, Optional, Tuple
 # lib
+import opentracing
 from cloudcix.api import IAAS
 from jaeger_client import Span
 from netaddr import IPAddress, IPNetwork
@@ -20,7 +21,6 @@ from paramiko import AutoAddPolicy, SSHClient, SSHException
 # local
 import settings
 import utils
-from celery_app import tracer
 from mixins import LinuxMixin
 
 
@@ -99,7 +99,7 @@ class Linux(LinuxMixin):
         vm_id = vm_data['idVM']
 
         # Generate the necessary template data
-        child_span = tracer.start_span('generate_template_data', child_of=span)
+        child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
         template_data = Linux._get_template_data(vm_data, image_data, child_span)
         child_span.finish()
 
@@ -128,7 +128,7 @@ class Linux(LinuxMixin):
         image_id = template_data.pop('image_id')
 
         # Write necessary files into the network drive
-        child_span = tracer.start_span('write_files_to_network_drive', child_of=span)
+        child_span = opentracing.tracer.start_span('write_files_to_network_drive', child_of=span)
         file_write_success = Linux._generate_network_drive_files(vm_id, image_id, template_data)
         child_span.finish()
 
@@ -138,7 +138,7 @@ class Linux(LinuxMixin):
             return False
 
         # Generate the two commands that will be run on the host machine directly
-        child_span = tracer.start_span('generate_commands', child_of=span)
+        child_span = opentracing.tracer.start_span('generate_commands', child_of=span)
         bridge_build_cmd, vm_build_cmd = Linux._generate_host_commands(vm_id, template_data)
         child_span.finish()
 
@@ -154,7 +154,7 @@ class Linux(LinuxMixin):
             # Attempt to execute the bridge build command
             Linux.logger.debug(f'Executing bridge build command for VM #{vm_id}')
 
-            child_span = tracer.start_span('build_bridge', child_of=span)
+            child_span = opentracing.tracer.start_span('build_bridge', child_of=span)
             stdout, stderr = Linux.deploy(bridge_build_cmd, client, child_span)
             child_span.finish()
 
@@ -166,7 +166,7 @@ class Linux(LinuxMixin):
             # Now attempt to execute the vm build command
             Linux.logger.debug(f'Executing vm build command for VM #{vm_id}')
 
-            child_span = tracer.start_span('build_vm', child_of=span)
+            child_span = opentracing.tracer.start_span('build_vm', child_of=span)
             stdout, stderr = Linux.deploy(vm_build_cmd, client, child_span)
             child_span.finish()
 
@@ -211,6 +211,8 @@ class Linux(LinuxMixin):
         # Generate encrypted passwords
         admin_password = Linux._password_generator(size=8)
         data['admin_password'] = admin_password
+        # Also save the password back to the VM data dict
+        vm_data['admin_password'] = admin_password
         data['crypted_admin_password'] = str(crypt(admin_password, mksalt(METHOD_SHA512)))
         root_password = Linux._password_generator(size=128)
         data['crypted_root_password'] = str(crypt(root_password, mksalt(METHOD_SHA512)))

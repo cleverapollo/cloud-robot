@@ -9,12 +9,12 @@ quiescer class for windows vms
 import logging
 from typing import Any, Dict, Optional
 # lib
+import opentracing
 from cloudcix.api import IAAS
 from jaeger_client import Span
 from winrm.exceptions import WinRMError
 # local
 import utils
-from celery_app import tracer
 from mixins import WindowsMixin
 
 
@@ -49,7 +49,7 @@ class Windows(WindowsMixin):
         vm_id = vm_data['idVM']
 
         # Generate the necessary template data
-        child_span = tracer.start_span('generate_template_data', child_of=span)
+        child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
         template_data = Windows._get_template_data(vm_data, child_span)
         child_span.finish()
 
@@ -77,14 +77,14 @@ class Windows(WindowsMixin):
         host_name = template_data.pop('host_name')
 
         # Render the quiesce command
-        child_span = tracer.start_span('generate_command', child_of=span)
+        child_span = opentracing.tracer.start_span('generate_command', child_of=span)
         cmd = utils.JINJA_ENV.get_template('vm/windows/quiesce_cmd.j2').render(**template_data)
         child_span.finish()
 
         # Open a client and run the two necessary commands on the host
         quiesced = False
         try:
-            child_span = tracer.start_span('quiesce_vm', child_of=span)
+            child_span = opentracing.tracer.start_span('quiesce_vm', child_of=span)
             response = Windows.deploy(cmd, host_name, child_span)
             span.set_tag('host', host_name)
             child_span.finish()
