@@ -40,6 +40,12 @@ app = Celery(
 )
 # Optional config
 app.conf.timezone = 'Europe/Dublin'
+# Route heartbeat tasks to a different queue than the other tasks
+app.conf.task_routes = {
+    'tasks.mainloop': {'queue': 'heartbeat'},
+    'tasks.scrub': {'queue': 'heartbeat'},
+    # All other tasks will be sent to the default queue named 'celery'
+}
 
 # Add cron based jobs
 app.conf.beat_schedule = {

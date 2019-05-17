@@ -8,3 +8,5 @@ jinja2
 junos-eznc
 netaddr
 paramiko
+# supervisor for running multiple processes once
+supervisor
