@@ -153,6 +153,7 @@ class Windows(WindowsMixin):
         # Fetch the drives for the VM and add them to the data
         # Update needs to use changes, not the drives that are attached to the VM by default
         drives: Deque[Dict[str, str]] = deque()
+        Windows.logger.debug(f'Fetching drives for VM #{vm_id}')
         for storage_id, storage_changes in vm_data['changes_this_month'][0]['details']['storages'].items():
             # Read the storage from the API
             storage = utils.api_read(IAAS.storage, storage_id, span=span)
@@ -188,6 +189,7 @@ class Windows(WindowsMixin):
         data['drives'] = drives
 
         # Get the Networking details
+        Windows.logger.debug(f'Fetching networking information for VM #{vm_id}')
         for ip_address in utils.api_list(IAAS.ipaddress, {'vm': vm_id}, span=span):
             # The private IP for the VM will be the one we need to pass to the template
             if not IPAddress(ip_address['address']).is_private():

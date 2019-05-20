@@ -150,6 +150,7 @@ class Linux(LinuxMixin):
 
         # Fetch the drives for the VM and add them to the data
         # Update needs to use changes, not the drives that are attached to the VM by default
+        Linux.logger.debug(f'Fetching drives for VM #{vm_id}')
         drives: Deque[Dict[str, str]] = deque()
         for storage_id, storage_changes in vm_data['changes_this_month'][0]['details']['storages'].items():
             # Read the storage from the API
@@ -186,6 +187,7 @@ class Linux(LinuxMixin):
         data['drives'] = drives
 
         # Get the ip address of the host
+        Linux.logger.debug(f'Fetching host address for VM #{vm_id}')
         for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer'], span=span):
             if mac['status'] is True and mac['ip'] is not None:
                 data['host_ip'] = mac['ip']
