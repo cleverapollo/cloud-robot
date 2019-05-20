@@ -158,7 +158,7 @@ class Windows(WindowsMixin):
         storage_ids = [storage_id for storage_id in vm_data['changes_this_month'][0]['details']['storages']]
         storages = {
             storage['idStorage']: storage
-            for storage in utils.api_list(IAAS.storage, {'idStorage__in': storage_ids})
+            for storage in utils.api_list(IAAS.storage, {'idStorage__in': storage_ids}, vm_id=vm_id, span=span)
         }
         for storage_id, storage_changes in vm_data['changes_this_month'][0]['details']['storages'].items():
             # Read the storage from the API
