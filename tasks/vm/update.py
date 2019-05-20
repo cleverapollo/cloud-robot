@@ -118,7 +118,7 @@ def _update_vm(vm_id: int, span: Span):
     span.set_tag('return_reason', f'success: {success}')
 
     if success:
-        logger.info(f'Successfully updated VM #{vm_id} from hardware.')
+        logger.info(f'Successfully updated VM #{vm_id}.')
         # Update back to RUNNING
         child_span = opentracing.tracer.start_span('update_to_running', child_of=span)
         response = IAAS.vm.partial_update(
