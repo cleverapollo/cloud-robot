@@ -76,8 +76,15 @@ def _update_vrf(vrf_id: int, span: Span):
         span.set_tag('return_reason', 'could_not_update_state')
         return
 
+    success: bool = False
     child_span = opentracing.tracer.start_span('update', child_of=span)
-    success = VrfUpdater.update(vrf, child_span)
+    try:
+        success = VrfUpdater.update(vrf, child_span)
+    except Exception:
+        logger.error(
+            f'An unexpected error occurred when attempting to update VRF #{vrf_id}',
+            exc_info=True,
+        )
     child_span.finish()
 
     span.set_tag('return_reason', f'success: {success}')

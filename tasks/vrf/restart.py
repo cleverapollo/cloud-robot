@@ -60,8 +60,15 @@ def _restart_vrf(vrf_id: int, span: Span):
         return
 
     # There's no in-between state for Restart tasks, just jump straight to doing the work
+    success: bool = False
     child_span = opentracing.tracer.start_span('restart', child_of=span)
-    success = VrfRestarter.restart(vrf, child_span)
+    try:
+        success = VrfRestarter.restart(vrf, child_span)
+    except Exception:
+        logger.error(
+            f'An unexpected error occurred when attempting to restart VRF #{vrf_id}',
+            exc_info=True,
+        )
     child_span.finish()
 
     span.set_tag('return_reason', f'success: {success}')

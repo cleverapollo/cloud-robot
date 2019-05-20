@@ -74,8 +74,15 @@ def _build_vrf(vrf_id: int, span: Span):
         span.set_tag('return_reason', 'could_not_update_state')
         return
 
+    success: bool = False
     child_span = opentracing.tracer.start_span('build', child_of=span)
-    success = VrfBuilder.build(vrf, child_span)
+    try:
+        success = VrfBuilder.build(vrf, child_span)
+    except Exception:
+        logger.error(
+            f'An unexpected error occurred when attempting to build VRF #{vrf_id}',
+            exc_info=True,
+        )
     child_span.finish()
 
     span.set_tag('return_reason', f'success: {success}')
