@@ -152,9 +152,15 @@ class Linux(LinuxMixin):
         # Update needs to use changes, not the drives that are attached to the VM by default
         Linux.logger.debug(f'Fetching drives for VM #{vm_id}')
         drives: Deque[Dict[str, str]] = deque()
+        # List all the storages that are in use for the VM
+        storage_ids = [storage_id for storage_id in vm_data['changes_this_month'][0]['details']['storages']]
+        storages = {
+            storage['idStorage']: storage
+            for storage in utils.api_list(IAAS.storage, {'idStorage__in': storage_ids})
+        }
         for storage_id, storage_changes in vm_data['changes_this_month'][0]['details']['storages'].items():
             # Read the storage from the API
-            storage = utils.api_read(IAAS.storage, storage_id, span=span)
+            storage = storages.get(storage_id, None)
             if storage is None:
                 Linux.logger.error(f'Error fetching Storage #{storage_id} for VM #{vm_id}')
                 return None
