@@ -21,8 +21,8 @@ __all__ = [
 class VmMixin:
     logger: logging.Logger
 
-    @staticmethod
-    def fetch_drive_updates(vm_data: Dict[str, Any], span: Span) -> Tuple[str, str, Deque[Dict[str, str]]]:
+    @classmethod
+    def fetch_drive_updates(cls, vm_data: Dict[str, Any], span: Span) -> Tuple[str, str, Deque[Dict[str, str]]]:
         """
         Given a VM's data, generate the data for drives that need to be updated in this update request
         :param vm_data: The data of the VM being updated
@@ -51,12 +51,12 @@ class VmMixin:
             storage['idStorage']: storage
             for storage in utils.api_list(IAAS.storage, {'idStorage__in': storage_ids}, vm_id=vm_id, span=span)
         }
-        VmMixin.logger.debug(f'Drives for VM #{vm_id}: {storage_ids}')
+        cls.logger.debug(f'Drives for VM #{vm_id}: {storage_ids}')
         for storage_id, storage_changes in storage_changes.items():
             # Read the storage from the API
             storage = storages.get(storage_id, None)
             if storage is None:
-                VmMixin.logger.error(f'Error fetching Storage #{storage_id} for VM #{vm_id}')
+                cls.logger.error(f'Error fetching Storage #{storage_id} for VM #{vm_id}')
                 return hdd, ssd, drives
             # Check if the storage is primary
             if storage['primary']:
@@ -66,7 +66,7 @@ class VmMixin:
                 elif storage['storage_type'] == 'SSD':
                     ssd = f'{storage["idStorage"]}:{storage_changes["new_value"]}:{storage_changes["old_value"]}'
                 else:
-                    VmMixin.logger.error(
+                    cls.logger.error(
                         f'Invalid primary drive storage type {storage["storage_type"]} for VM #{vm_id}. '
                         'Expected either "HDD" or "SSD"',
                     )
