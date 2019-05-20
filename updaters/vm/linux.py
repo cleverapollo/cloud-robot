@@ -7,8 +7,7 @@ updater class for linux vms
 """
 # stdlib
 import logging
-from collections import deque
-from typing import Any, Deque, Dict, Optional
+from typing import Any, Dict, Optional
 # lib
 import opentracing
 from cloudcix.api import IAAS
@@ -17,7 +16,7 @@ from paramiko import AutoAddPolicy, SSHClient, SSHException
 # local
 import settings
 import utils
-from mixins import LinuxMixin
+from mixins import LinuxMixin, VmMixin
 
 
 __all__ = [
@@ -25,7 +24,7 @@ __all__ = [
 ]
 
 
-class Linux(LinuxMixin):
+class Linux(LinuxMixin, VmMixin):
     """
     Class that handles the updating of the specified VM
     When we get to this point, we can be sure that the VM is a linux VM
@@ -148,51 +147,6 @@ class Linux(LinuxMixin):
         data['ram'] = vm_data['ram'] * 1024
         data['cpu'] = vm_data['cpu']
 
-        # Fetch the drives for the VM and add them to the data
-        # Update needs to use changes, not the drives that are attached to the VM by default
-        Linux.logger.debug(f'Fetching drives for VM #{vm_id}')
-        drives: Deque[Dict[str, str]] = deque()
-        # List all the storages that are in use for the VM
-        storage_ids = [storage_id for storage_id in vm_data['changes_this_month'][0]['details']['storages']]
-        storages = {
-            storage['idStorage']: storage
-            for storage in utils.api_list(IAAS.storage, {'idStorage__in': storage_ids}, vm_id=vm_id, span=span)
-        }
-        Linux.logger.debug(f'Drives for VM #{vm_id}: {storage_ids}')
-        for storage_id, storage_changes in vm_data['changes_this_month'][0]['details']['storages'].items():
-            # Read the storage from the API
-            storage = storages.get(storage_id, None)
-            if storage is None:
-                Linux.logger.error(f'Error fetching Storage #{storage_id} for VM #{vm_id}')
-                return None
-            # Check if the storage is primary
-            if storage['primary']:
-                # Determine which field (hdd or ssd) to populate with this storage information
-                if storage['storage_type'] == 'HDD':
-                    data['hdd'] = (
-                        f'{storage["idStorage"]}:{storage_changes["new_value"]}:{storage_changes["old_value"]}'
-                    )
-                    data['ssd'] = 0
-                elif storage['storage_type'] == 'SSD':
-                    data['hdd'] = 0
-                    data['ssd'] = (
-                        f'{storage["idStorage"]}:{storage_changes["new_value"]}:{storage_changes["old_value"]}'
-                    )
-                else:
-                    Linux.logger.error(
-                        f'Invalid primary drive storage type {storage["storage_type"]}. Expected either "HDD" or "SSD"',
-                    )
-                    return None
-            else:
-                # Append the drive to the deque
-                drives.append({
-                    'id': storage_id,
-                    'type': storage['storage_type'],
-                    'new_size': storage_changes['new_value'],
-                    'old_size': storage_changes['old_value'],
-                })
-        data['drives'] = drives
-
         # Get the ip address of the host
         Linux.logger.debug(f'Fetching host address for VM #{vm_id}')
         for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer'], span=span):
@@ -202,4 +156,9 @@ class Linux(LinuxMixin):
 
         # Add the host information to the data
         data['host_sudo_passwd'] = settings.NETWORK_PASSWORD
+
+        # Fetch the drive information for the update
+        Linux.logger.debug(f'Fetching drives for VM #{vm_id}')
+        data['hdd'], data['ssd'], data['drives'] = Linux.fetch_drive_updates(vm_data, span)
+
         return data

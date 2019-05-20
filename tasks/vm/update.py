@@ -108,7 +108,7 @@ def _update_vm(vm_id: int, span: Span):
                 f'Unsupported Hypervisor ID #{hypervisor} for VM #{vm_id}',
             )
             child_span.set_tag('hypervisor', 'unsupported')
-    except:
+    except Exception:
         logger.error(
             f'An unexpected error occurred when attempting to update VM #{vm_id}',
             exc_info=True,
