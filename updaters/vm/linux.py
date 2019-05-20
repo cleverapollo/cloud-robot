@@ -158,6 +158,7 @@ class Linux(LinuxMixin):
             storage['idStorage']: storage
             for storage in utils.api_list(IAAS.storage, {'idStorage__in': storage_ids}, vm_id=vm_id, span=span)
         }
+        Linux.logger.debug(f'Drives for VM #{vm_id}: {storage_ids}')
         for storage_id, storage_changes in vm_data['changes_this_month'][0]['details']['storages'].items():
             # Read the storage from the API
             storage = storages.get(storage_id, None)
