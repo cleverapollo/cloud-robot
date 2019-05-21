@@ -96,23 +96,29 @@ def _update_vm(vm_id: int, span: Span):
 
     hypervisor = image['idHypervisor']
     child_span = opentracing.tracer.start_span('update', child_of=span)
-    if hypervisor == 1:  # HyperV -> Windows
-        success = WindowsVmUpdater.update(vm, child_span)
-        child_span.set_tag('hypervisor', 'windows')
-    elif hypervisor == 2:  # KVM -> Linux
-        success = LinuxVmUpdater.update(vm, child_span)
-        child_span.set_tag('hypervisor', 'linux')
-    else:
+    try:
+        if hypervisor == 1:  # HyperV -> Windows
+            success = WindowsVmUpdater.update(vm, child_span)
+            child_span.set_tag('hypervisor', 'windows')
+        elif hypervisor == 2:  # KVM -> Linux
+            success = LinuxVmUpdater.update(vm, child_span)
+            child_span.set_tag('hypervisor', 'linux')
+        else:
+            logger.error(
+                f'Unsupported Hypervisor ID #{hypervisor} for VM #{vm_id}',
+            )
+            child_span.set_tag('hypervisor', 'unsupported')
+    except Exception:
         logger.error(
-            f'Unsupported Hypervisor ID #{hypervisor} for VM #{vm_id}',
+            f'An unexpected error occurred when attempting to update VM #{vm_id}',
+            exc_info=True,
         )
-        child_span.set_tag('hypervisor', 'unsupported')
     child_span.finish()
 
     span.set_tag('return_reason', f'success: {success}')
 
     if success:
-        logger.info(f'Successfully updated VM #{vm_id} from hardware.')
+        logger.info(f'Successfully updated VM #{vm_id}.')
         # Update back to RUNNING
         child_span = opentracing.tracer.start_span('update_to_running', child_of=span)
         response = IAAS.vm.partial_update(

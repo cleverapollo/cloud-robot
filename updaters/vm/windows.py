@@ -7,8 +7,7 @@ updater class for windows vms
 """
 # stdlib
 import logging
-from collections import deque
-from typing import Any, Deque, Dict, Optional
+from typing import Any, Dict, Optional
 # lib
 import opentracing
 from cloudcix.api import IAAS
@@ -18,7 +17,7 @@ from winrm.exceptions import WinRMError
 # local
 import settings
 import utils
-from mixins import WindowsMixin
+from mixins import VmMixin, WindowsMixin
 
 
 __all__ = [
@@ -26,7 +25,7 @@ __all__ = [
 ]
 
 
-class Windows(WindowsMixin):
+class Windows(WindowsMixin, VmMixin):
     """
     Class that handles the updating of the specified VM
     When we get to this point, we can be sure that the VM is a windows VM
@@ -145,49 +144,13 @@ class Windows(WindowsMixin):
         data: Dict[str, Any] = {key: None for key in Windows.template_keys}
 
         data['vm_identifier'] = f'{vm_data["idProject"]}_{vm_data["idVM"]}'
-        # RAM is needed in MB for the updater but we take it in in GB
-        data['ram'] = vm_data['ram'] * 1000
+        # RAM is needed in MB for the updater but we take it in in GB (1024, not 1000)
+        data['ram'] = vm_data['ram'] * 1024
         data['cpu'] = vm_data['cpu']
         data['dns'] = vm_data['dns'].replace(',', '", "')
 
-        # Fetch the drives for the VM and add them to the data
-        # Update needs to use changes, not the drives that are attached to the VM by default
-        drives: Deque[Dict[str, str]] = deque()
-        for storage_id, storage_changes in vm_data['changes_this_month'][0]['details']['storages'].items():
-            # Read the storage from the API
-            storage = utils.api_read(IAAS.storage, storage_id, span=span)
-            if storage is None:
-                Windows.logger.error(f'Error fetching Storage #{storage_id} for VM #{vm_id}')
-                return None
-            # Check if the storage is primary
-            if storage['primary']:
-                # Determine which field (hdd or ssd) to populate with this storage information
-                if storage['storage_type'] == 'HDD':
-                    data['hdd'] = (
-                        f'{storage["idStorage"]}:{storage_changes["new_value"]}:{storage_changes["old_value"]}'
-                    )
-                    data['ssd'] = 0
-                elif storage['storage_type'] == 'SSD':
-                    data['hdd'] = 0
-                    data['ssd'] = (
-                        f'{storage["idStorage"]}:{storage_changes["new_value"]}:{storage_changes["old_value"]}'
-                    )
-                else:
-                    Windows.logger.error(
-                        f'Invalid primary drive storage type {storage["storage_type"]}. Expected either "HDD" or "SSD"',
-                    )
-                    return None
-            else:
-                # Append the drive to the deque
-                drives.append({
-                    'id': storage_id,
-                    'type': storage['storage_type'],
-                    'new_size': storage_changes['new_value'],
-                    'old_size': storage_changes['old_value'],
-                })
-        data['drives'] = drives
-
         # Get the Networking details
+        Windows.logger.debug(f'Fetching networking information for VM #{vm_id}')
         for ip_address in utils.api_list(IAAS.ipaddress, {'vm': vm_id}, span=span):
             # The private IP for the VM will be the one we need to pass to the template
             if not IPAddress(ip_address['address']).is_private():
@@ -206,6 +169,10 @@ class Windows(WindowsMixin):
             if mac['status'] is True and mac['ip'] is not None:
                 data['host_name'] = mac['dnsName']
                 break
+
+        # Fetch the drive information for the update
+        Windows.logger.debug(f'Fetching drives for VM #{vm_id}')
+        data['hdd'], data['ssd'], data['drives'] = Windows.fetch_drive_updates(vm_data, span)
 
         # Add the host information to the data
         data['freenas_url'] = settings.FREENAS_URL

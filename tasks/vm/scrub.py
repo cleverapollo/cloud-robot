@@ -91,17 +91,23 @@ def _scrub_vm(vm_id: int, span: Span):
 
     hypervisor = image['idHypervisor']
     child_span = opentracing.tracer.start_span('scrub', child_of=span)
-    if hypervisor == 1:  # HyperV -> Windows
-        success = WindowsVmScrubber.scrub(vm, child_span)
-        child_span.set_tag('hypervisor', 'windows')
-    elif hypervisor == 2:  # KVM -> Linux
-        success = LinuxVmScrubber.scrub(vm, child_span)
-        child_span.set_tag('hypervisor', 'linux')
-    else:
+    try:
+        if hypervisor == 1:  # HyperV -> Windows
+            success = WindowsVmScrubber.scrub(vm, child_span)
+            child_span.set_tag('hypervisor', 'windows')
+        elif hypervisor == 2:  # KVM -> Linux
+            success = LinuxVmScrubber.scrub(vm, child_span)
+            child_span.set_tag('hypervisor', 'linux')
+        else:
+            logger.error(
+                f'Unsupported Hypervisor ID #{hypervisor} for VM #{vm_id}',
+            )
+            child_span.set_tag('hypervisor', 'linux')
+    except Exception:
         logger.error(
-            f'Unsupported Hypervisor ID #{hypervisor} for VM #{vm_id}',
+            f'An unexpected error occurred when attempting to scrub VM #{vm_id}',
+            exc_info=True,
         )
-        child_span.set_tag('hypervisor', 'linux')
     child_span.finish()
 
     span.set_tag('return_reason', f'success: {success}')

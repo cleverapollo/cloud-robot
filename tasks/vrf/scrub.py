@@ -73,8 +73,15 @@ def _scrub_vrf(vrf_id: int, span: Span):
         return
 
     # There's no in-between state for Scrub tasks, just jump straight to doing the work
+    success: bool = False
     child_span = opentracing.tracer.start_span('scrub', child_of=span)
-    success = VrfScrubber.scrub(vrf, child_span)
+    try:
+        success = VrfScrubber.scrub(vrf, child_span)
+    except Exception:
+        logger.error(
+            f'An unexpected error occurred when attempting to build VRF #{vrf_id}',
+            exc_info=True,
+        )
     child_span.finish()
 
     span.set_tag('return_reason', f'success: {success}')

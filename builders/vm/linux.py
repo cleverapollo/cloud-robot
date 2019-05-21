@@ -203,8 +203,8 @@ class Linux(LinuxMixin):
         data['vm_identifier'] = f'{vm_data["idProject"]}_{vm_data["idVM"]}'
         data['image_filename'] = image_data['filename']
         data['image_id'] = image_data['idImage']
-        # RAM is needed in MB for the builder but we take it in in GB
-        data['ram'] = vm_data['ram'] * 1000
+        # RAM is needed in MB for the builder but we take it in in GB (1024, not 1000)
+        data['ram'] = vm_data['ram'] * 1024
         data['cpu'] = vm_data['cpu']
         data['dns'] = vm_data['dns']
 
