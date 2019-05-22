@@ -108,7 +108,7 @@ Write-Host "Converting ISO into VHD"
 try {
   Convert-cixWindowsImage -SourcePath $ISOPath -Edition $edition -UnattendPath $unattend -VHDPath $vhdPath -SizeBytes $size -VHDType "Dynamic" -VHDPartitionStyle $vhdPartitionStyle -VHDFormat "VHDX"
   try {
-    [string] $switchName = (Get-VMSwitch | Where-Object {$_.SwitchType -eq "External"}).Name
+    [string] $switchName = (Get-VMSwitch | Where-Object {$_.SwitchType -eq "External"} | Select-Object -first 1).Name
   }
   catch {
     Write-Error "Virtual Switch Not found, exiting the VM Build Details: $_"
