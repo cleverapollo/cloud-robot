@@ -277,6 +277,23 @@ class Windows(WindowsMixin):
             )
             return False
 
+        # Write out the build script files that are used by Robot
+        template_path_map = {
+            'vm/windows/scripts/vm_creator.j2': f'{network_drive_path}/scripts/VMCreator.ps1',
+            'vm/windows/scripts/convert_windows_image.j2': f'{network_drive_path}/scripts/Convert-WindowsImage.psm1',
+            'vm/windows/scripts/wim2vhd.j2': f'{network_drive_path}/scripts/vim2vhd.cs',
+        }
+        for template_name, output_path in template_path_map.items():
+            try:
+                rendered_template = utils.JINJA_ENV.get_template(template_name).render(**template_data)
+                with open(output_path, 'w') as f:
+                    f.write(rendered_template)
+            except IOError:
+                Windows.logger.error(
+                    f'Failed to write {template_name} to {output_path}',
+                )
+                return False
+
         # Return True as all was successful
         return True
 
