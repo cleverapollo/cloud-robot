@@ -104,7 +104,7 @@ catch {
   Write-Error "Unattend.xml file Not found, exiting the VM Build. Details: $_"
   Exit-PSSession
 }
-Write-Info "Converting ISO into VHD"
+Write-Host "Converting ISO into VHD"
 try {
   Convert-cixWindowsImage -SourcePath $ISOPath -Edition $edition -UnattendPath $unattend -VHDPath $vhdPath -SizeBytes $size -VHDType "Dynamic" -VHDPartitionStyle $vhdPartitionStyle -VHDFormat "VHDX"
   try {
@@ -114,7 +114,7 @@ try {
     Write-Error "Virtual Switch Not found, exiting the VM Build Details: $_"
     Exit-PSSession
   }
-  Write-Info "Creating VM $VMName"
+  Write-Host "Creating VM $VMName"
   try {
     New-VM -Name $VMName -Path $vmPath -VHDPath $vhdPath -Generation $Gen -SwitchName $switchName
   }
@@ -122,7 +122,7 @@ try {
     Write-Error "Could not create VM, error details: $_"
     Exit-PSSession
   }
-  Write-Info "Setting VM Processor count $ProcessorCount"
+  Write-Host "Setting VM Processor count $ProcessorCount"
   try {
     Set-VMProcessor $VMName -Count $ProcessorCount
   }
@@ -130,7 +130,7 @@ try {
     Write-Error "Failed to set processor count for VM, error details: $_"
     Exit-PSSession
   }
-  Write-Info "Setting VM memory RAM=$ram"
+  Write-Host "Setting VM memory RAM=$ram"
   if ($Dynamic -eq 0) {
     try {
       Set-VMMemory $VMName -DynamicMemoryEnabled $false -StartupBytes $ram
@@ -149,7 +149,7 @@ try {
       Exit-PSSession
     }
   }
-  Write-Info "Setting Network Adapter"
+  Write-Host "Setting Network Adapter"
   try {
     Set-VMNetworkAdapterVlan -VMName $VMName -Access -VlanId $VlanId
   }
@@ -158,7 +158,7 @@ try {
     Exit-PSSession
   }
   if ($MulDrive -ine 0) {
-    Write-Info "Found extra drives, parsing them."
+    Write-Host "Found extra drives, parsing them."
     $mulDrives = $MulDrive.Split(',')
     $extraDrives  = @()
     foreach($drive in $mulDrives){
