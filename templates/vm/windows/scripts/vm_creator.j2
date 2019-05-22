@@ -1,0 +1,222 @@
+[CmdletBinding()]
+Param(
+      [Parameter(Mandatory=$true)]
+      [ValidateNotNullorEmpty()]
+      [string]
+      $VMName,
+      [Parameter(Mandatory=$true)]
+      [ValidateRange(1, 2)]
+      [int]
+      $Gen,
+      [Parameter(Mandatory=$true)]
+      $OSName,
+      [Parameter(Mandatory=$true)]
+      [ValidateScript({$_ -ge 1})]
+      [int]
+      $ProcessorCount,
+      [Parameter(Mandatory=$true)]
+      [int]
+      $Dynamic,
+      [Parameter(Mandatory=$true)]
+      $Ram,
+      [Parameter(Mandatory=$true)]
+      $Hdd,
+      [Parameter(Mandatory=$true)]
+      $Ssd,
+      [Parameter(Mandatory=$true)]
+      $MulDrive,
+      [Parameter(Mandatory=$true)]
+      [ValidateNotNullorEmpty()]
+      [ValidateRange(1000, 4000)]
+      [int64]
+      $VlanId
+)
+Import-Module -Name Z:\HyperV\scripts\Convert-WindowsImage.psm1 -Prefix cix
+$minMemory = 64MB
+$ram = [int64] $Ram * 1MB
+
+if($Hdd) {
+  $hdd_details = $Hdd.Split(':')
+  $hdd_id = $hdd_details[0]
+  $hdd = [int64] $hdd_details[1] * 1GB
+}
+elseif($Ssd){
+  $ssd_details = $Ssd.Split(':')
+  $ssd_id = $ssd_details[0]
+  $ssd = [int64] $ssd_details[1] * 1GB
+}
+
+if($Gen -eq 1){
+  $vhdPartitionStyle = "MBR"
+}
+else {
+  $vhdPartitionStyle = "GPT"
+}
+$vmPath = "D:\HyperV\"
+New-Item -ItemType directory -Path "$vmPath$VMName"
+try {
+  if($hdd) {
+    $vhdPath = $vmPath + $VMName + "\" + $VMName + "_HDD_" + $hdd_id + ".vhdx"
+    $size = $hdd
+  }
+  elseif($ssd) {
+    $vhdPath = $vmPath + $VMName + "\" + $VMName + "_SSD_" + $ssd_id + ".vhdx"
+    $size = $ssd
+  }
+}
+catch {
+  Write-Error "Failed to generate the Drive path, exiting the VMBuild, Details: $_"
+  Exit-PSSession
+}
+try {
+  if($OSName -like "SW_DVD9_Win_Svr_STD_Core_and_DataCtr_Core_2016_64Bit_English_-3_MLF_X21-30350.ISO") {
+    [ValidateScript({Test-Path $_ })]
+    [string] $ISOPath = "Z:\HyperV\ISOs\SW_DVD9_Win_Svr_STD_Core_and_DataCtr_Core_2016_64Bit_English_-3_MLF_X21-30350.ISO"
+    [ValidateNotNullorEmpty()]
+    $edition = "Windows Server 2016 SERVERSTANDARD"
+  }
+  elseif($OSName -like "SW_DVD9_Windows_Svr_Std_and_DataCtr_2012_R2_64Bit_English_-4_MLF_X19-82891.ISO") {
+    [ValidateScript({Test-Path $_ })]
+    $ISOPath = "Z:\HyperV\ISOs\SW_DVD9_Windows_Svr_Std_and_DataCtr_2012_R2_64Bit_English_-4_MLF_X19-82891.ISO"
+    [ValidateNotNullorEmpty()]
+    $edition = "Windows Server 2012 R2 SERVERSTANDARD"
+  }
+  elseif($OSName -like "SW_DVD5_Windows_Svr_DC_EE_SE_Web_2008_R2_64Bit_English_w_SP1_MLF_X17-22580.ISO") {
+    [ValidateScript({Test-Path $_ })]
+    $ISOPath =  "Z:\HyperV\ISOs\SW_DVD5_Windows_Svr_DC_EE_SE_Web_2008_R2_64Bit_English_w_SP1_MLF_X17-22580.ISO"
+    [ValidateNotNullorEmpty()]
+    $edition = "Windows Server 2008 R2 SERVERSTANDARD"
+  }
+  else{
+    Write-Error "Invalid OSName $OSName, Aborting the build."
+    Exit-PSSession
+  }
+}
+catch {
+  Write-Error "Failed to locate images location, exiting the VM Build. Details: $_"
+  Exit-PSSession
+}
+try {
+  [ValidateScript({Test-Path $_ })]
+  $unattend = "Z:\HyperV\unattend_xmls\$VMName.xml"
+}
+catch {
+  Write-Error "Unattend.xml file Not found, exiting the VM Build. Details: $_"
+  Exit-PSSession
+}
+Write-Info "Converting ISO into VHD"
+try {
+  Convert-cixWindowsImage -SourcePath $ISOPath -Edition $edition -UnattendPath $unattend -VHDPath $vhdPath -SizeBytes $size -VHDType "Dynamic" -VHDPartitionStyle $vhdPartitionStyle -VHDFormat "VHDX"
+  try {
+    [string] $switchName = (Get-VMSwitch | Where-Object {$_.SwitchType -eq "External"}).Name
+  }
+  catch {
+    Write-Error "Virtual Switch Not found, exiting the VM Build Details: $_"
+    Exit-PSSession
+  }
+  Write-Info "Creating VM $VMName"
+  try {
+    New-VM -Name $VMName -Path $vmPath -VHDPath $vhdPath -Generation $Gen -SwitchName $switchName
+  }
+  catch {
+    Write-Error "Could not create VM, error details: $_"
+    Exit-PSSession
+  }
+  Write-Info "Setting VM Processor count $ProcessorCount"
+  try {
+    Set-VMProcessor $VMName -Count $ProcessorCount
+  }
+  catch {
+    Write-Error "Failed to set processor count for VM, error details: $_"
+    Exit-PSSession
+  }
+  Write-Info "Setting VM memory RAM=$ram"
+  if ($Dynamic -eq 0) {
+    try {
+      Set-VMMemory $VMName -DynamicMemoryEnabled $false -StartupBytes $ram
+    }
+    catch {
+      Write-Error "Failed to set Ram for the VM, error details: $_ "
+      Exit-PSSession
+    }
+  }
+  else {
+    try {
+      Set-VMMemory $VMName -DynamicMemoryEnabled $true -MinimumBytes $minMemory -StartupBytes $ram -MaximumBytes $ram
+     }
+    catch {
+      Write-Error "Failed to set Ram for the VM, error details: $_ "
+      Exit-PSSession
+    }
+  }
+  Write-Info "Setting Network Adapter"
+  try {
+    Set-VMNetworkAdapterVlan -VMName $VMName -Access -VlanId $VlanId
+  }
+  catch {
+    Write-Error "Failed to set network adapter for VM, error details: $_ "
+    Exit-PSSession
+  }
+  if ($MulDrive -ine 0) {
+    Write-Info "Found extra drives, parsing them."
+    $mulDrives = $MulDrive.Split(',')
+    $extraDrives  = @()
+    foreach($drive in $mulDrives){
+      $driveData = $drive.Split(':')
+      $driveId = $driveData[0]
+      $driveSize = [int64] $driveData[1] * 1GB
+      $driveObject = New-Object System.Object
+      if($hdd) {
+        $vhdPath = $vmPath + $VMName + "\" + $VMName + "_HDD_$driveId.vhdx"
+        $driveObject | Add-Member -MemberType NoteProperty -Name Path -Value $vhdPath
+      }
+      elseif($ssd) {
+        $vhdPath = $vmPath + $VMName + "\" + $VMName + "_SSD_$driveId.vhdx"
+        $driveObject | Add-Member -MemberType NoteProperty -Name Path -Value $vhdPath
+      }
+      $driveObject | Add-Member -MemberType NoteProperty -Name Size -Value $driveSize
+      $driveObject | Add-Member -MemberType NoteProperty -Name Type -Value Dynamic
+      $extraDrives += $driveObject
+    }
+    Write-Host "Adding extra drives"
+    foreach ($extraDrive in $extraDrives) {
+      if ($extraDrive.Type -like "Dynamic") {
+        try {
+          New-VHD -Path $extraDrive.Path -SizeBytes $extraDrive.Size -Dynamic
+        }
+        catch {
+          Write-Error " Failed to create new drive $extraDrive.Path, error details: $_"
+          Exit-PSSession
+        }
+      }
+      elseif ($extraDrive.Type -like "Fixed") {
+        try {
+          New-VHD -Path $extraDrive.Path -SizeBytes $extraDrive.Size -Fixed
+        }
+        catch {
+          Write-Error " Failed to create new drive $extraDrive.Path, error details: $_"
+          Exit-PSSession
+        }
+      }
+      try {
+        Add-VMHardDiskDrive -VMName $VMName -Path $extraDrive.Path
+      }
+      catch {
+        Write-Error " Failed to add drive $extraDrive.Path for VM $VMName, error details: $_"
+        Exit-PSSession
+      }
+    }
+  }
+  try {
+    Start-VM -Name $VMName
+    Write-Host "VM Successfully Created and Hosted"
+  }
+  catch {
+    Write-Error " VM $VMName failed to start, error details: $_"
+    Exit-PSSession
+  }
+}
+catch {
+  Write-Error "Failed to Convert ISO into VHD. Details: $_"
+  Exit-PSSession
+}
