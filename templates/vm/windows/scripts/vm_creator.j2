@@ -4733,7 +4733,8 @@ try {
 
   # Get the SwitchName first
   try {
-    [string] $switchName = (Get-VMSwitch | Where-Object {$_.SwitchType -eq "External"} | Select-Object -first 1).Name
+    # (Get-VMSwitch | Where-Object {$_.SwitchType -eq "External"} | Select-Object -first 1).Name
+    [string] $switchName = "Virtual Switch"  # Wil has informed me that this will be the standard name on all hosts
   }
   catch {
     Write-Error "Virtual Switch Not found, exiting the VM Build Details: $_"
