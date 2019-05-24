@@ -47,10 +47,12 @@ try {
     {% endif %}
   {% endfor %}
 
-  {# 5. Start the VM again. #}
+  {# 5. Start the VM again (only if we need to) #}
+  {% if restart %}
   Start-VM -Name $VMName
+  {% endif %}
 
-  Write-Host "VM Successfully Shutdown Updated and Rebooted."
+  Write-Host "VM Successfully Updated."
 } catch {
   Write-Error "VM failed to update. Error Message: $_.Exception.Message"
 }

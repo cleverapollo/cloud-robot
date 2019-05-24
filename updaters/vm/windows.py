@@ -17,7 +17,7 @@ from winrm.exceptions import WinRMError
 # local
 import settings
 import utils
-from mixins import VmMixin, WindowsMixin
+from mixins import VmUpdateMixin, WindowsMixin
 
 
 __all__ = [
@@ -25,7 +25,7 @@ __all__ = [
 ]
 
 
-class Windows(WindowsMixin, VmMixin):
+class Windows(WindowsMixin, VmUpdateMixin):
     """
     Class that handles the updating of the specified VM
     When we get to this point, we can be sure that the VM is a windows VM
@@ -52,6 +52,8 @@ class Windows(WindowsMixin, VmMixin):
         'netmask',
         # the amount of RAM in the VM
         'ram',
+        # a flag stating whether or not the VM should be turned back on after updating it
+        'restart',
         # the ssd primary drive of the VM 'id:size'
         'ssd',
         # the vlan that the vm is a part of
@@ -121,7 +123,7 @@ class Windows(WindowsMixin, VmMixin):
             if response.std_out:
                 msg = response.std_out.strip()
                 Windows.logger.debug(f'VM update command for VM #{vm_id} generated stdout\n{msg}')
-                updated = 'VM Successfully Shutdown Updated and Rebooted' in msg
+                updated = 'VM Successfully Updated' in msg
             # Check if the error was parsed to ensure we're not logging invalid std_err output
             if response.std_err and '#< CLIXML\r\n' not in response.std_err:
                 msg = response.std_err.strip()
@@ -176,4 +178,8 @@ class Windows(WindowsMixin, VmMixin):
 
         # Add the host information to the data
         data['freenas_url'] = settings.FREENAS_URL
+
+        # Determine whether or not we should turn the VM back on after the update finishes
+        Windows.logger.debug(f'Determining if VM #{vm_id} should be powered on after update')
+        data['restart'] = Windows.determine_should_restart(vm_data)
         return data
