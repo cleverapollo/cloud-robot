@@ -6,7 +6,7 @@ methods included;
 # stdlib
 import logging
 from collections import deque
-from typing import Any, Deque, Dict, Tuple
+from typing import Any, Deque, Dict, Optional, Tuple
 # lib
 from cloudcix.api import IAAS
 from jaeger_client import Span
@@ -14,11 +14,11 @@ from jaeger_client import Span
 import utils
 
 __all__ = [
-    'VmMixin',
+    'VmUpdateMixin',
 ]
 
 
-class VmMixin:
+class VmUpdateMixin:
     logger: logging.Logger
 
     @classmethod
@@ -81,3 +81,21 @@ class VmMixin:
 
         # Finally, return the generated information
         return hdd, ssd, drives
+
+    @classmethod
+    def determine_should_restart(cls, vm_data: Dict[str, Any]) -> Optional[bool]:
+        """
+        Check through the VM changes to see if the VM should be turned back on after the update is finished
+        """
+        # Determine whether or not we should restart the VM by retrieving the previous state of the VM
+        if len(vm_data['changes_this_month']) == 0:
+            # This is wrong, state update should always be there regardless
+            return None
+        state_change = vm_data['changes_this_month'][0]['details'].get('state', {})
+        if len(state_change) == 0:
+            # This is also as bug
+            return None
+        # Update the vm_data to retain the state to go back to
+        vm_data['return_state'] = state_change['old_value']
+        # We restart the VM iff the VM was in state 4 before this update
+        return state_change['old_value'] == 4

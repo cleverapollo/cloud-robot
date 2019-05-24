@@ -1,5 +1,8 @@
-{# 1. Shutdown the VM if it isn't already #}
+{# 1. Shutdown the VM if it isn't already, and wait for it to shut down #}
 echo {{ host_sudo_passwd }} | sudo -S virsh shutdown {{ vm_identifier }}
+while virsh list --all | grep '{{ vm_identifier }}' | grep 'running'; do
+  sleep 1
+done
 
 {# 2. Update the RAM #}
 {# 2a. Maximum #}
@@ -52,5 +55,10 @@ echo {{ host_sudo_passwd }} | sudo -S virsh attach-disk {{ vm_identifier }} \
 --target vd{{ alphabet }}
 {% endfor %}
 
-{# 6. Restart the VM #}
+{# 6. Restart the VM, and wait for it to be running (only if we need to) #}
+{% if restart %}
 echo {{ host_sudo_passwd }} | sudo -S virsh start {{ vm_identifier }}
+while virsh list --all | grep '{{ vm_identifier }}' | grep 'shut off'; do
+  sleep 1
+done
+{% endif %}
