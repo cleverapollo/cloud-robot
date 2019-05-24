@@ -16,7 +16,7 @@ from paramiko import AutoAddPolicy, SSHClient, SSHException
 # local
 import settings
 import utils
-from mixins import LinuxMixin, VmMixin
+from mixins import LinuxMixin, VmUpdateMixin
 
 
 __all__ = [
@@ -24,7 +24,7 @@ __all__ = [
 ]
 
 
-class Linux(LinuxMixin, VmMixin):
+class Linux(LinuxMixin, VmUpdateMixin):
     """
     Class that handles the updating of the specified VM
     When we get to this point, we can be sure that the VM is a linux VM
@@ -45,6 +45,8 @@ class Linux(LinuxMixin, VmMixin):
         'host_sudo_passwd',
         # the amount of RAM in the VM
         'ram',
+        # a flag stating whether or not the VM should be turned back on after updating it
+        'restart',
         # the ssd primary drive of the VM 'id:size'
         'ssd',
         # an identifier that uniquely identifies the vm
@@ -161,4 +163,7 @@ class Linux(LinuxMixin, VmMixin):
         Linux.logger.debug(f'Fetching drives for VM #{vm_id}')
         data['hdd'], data['ssd'], data['drives'] = Linux.fetch_drive_updates(vm_data, span)
 
+        # Determine whether or not we should turn the VM back on after the update finishes
+        Linux.logger.debug(f'Determining if VM #{vm_id} should be powered on after update')
+        data['restart'] = Linux.determine_should_restart(vm_data)
         return data
