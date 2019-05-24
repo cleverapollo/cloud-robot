@@ -95,5 +95,7 @@ class VmUpdateMixin:
         if len(state_change) == 0:
             # This is also as bug
             return None
+        # Update the vm_data to retain the state to go back to
+        vm_data['return_state'] = state_change['old_value']
         # We restart the VM iff the VM was in state 4 before this update
         return state_change['old_value'] == 4
