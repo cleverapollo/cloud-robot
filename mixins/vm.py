@@ -98,4 +98,5 @@ class VmUpdateMixin:
         # Update the vm_data to retain the state to go back to
         vm_data['return_state'] = state_change['old_value']
         # We restart the VM iff the VM was in state 4 before this update
+        cls.logger.debug(f'VM #{vm_data["idVM"]} will be returned to state {state_change["old_value"]} after update')
         return state_change['old_value'] == 4
