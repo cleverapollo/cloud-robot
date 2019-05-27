@@ -5,6 +5,7 @@ try {
   Test-Path -Path Z:\HyperV\
   & Z:\HyperV\scripts\VMCreator.ps1 -VMName {{ vm_identifier }} -Gen 1 -OSName {{ image_filename }} -ProcessorCount {{ cpu }} -Dynamic 1 -Ram {{ ram }} -Hdd {{ hdd }} -Ssd {{ ssd }} -MulDrive {{ drives }} -VlanId {{ vlan }} -Verbose;
 } catch {
+  Remove-Item -Path D:\HyperV\{{ vm_identifier }} -Recurse
   Write-Error "VM Build Failed. Error Message: $_.Exception.Message";
 } finally {
   cmd.exe /c "umount Z:"
