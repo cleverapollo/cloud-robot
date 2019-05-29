@@ -156,8 +156,7 @@ class Windows(WindowsMixin):
             if response.std_err and '#< CLIXML\r\n' not in response.std_err:
                 msg = response.std_err.strip()
                 Windows.logger.warning(f'VM build command for VM #{vm_id} generated stderr\n{msg}')
-        finally:
-            return built
+        return built
 
     @staticmethod
     def _get_template_data(vm_data: Dict[str, Any], image_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
