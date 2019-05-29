@@ -1,8 +1,10 @@
-{# 1. Define the bridge using the definition file we generated #}
-echo {{ host_sudo_passwd }} | sudo -S virsh iface-define --file {{ network_drive_path }}/bridge_xmls/br{{ vlan }}.xml
+{
+  {# 1. Define the bridge using the definition file we generated #}
+  echo {{ host_sudo_passwd }} | sudo -S virsh iface-define --file {{ network_drive_path }}/bridge_xmls/br{{ vlan }}.xml
 
-{# 2. Bring up the interface #}
-echo {{ host_sudo_passwd }} | sudo -S ifup cloud0.{{ vlan }}
+  {# 2. Bring up the interface #}
+  echo {{ host_sudo_passwd }} | sudo -S ifup cloud0.{{ vlan }}
 
-{# 3. Start the interface #}
-echo {{ host_sudo_passwd }} | sudo -S virsh iface-start br{{ vlan }}
+  {# 3. Start the interface #}
+  echo {{ host_sudo_passwd }} | sudo -S virsh iface-start br{{ vlan }}
+}

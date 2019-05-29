@@ -1,3 +1,4 @@
+{
 {# 1. First shutdown the VM #}
 echo {{ host_sudo_passwd }} | sudo -S virsh shutdown {{ vm_identifier }}
 
@@ -16,3 +17,4 @@ echo {{ host_sudo_passwd }} | sudo -S rm -rf /var/lib/libvirt/images/{{ vm_ident
 {% for drive in drives %}
 echo {{ host_sudo_passwd }} | sudo -S rm -rf /var/lib/libvirt/images/{{ vm_identifier }}_{{ drive["type"] }}_{{ drive["id"] }}.img
 {% endfor %}
+}
