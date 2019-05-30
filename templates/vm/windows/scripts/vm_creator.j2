@@ -4573,9 +4573,6 @@ shutdown /r /t 60
                         Remove-Item -Path $vhdFinalPathCurrent -Force
                     }
 
-                    # Remove the directory we used for copying the ISO
-                    Remove-Item -Path "$($env:Temp)\$($TempGuid)" -Recurse
-
                     $vhdFinalPath += $vhdFinalPathCurrent
 
                     Write-W2VTrace -Text "Renaming $VHDFormat at $VHDPath to $vhdFinalName"
@@ -4633,6 +4630,9 @@ shutdown /r /t 60
                 if ($transcripting) {
                     $null = Stop-Transcript
                 }
+
+                # Remove the directory we used for copying the ISO
+                Remove-Item -Path "$($env:Temp)\$($TempGuid)" -Recurse
             }
         }
 
