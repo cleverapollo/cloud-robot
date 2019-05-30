@@ -44,7 +44,7 @@ class VrfMixin:
             with Device(host=management_ip, user='robot', port=22) as router:
                 router.timeout = 2 * 60
                 cls.logger.debug(f'Successfully connected to Router {management_ip}, now attempting to load config')
-                with Config(router, mode='private') as config:
+                with Config(router, mode='batch') as config:
                     try:
                         for cmd in setconf.split('\n'):
                             config.load(cmd, format='set', merge=True, ignore_warning=scrub)
