@@ -4094,17 +4094,10 @@ namespace WIM2VHD {
 
                     $isoPath = (Resolve-Path $SourcePath).Path
 
-                    Write-W2VInfo "Opening ISO $(Split-Path $isoPath -Leaf)..."
-                    try {
+                    Write-W2VInfo "Checking if the ISO $(Split-Path $isoPath -Leaf) is already mounted in another process..."
+                    if (!(Get-DiskImage -ImagePath $isoPath).Attached) {
+                      Write-W2VInfo "Not already mounted, opening ISO..."
                       $openIso     = Mount-DiskImage -ImagePath $isoPath -StorageType ISO -PassThru
-                    } catch {
-                      # Check that the Disk Image is already mounted
-                      Write-W2VInfo "ISO could not be mounted. Checking if it is already attached."
-                      if (!(Get-DiskImage -ImagePath $isoPath).Attached) {
-                        # Disk is not mounted and was unable to be mounted, re-throwing exception
-                        throw
-                      }
-                      # If we get to this point, it means the ISO is already attached so we should be okay to keep going
                     }
                     # Refresh the DiskImage object so we can get the real information about it.  I assume this is a bug.
                     $openIso     = Get-DiskImage -ImagePath $isoPath
