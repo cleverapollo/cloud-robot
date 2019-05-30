@@ -4089,7 +4089,9 @@ namespace WIM2VHD {
                     if (Test-IsNetworkLocation $SourcePath) {
                         Write-W2VInfo "Copying ISO $(Split-Path $SourcePath -Leaf) to temp folder..."
                         Copy-Item -Path $SourcePath -Destination $env:Temp -Force
-                        $SourcePath = "$($env:Temp)\$([string][Guid]::NewGuid())\$(Split-Path $SourcePath -Leaf)"
+                        $TempGuid = [string][Guid]::NewGuid()
+                        New-Item -Path "$($env:Temp)" -Name "$($TempGuid)" -ItemType "directory"
+                        $SourcePath = "$($env:Temp)\$($TempGuid)\$(Split-Path $SourcePath -Leaf)"
                     }
 
                     $isoPath = (Resolve-Path $SourcePath).Path
