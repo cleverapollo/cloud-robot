@@ -112,6 +112,22 @@ class Windows(WindowsMixin, VmUpdateMixin):
             response = Windows.deploy(cmd, host_name, child_span)
             span.set_tag('host', host_name)
             child_span.finish()
+
+            # Check if we need to restart the VM as well
+            if template_data['restart']:
+                # Also render and deploy the restart_cmd template
+                restart_cmd = utils.JINJA_ENV.get_template('vm/windows/restart_cmd.j2').render(**template_data)
+
+                # Attempt to execute the restart command
+                Windows.logger.debug(f'Executing restart command for VM #{vm_id}')
+                child_span = opentracing.tracer.start_span('restart_vm', child_of=span)
+                stdout, stderr = Windows.deploy(restart_cmd, host_name, child_span)
+                child_span.finish()
+
+                if stdout:
+                    Windows.logger.debug(f'VM restart command for VM #{vm_id} generated stdout.\n{stdout}')
+                if stderr:
+                    Windows.logger.warning(f'VM restart command for VM #{vm_id} generated stderr.\n{stderr}')
         except WinRMError:
             Windows.logger.error(
                 f'Exception occurred while attempting to update VM #{vm_id} on {host_name}',
@@ -128,8 +144,7 @@ class Windows(WindowsMixin, VmUpdateMixin):
             if response.std_err and '#< CLIXML\r\n' not in response.std_err:
                 msg = response.std_err.strip()
                 Windows.logger.warning(f'VM update command for VM #{vm_id} generated stderr\n{msg}')
-        finally:
-            return updated
+        return updated
 
     @staticmethod
     def _get_template_data(vm_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:

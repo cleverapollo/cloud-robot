@@ -4,7 +4,6 @@ File containing some utility functions that wrap around various repeatedly used 
 # stdlib
 import atexit
 import logging
-import logging.handlers
 import subprocess
 from typing import Any, Dict, List, Optional
 # lib
@@ -16,7 +15,7 @@ from logstash_async.formatter import LogstashFormatter
 from logstash_async.handler import AsynchronousLogstashHandler
 # local
 from cloudcix_token import Token
-from settings import REGION_NAME, LOGSTASH_IP
+from settings import LOGSTASH_IP, NETWORK_PASSWORD, REGION_NAME
 
 
 __all__ = [
@@ -33,6 +32,13 @@ JINJA_ENV = jinja2.Environment(
     loader=jinja2.FileSystemLoader('templates'),
     trim_blocks=True,
 )
+
+
+def _redact_logs(record: logging.LogRecord):
+    """
+    Filter out the logs to redact passwords and other sensitive information
+    """
+    record.msg = record.msg.replace(NETWORK_PASSWORD, '*' * 16)
 
 
 def setup_root_logger():
@@ -56,6 +62,9 @@ def setup_root_logger():
     logstash_handler = AsynchronousLogstashHandler(LOGSTASH_IP, 5959, 'log.db')
     logstash_handler.setFormatter(logstash_fmt)
     logger.addHandler(logstash_handler)
+
+    # Add the redact filter
+    logger.addFilter(_redact_logs)
 
     # At exit, flush all logs to logstash
     atexit.register(logstash_handler.flush)
