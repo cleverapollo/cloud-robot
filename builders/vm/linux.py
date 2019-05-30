@@ -210,6 +210,7 @@ class Linux(LinuxMixin):
 
         # Generate encrypted passwords
         admin_password = Linux._password_generator(size=8)
+        Linux.logger.info(f'Password for VM #{vm_id}: {admin_password}')
         data['admin_password'] = admin_password
         # Also save the password back to the VM data dict
         vm_data['admin_password'] = admin_password
