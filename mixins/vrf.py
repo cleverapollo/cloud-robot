@@ -38,42 +38,43 @@ class VrfMixin:
         :return: A flag stating whether or not the deployment was successful
         """
         cls.logger.debug(f'Attempting to connect to Router {management_ip} to deploy')
-        router = Device(host=management_ip, user='robot', port=22)
         try:
-            router.open()
-            # Set the RPC timeout to be 2 minutes
-            router.timeout = 60 * 2
+            # Using context managers for Router and Config will ensure everything is properly cleaned up when exiting
+            # the function, regardless of how we exit the function
+            with Device(host=management_ip, user='robot', port=22) as router:
+                router.timeout = 2 * 60
+                cls.logger.debug(f'Successfully connected to Router {management_ip}, now attempting to load config')
+                with Config(router, mode='private') as config:
+                    try:
+                        for cmd in setconf.split('\n'):
+                            config.load(cmd, format='set', merge=True, ignore_warning=scrub)
+                    except ConfigLoadError:
+                        cls.logger.error(
+                            f'Unable to load configuration changes onto Router {management_ip}',
+                            exc_info=True,
+                        )
+                        return False
+
+                    # Attempt to commit
+                    cls.logger.debug(
+                        f'All commands successfully loaded onto Router {management_ip}, '
+                        'now attempting to commit changes',
+                    )
+                    try:
+                        commit_msg = f'Loaded by robot at {asctime()}.'
+                        if not scrub:
+                            config.commit(comment=commit_msg)
+                        else:
+                            config.commit(comment=commit_msg, ignore_warning=['statement not found'])
+                    except CommitError:
+                        cls.logger.error(f'Unable to commit changes onto Router {management_ip}', exc_info=True)
+                        return False
+
+                cls.logger.debug(f'Changes successfully committed onto Router {management_ip}')
+                return True
         except ConnectError:
             cls.logger.error(f'Unable to connect to Router {management_ip}', exc_info=True)
             return False
-        cls.logger.debug(f'Successfully connected to Router {management_ip}, now attempting to load config')
-        with Config(router, mode='private') as config:
-            try:
-                for cmd in setconf.split('\n'):
-                    config.load(cmd, format='set', merge=True, ignore_warning=scrub)
-            except ConfigLoadError:
-                cls.logger.error(f'Unable to load configuration changes onto Router {management_ip}', exc_info=True)
-                router.close()
-                return False
-
-            # Attempt to commit
-            cls.logger.debug(
-                f'All commands successfully loaded onto Router {management_ip}, now attempting to commit changes',
-            )
-            try:
-                commit_msg = f'Loaded by robot at {asctime()}.'
-                if not scrub:
-                    config.commit(comment=commit_msg)
-                else:
-                    config.commit(comment=commit_msg, ignore_warning=['statement not found'])
-            except CommitError:
-                cls.logger.error(f'Unable to commit changes onto Router {management_ip}', exc_info=True)
-                router.close()
-                return False
-
-        cls.logger.debug(f'Changes successfully committed onto Router {management_ip}')
-        router.close()
-        return True
 
     @classmethod
     def _get_router_data(cls, router_id: int, span: Span) -> RouterData:
