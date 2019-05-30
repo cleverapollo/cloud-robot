@@ -10,8 +10,8 @@ try {
 } catch {
   if ($(Test-Path -Path D:\HyperV\{{ vm_identifier }}) -eq $True) {
     Remove-Item -Path D:\HyperV\{{ vm_identifier }} -Recurse
-    Write-Error "VM Build Failed. Error Message: $_.Exception.Message";
   }
+  Write-Error "VM Build Failed. Error Message: $_.Exception.Message";
 } finally {
   cmd.exe /c "umount Z:"
 }
