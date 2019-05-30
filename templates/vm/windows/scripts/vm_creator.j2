@@ -4088,9 +4088,9 @@ namespace WIM2VHD {
                     # or about network latency.
                     if (Test-IsNetworkLocation $SourcePath) {
                         Write-W2VInfo "Copying ISO $(Split-Path $SourcePath -Leaf) to temp folder..."
-                        Copy-Item -Path $SourcePath -Destination $env:Temp -Force
                         $TempGuid = [string][Guid]::NewGuid()
                         New-Item -Path "$($env:Temp)" -Name "$($TempGuid)" -ItemType "directory"
+                        Copy-Item -Path $SourcePath -Destination "$($env:Temp)\$($TempGuid)" -Force
                         $SourcePath = "$($env:Temp)\$($TempGuid)\$(Split-Path $SourcePath -Leaf)"
                     }
 
