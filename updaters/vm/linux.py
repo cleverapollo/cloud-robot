@@ -120,6 +120,21 @@ class Linux(LinuxMixin, VmUpdateMixin):
                 updated = True
             if stderr:
                 Linux.logger.warning(f'VM update command for VM #{vm_id} generated stderr.\n{stderr}')
+
+            if template_data['restart']:
+                # Also render and deploy the restart_cmd template
+                restart_cmd = utils.JINJA_ENV.get_template('vm/linux/restart_cmd.j2').render(**template_data)
+                # Attempt to execute the update command
+                Linux.logger.debug(f'Executing restart command for VM #{vm_id}')
+
+                child_span = opentracing.tracer.start_span('restart_vm', child_of=span)
+                stdout, stderr = Linux.deploy(restart_cmd, client, child_span)
+                child_span.finish()
+
+                if stdout:
+                    Linux.logger.debug(f'VM restart command for VM #{vm_id} generated stdout.\n{stdout}')
+                if stderr:
+                    Linux.logger.warning(f'VM restart command for VM #{vm_id} generated stderr.\n{stderr}')
         except SSHException:
             Linux.logger.error(
                 f'Exception occurred while updating VM #{vm_id} in {host_ip}',
