@@ -79,7 +79,7 @@ def _scrub_vrf(vrf_id: int, span: Span):
         success = VrfScrubber.scrub(vrf, child_span)
     except Exception:
         logger.error(
-            f'An unexpected error occurred when attempting to build VRF #{vrf_id}',
+            f'An unexpected error occurred when attempting to scrub VRF #{vrf_id}',
             exc_info=True,
         )
     child_span.finish()
