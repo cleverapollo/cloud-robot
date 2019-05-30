@@ -4087,11 +4087,14 @@ namespace WIM2VHD {
                     # If the ISO isn't local, copy it down so we don't have to worry about resource contention
                     # or about network latency.
                     if (Test-IsNetworkLocation $SourcePath) {
-                        Write-W2VInfo "Copying ISO $(Split-Path $SourcePath -Leaf) to temp folder..."
-                        $TempGuid = [string][Guid]::NewGuid()
-                        New-Item -Path "$($env:Temp)" -Name "$($TempGuid)" -ItemType "directory"
-                        Copy-Item -Path $SourcePath -Destination "$($env:Temp)\$($TempGuid)" -Force
-                        $SourcePath = "$($env:Temp)\$($TempGuid)\$(Split-Path $SourcePath -Leaf)"
+                      Write-W2VInfo "Copying ISO $(Split-Path $SourcePath -Leaf) to temp folder..."
+                      $TempGuid = [string][Guid]::NewGuid()
+                      New-Item -Path "$($env:Temp)" -Name "$($TempGuid)" -ItemType "directory"
+                      Copy-Item -Path $SourcePath -Destination "$($env:Temp)\$($TempGuid)" -Force
+                      $SourcePath = "$($env:Temp)\$($TempGuid)\$(Split-Path $SourcePath -Leaf)"
+
+                      # Set this to True so that the temp folder gets cleaned up
+                      $SourceIsNetwork = $true
                     }
 
                     $isoPath = (Resolve-Path $SourcePath).Path
