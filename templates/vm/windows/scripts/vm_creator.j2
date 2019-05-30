@@ -4080,6 +4080,7 @@ namespace WIM2VHD {
                 }
 
                 Write-W2VTrace "Temporary $VHDFormat path is : $VHDPath"
+                $TempGuid = [string][Guid]::NewGuid()
 
                 # If we're using an ISO, mount it and get the path to the WIM file.
                 if (([IO.FileInfo]$SourcePath).Extension -ilike ".ISO") {
@@ -4088,13 +4089,9 @@ namespace WIM2VHD {
                     # or about network latency.
                     if (Test-IsNetworkLocation $SourcePath) {
                       Write-W2VInfo "Copying ISO $(Split-Path $SourcePath -Leaf) to temp folder..."
-                      $TempGuid = [string][Guid]::NewGuid()
                       New-Item -Path "$($env:Temp)" -Name "$($TempGuid)" -ItemType "directory"
                       Copy-Item -Path $SourcePath -Destination "$($env:Temp)\$($TempGuid)" -Force
                       $SourcePath = "$($env:Temp)\$($TempGuid)\$(Split-Path $SourcePath -Leaf)"
-
-                      # Set this to True so that the temp folder gets cleaned up
-                      $SourceIsNetwork = $true
                     }
 
                     $isoPath = (Resolve-Path $SourcePath).Path
@@ -4575,6 +4572,9 @@ shutdown /r /t 60
                         Write-W2VInfo "Deleting pre-existing $VHDFormat : $(Split-Path $vhdFinalPathCurrent -Leaf)..."
                         Remove-Item -Path $vhdFinalPathCurrent -Force
                     }
+
+                    # Remove the directory we used for copying the ISO
+                    Remove-Item -Path "$($env:Temp)\$($TempGuid)" -Recurse
 
                     $vhdFinalPath += $vhdFinalPathCurrent
 
