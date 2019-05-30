@@ -4095,7 +4095,17 @@ namespace WIM2VHD {
                     $isoPath = (Resolve-Path $SourcePath).Path
 
                     Write-W2VInfo "Opening ISO $(Split-Path $isoPath -Leaf)..."
-                    $openIso     = Mount-DiskImage -ImagePath $isoPath -StorageType ISO -PassThru
+                    try {
+                      $openIso     = Mount-DiskImage -ImagePath $isoPath -StorageType ISO -PassThru
+                    } catch {
+                      # Check that the Disk Image is already mounted
+                      Write-W2VInfo "ISO could not be mounted. Checking if it is already attached."
+                      if (!(Get-DiskImage -ImagePath $isoPath).Attached) {
+                        # Disk is not mounted and was unable to be mounted, re-throwing exception
+                        throw
+                      }
+                      # If we get to this point, it means the ISO is already attached so we should be okay to keep going
+                    }
                     # Refresh the DiskImage object so we can get the real information about it.  I assume this is a bug.
                     $openIso     = Get-DiskImage -ImagePath $isoPath
                     $driveLetter = ($openIso | Get-Volume).DriveLetter
@@ -4606,8 +4616,12 @@ shutdown /r /t 60
 
                 # If we still have an ISO open, close it.
                 if ($openIso -ne $null) {
-                    Write-W2VInfo "Closing ISO..."
-                    Dismount-DiskImage $ISOPath
+                    Write-W2VInfo "Attempting to close ISO..."
+                    try {
+                      Dismount-DiskImage $ISOPath
+                    } catch {
+                      Write-W2VInfo "Unable to close ISO, assuming that it is in use elsewhere..."
+                    }
                 }
 
                 # Check to see if the WIM is local, or on a network location.  If the latter, remove the copy.
