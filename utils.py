@@ -65,6 +65,7 @@ def setup_root_logger():
     logger.addHandler(logstash_handler)
 
     # Add the redact filter
+    logstash_handler.addFilter(_redact_logs)
     logger.addFilter(_redact_logs)
 
     # At exit, flush all logs to logstash
