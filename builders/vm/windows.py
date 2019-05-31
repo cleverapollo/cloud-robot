@@ -184,7 +184,6 @@ class Windows(WindowsMixin):
         # Generate encrypted passwords
         data['admin_password'] = Windows._password_generator(size=8)
         # Also save the password back to the VM data dict
-        Windows.logger.info(f'Password for VM #{vm_id}: {data["admin_password"]}')
         vm_data['admin_password'] = data['admin_password']
 
         # Fetch the drives for the VM and add them to the data
