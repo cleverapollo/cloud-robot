@@ -77,9 +77,10 @@ class Vrf(VrfBuilder):
         management_ip = template_data.pop('management_ip')
         try:
             child_span = opentracing.tracer.start_span('generate_setconf', child_of=span)
-            template_name = f'vrf/update_{router_model}.j2'
-            child_span.set_tag('template_name', template_name)
-            conf = utils.JINJA_ENV.get_template(template_name).render(**template_data)
+            build_template_name = f'vrf/build_{router_model}.j2'
+            child_span.set_tag('template_name', build_template_name)
+            build_conf = utils.JINJA_ENV.get_template(build_template_name).render(**template_data)
+            delete_conf = utils.JINJA_ENV.get_template('vrf/scrub.j2').render(**template_data)
             child_span.finish()
         except Exception:
             Vrf.logger.error(
@@ -88,10 +89,19 @@ class Vrf(VrfBuilder):
             )
             span.set_tag('failed_reason', 'invalid_template_name')
             return False
-        Vrf.logger.debug(f'Generated setconf for VRF #{vrf_id}\n{conf}')
+        Vrf.logger.debug(f'Generated delete setconf for VRF #{vrf_id}\n{delete_conf}')
+        Vrf.logger.debug(f'Generated build setconf for VRF #{vrf_id}\n{build_conf}')
 
         # Deploy the generated setconf to the router
-        child_span = opentracing.tracer.start_span('deploy_setconf', child_of=span)
-        success = Vrf.deploy(conf, management_ip)
+        build_success = False
+        child_span = opentracing.tracer.start_span('deploy_delete_setconf', child_of=span)
+        delete_success = Vrf.deploy(delete_conf, management_ip)
         child_span.finish()
-        return success
+        if delete_success:
+            child_span = opentracing.tracer.start_span('deploy_build_setconf', child_of=span)
+            build_success = Vrf.deploy(build_conf, management_ip)
+            child_span.finish()
+            return build_success
+        else:
+            Vrf.logger.error(f'Failed to deploy delete conf for VRF #{vrf_id}')
+            return delete_success
