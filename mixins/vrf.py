@@ -56,14 +56,15 @@ class VrfMixin:
                         return False
 
                     # Attempt to commit
-                    cls.logger.debug(
-                        f'All commands successfully loaded onto Router {management_ip}, '
-                        'now attempting to commit changes',
-                    )
                     try:
                         commit_msg = f'Loaded by robot at {asctime()}.'
+                        cls.logger.debug(
+                            f'All commands successfully loaded onto Router {management_ip}, '
+                            'now checking the commit status',
+                        )
                         # Commit check either raises an error or returns True
                         config.commit_check()
+                        cls.logger.debug(f'Commit check on Router {management_ip} successful, committing changes.')
                         if not scrub:
                             config.commit(comment=commit_msg)
                         else:
