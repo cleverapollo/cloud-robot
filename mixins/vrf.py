@@ -66,9 +66,10 @@ class VrfMixin:
                         config.commit_check()
                         cls.logger.debug(f'Commit check on Router {management_ip} successful, committing changes.')
                         if not scrub:
-                            config.commit(comment=commit_msg)
+                            detail = config.commit(comment=commit_msg)
                         else:
-                            config.commit(comment=commit_msg, ignore_warning=['statement not found'])
+                            detail = config.commit(comment=commit_msg, ignore_warning=['statement not found'])
+                        cls.logger.debug(f'Response from commit on Router {management_ip}\n{detail}')
                     except CommitError:
                         cls.logger.error(f'Unable to commit changes onto Router {management_ip}', exc_info=True)
                         return False
