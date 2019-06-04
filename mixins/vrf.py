@@ -62,6 +62,8 @@ class VrfMixin:
                     )
                     try:
                         commit_msg = f'Loaded by robot at {asctime()}.'
+                        # Commit check either raises an error or returns True
+                        config.commit_check()
                         if not scrub:
                             config.commit(comment=commit_msg)
                         else:
