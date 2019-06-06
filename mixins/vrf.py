@@ -42,7 +42,7 @@ class VrfMixin:
             # Using context managers for Router and Config will ensure everything is properly cleaned up when exiting
             # the function, regardless of how we exit the function
             with Device(host=management_ip, user='robot', port=22) as router:
-                router.timeout = 2 * 60
+                router.timeout = 5 * 60  # 5 minute timeout
                 cls.logger.debug(f'Successfully connected to Router {management_ip}, now attempting to load config')
                 with Config(router, mode='batch') as config:
                     try:
