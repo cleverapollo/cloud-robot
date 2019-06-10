@@ -42,7 +42,7 @@ class VrfMixin:
             # Using context managers for Router and Config will ensure everything is properly cleaned up when exiting
             # the function, regardless of how we exit the function
             with Device(host=management_ip, user='robot', port=22) as router:
-                router.timeout = 2 * 60
+                router.timeout = 15 * 60  # 15 minute timeout
                 cls.logger.debug(f'Successfully connected to Router {management_ip}, now attempting to load config')
                 with Config(router, mode='batch') as config:
                     try:
@@ -53,20 +53,28 @@ class VrfMixin:
                             f'Unable to load configuration changes onto Router {management_ip}',
                             exc_info=True,
                         )
+                        # Reduce device timeout so we're not waiting forever for it to close config
+                        router.timeout = 2 * 60
                         return False
 
                     # Attempt to commit
-                    cls.logger.debug(
-                        f'All commands successfully loaded onto Router {management_ip}, '
-                        'now attempting to commit changes',
-                    )
                     try:
                         commit_msg = f'Loaded by robot at {asctime()}.'
+                        cls.logger.debug(
+                            f'All commands successfully loaded onto Router {management_ip}, '
+                            'now checking the commit status',
+                        )
+                        # Commit check either raises an error or returns True
+                        config.commit_check()
+                        cls.logger.debug(f'Commit check on Router {management_ip} successful, committing changes.')
                         if not scrub:
-                            config.commit(comment=commit_msg)
+                            detail = config.commit(comment=commit_msg)
                         else:
-                            config.commit(comment=commit_msg, ignore_warning=['statement not found'])
+                            detail = config.commit(comment=commit_msg, ignore_warning=['statement not found'])
+                        cls.logger.debug(f'Response from commit on Router {management_ip}\n{detail}')
                     except CommitError:
+                        # Reduce device timeout so we're not waiting forever for it to close config
+                        router.timeout = 2 * 60
                         cls.logger.error(f'Unable to commit changes onto Router {management_ip}', exc_info=True)
                         return False
 

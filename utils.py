@@ -34,11 +34,12 @@ JINJA_ENV = jinja2.Environment(
 )
 
 
-def _redact_logs(record: logging.LogRecord):
+def _redact_logs(record: logging.LogRecord) -> bool:
     """
     Filter out the logs to redact passwords and other sensitive information
     """
     record.msg = record.msg.replace(NETWORK_PASSWORD, '*' * 16)
+    return True
 
 
 def setup_root_logger():
@@ -64,6 +65,7 @@ def setup_root_logger():
     logger.addHandler(logstash_handler)
 
     # Add the redact filter
+    logstash_handler.addFilter(_redact_logs)
     logger.addFilter(_redact_logs)
 
     # At exit, flush all logs to logstash
