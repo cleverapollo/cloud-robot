@@ -68,9 +68,16 @@ class VrfMixin:
                         config.commit_check()
                         cls.logger.debug(f'Commit check on Router {management_ip} successful, committing changes.')
                         if not scrub:
-                            detail = config.commit(comment=commit_msg)
+                            detail = config.commit(
+                                comment=commit_msg,
+                                detail=True,
+                            )
                         else:
-                            detail = config.commit(comment=commit_msg, ignore_warning=['statement not found'])
+                            detail = config.commit(
+                                comment=commit_msg,
+                                ignore_warning=['statement not found'],
+                                detail=True,
+                            )
                         cls.logger.debug(f'Response from commit on Router {management_ip}\n{detail}')
                     except CommitError:
                         # Reduce device timeout so we're not waiting forever for it to close config
