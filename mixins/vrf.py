@@ -68,13 +68,11 @@ class VrfMixin:
                         if not scrub:
                             detail = config.commit(
                                 comment=commit_msg,
-                                detail=True,
                             )
                         else:
                             detail = config.commit(
                                 comment=commit_msg,
                                 ignore_warning=['statement not found'],
-                                detail=True,
                             )
                         cls.logger.debug(f'Response from commit on Router {management_ip}\n{detail}')
                     except CommitError:
