@@ -5,7 +5,6 @@ from settings_local import (
     CELERY_HOST,
     CLOUDCIX_API_PASSWORD,
     CLOUDCIX_API_USERNAME,
-    CLOUDCIX_EMAIL_PASSWORD,
     CLOUDCIX_EMAIL_USERNAME,
     REGION_NAME,
     FREENAS_URL,
@@ -21,8 +20,6 @@ __all__ = [
     'CLOUDCIX_API_USERNAME',
     'CLOUDCIX_API_VERSION',
     'CLOUDCIX_API_V2_URL',
-    'CLOUDCIX_EMAIL_HOST',
-    'CLOUDCIX_EMAIL_PASSWORD',
     'CLOUDCIX_EMAIL_USERNAME',
     'FREENAS_URL',
     'HYPERV_HOST_NETWORK_DRIVE_PATH',
@@ -44,8 +41,6 @@ CLOUDCIX_API_URL = 'https://api.cloudcix.com/'
 # API V2 Stuff
 CLOUDCIX_API_VERSION = 2
 CLOUDCIX_API_V2_URL = CLOUDCIX_API_URL
-# Cloudcix email smtp server id with port
-CLOUDCIX_EMAIL_HOST = 'webmail.cix.ie:587'
 # Database in influx to send to
 CLOUDCIX_INFLUX_DATABASE = 'robot'
 # Port of influx endpoint

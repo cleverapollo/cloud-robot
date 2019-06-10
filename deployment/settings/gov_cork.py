@@ -8,8 +8,6 @@ __all__ = [
     'CLOUDCIX_API_USERNAME',
     'CLOUDCIX_API_VERSION',
     'CLOUDCIX_API_V2_URL',
-    'CLOUDCIX_EMAIL_HOST',
-    'CLOUDCIX_EMAIL_PASSWORD',
     'CLOUDCIX_EMAIL_USERNAME',
     'FREENAS_URL',
     'HYPERV_HOST_NETWORK_DRIVE_PATH',
@@ -42,12 +40,8 @@ CLOUDCIX_API_VERSION = 2
 CLOUDCIX_API_V2_URL = CLOUDCIX_API_URL
 
 # Webmail settings
-# Cloudcix email smtp server id with port
-CLOUDCIX_EMAIL_HOST = 'webmail.cix.ie:587'
-# Region's email password
-CLOUDCIX_EMAIL_PASSWORD = 'C0rkG0vC1xacc355'
 # Region's email id
-CLOUDCIX_EMAIL_USERNAME = 'cloud@cloudcix.com'
+CLOUDCIX_EMAIL_USERNAME = 'cloud@cloudcix.net'
 
 # Database in influx to send to
 CLOUDCIX_INFLUX_DATABASE = 'robot'

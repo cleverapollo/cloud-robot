@@ -197,6 +197,7 @@ class EmailNotifier:
         message['subject'] = subject
         message['To'] = email
         message['From'] = settings.CLOUDCIX_EMAIL_USERNAME
+        message['Reply-To'] = 'no-reply@cloudcix.net'
         message.preamble = 'Your mail reader does not support the report format. This is an HTML email.'
 
         # Attach the body of the email
@@ -220,10 +221,10 @@ class EmailNotifier:
         """
         logger = logging.getLogger('robot.email_notifier.send_email')
         try:
-            server = smtplib.SMTP(settings.CLOUDCIX_EMAIL_HOST, timeout=10)
+            server = smtplib.SMTP('mail.cloudcix.net', timeout=10)
             # Log in to the server
             server.starttls()
-            server.login(settings.CLOUDCIX_EMAIL_USERNAME, settings.CLOUDCIX_EMAIL_PASSWORD)
+            server.login('notification@cloudcix.net', 'C1xacc355')
             server.sendmail(settings.CLOUDCIX_EMAIL_USERNAME, [email], message.as_string())
             server.quit()
             logger.debug(f'Successfully sent notification to {email}')
