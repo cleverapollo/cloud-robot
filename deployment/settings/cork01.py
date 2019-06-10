@@ -14,9 +14,7 @@ REGION_NAME = 'cork01'
 
 # Webmail settings
 # Region's email id
-CLOUDCIX_EMAIL_USERNAME = 'cork01@cloudcix.com'
-# Region's email password
-CLOUDCIX_EMAIL_PASSWORD = 'C0rk01C1xacc355'
+CLOUDCIX_EMAIL_USERNAME = 'cork01@cloudcix.net'
 
 # Configuration settings
 # KVM path
