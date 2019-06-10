@@ -42,8 +42,11 @@ app = Celery(
 app.conf.timezone = 'Europe/Dublin'
 # Route heartbeat tasks to a different queue than the other tasks
 app.conf.task_routes = {
+    # Send heartbeat tasks to their own queue
     'tasks.mainloop': {'queue': 'heartbeat'},
     'tasks.scrub': {'queue': 'heartbeat'},
+    # Also send VRF tasks to a separate queue
+    'tasks.vrf.*': {'queue': 'vrf'},
     # All other tasks will be sent to the default queue named 'celery'
 }
 
