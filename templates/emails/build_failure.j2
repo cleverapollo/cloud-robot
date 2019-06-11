@@ -1,13 +1,6 @@
 {% extends "emails/base.j2" %}
 {% block content %}
-<div>
-  <div class="title-cell">
-    <div class="title">
-      <span class="font-calibri">
-        <h1 class="title">Your VM "{{ name }}" has failed to build.</h1>
-        <h4 class="subtitle">Please contact the NOC, quoting the name of the VM.</h4>
-      </span>
-    </div>
-  </div>
-</div>
+<h2>An error occurred while building your VM "{{ name }}".</h1>
+<p>The NOC have been notified and will be in contact shortly.</p>
+<p>We apologise for any inconvenience caused.</p>
 {% endblock %}

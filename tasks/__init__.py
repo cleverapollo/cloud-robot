@@ -6,7 +6,6 @@ In this file, we define the robot based tasks that will be run by celery beat
 # stdlib
 # from datetime import datetime, timedelta
 # local
-# import settings
 from celery_app import app
 from robot import Robot
 

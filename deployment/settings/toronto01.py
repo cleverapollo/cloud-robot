@@ -14,7 +14,7 @@ REGION_NAME = 'toronto01'
 
 # Webmail settings
 # Region's email id
-CLOUDCIX_EMAIL_USERNAME = 'toronto01@cloudcix.net'
+CLOUDCIX_EMAIL_USERNAME = 'CloudCIX Toronto01 <toronto01@cloudcix.net>'
 
 # Configuration settings
 # KVM path
