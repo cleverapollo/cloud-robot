@@ -102,7 +102,7 @@ class EmailNotifier:
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/scheduled_delete_success.j2').render(**vm_data)
         # Format the subject
-        subject = f'[CloudCIX] Your VM "{name}" has been successfully scheduled for deletion!'
+        subject = f'[CloudCIX] Your VM "{name}" has been scheduled for deletion!'
         EmailNotifier._compose_email(email, subject, body)
 
     # ############################################################## #
