@@ -44,7 +44,7 @@ CLOUDCIX_API_V2_URL = 'https://stage.api.cloudcix.com/'
 
 # Webmail settings
 # Region's email id
-CLOUDCIX_EMAIL_USERNAME = 'alpha@cloudcix.net'
+CLOUDCIX_EMAIL_USERNAME = 'CloudCIX Alpha <alpha@cloudcix.net>'
 
 # Database in influx to send to
 CLOUDCIX_INFLUX_DATABASE = 'robot'

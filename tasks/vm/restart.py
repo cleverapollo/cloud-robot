@@ -117,7 +117,6 @@ def _restart_vm(vm_id: int, span: Span):
 
         # Email the user
         child_span = opentracing.tracer.start_span('send_email', child_of=span)
-        EmailNotifier.restart_success(vm)
         child_span.finish()
     else:
         logger.error(f'Failed to restart VM #{vm_id}')
@@ -125,6 +124,6 @@ def _restart_vm(vm_id: int, span: Span):
 
         # Email the user
         child_span = opentracing.tracer.start_span('send_email', child_of=span)
-        EmailNotifier.restart_failure(vm)
+        EmailNotifier.failure(vm)
         child_span.finish()
         # There's no fail state here either

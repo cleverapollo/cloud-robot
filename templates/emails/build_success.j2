@@ -1,31 +1,18 @@
 {% extends "emails/base.j2" %}
 {% block content %}
-<div>
-  <div class="title-cell">
-    <div class="title">
-      <span class="font-calibri">
-        <h1 class="title">Your VM "{{ name }}" has been built successfully!</h1>
-        <h4 class="subtitle">Please check your credentials below.</h4>
-      </span>
-    </div>
-  </div>
-</div>
-
-<div>
-  <div class="title-cell">
-    <hr class="divider" />
-  </div>
-</div>
-
-<div>
-  <div class="title-cell">
-    <ul class="credentials">
-      <li class="font-courier">username: <strong>administrator</strong></li>
-      <li class="font-courier">password: <strong>{{ admin_password }}</strong></li>
-    </ul>
-    <small>
-      We recommend you update your password once you log in to improve security.
-    </small>
-  </div>
-</div>
+<h2>Your VM "{{ name }}" has been successfully built!</h1>
+<p>Your credentials are provided below.</p>
+<hr />
+<table role="presentation" border="0" cellpadding="0" cellspacing="0">
+  <tbody>
+    <tr>
+      <th>Username: administrator</th>
+      <th>Password: {{ admin_password }}</th>
+    </tr>
+  </tbody>
+</table>
+<hr />
+<p>Log on to the <a href="https://saas.cloudcix.com/compute">CloudCIX Compute App</a> to retrieve the IP Addresses for the VM in order to log in.</p>
+<p>We recommend you update your password once you log in to improve security.</p>
+<p>If you requested more than one Storage drive in this VM, please note that any extra drives need to be manually formatted and mounted.</p>
 {% endblock %}
