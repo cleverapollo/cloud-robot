@@ -1,14 +1,15 @@
 {% extends "emails/base.j2" %}
 {% block content %}
-<div>
-  <div class="title-cell">
-    <div class="title">
-      <span class="font-calibri">
-        <h1 class="title">Your VM "{{ name }}" has been scheduled for deletion.</h1>
-        <h2>This VM will be deleted on {{ deletion_date }}.</h2>
-        <h3>If you change your mind, you can restore the VM from the CloudCIX Compute App before this date.</h3>
-      </span>
-    </div>
-  </div>
-</div>
+<h2>Your VM "{{ name }}" has been scheduled for deletion.</h1>
+<p>This VM will be deleted on;</p>
+<hr />
+<table role="presentation" border="0" cellpadding="0" cellspacing="0">
+  <tbody>
+    <tr>
+      <th>{{ deletion_date }}</th>
+    </tr>
+  </tbody>
+</table>
+<hr />
+<p>You can restore the VM from the <a href="https://saas.cloudcix.com/compute">CloudCIX Compute App</a> at any time before this date.</p>
 {% endblock %}

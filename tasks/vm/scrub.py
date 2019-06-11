@@ -10,6 +10,7 @@ import state
 import utils
 from celery_app import app
 from cloudcix_token import Token
+from email_notifier import EmailNotifier
 from scrubbers.vm import (
     Linux as LinuxVmScrubber,
     Windows as WindowsVmScrubber,
@@ -136,4 +137,5 @@ def _scrub_vm(vm_id: int, span: Span):
     else:
         logger.error(f'Failed to scrub VM #{vm_id}')
         metrics.vm_scrub_failure()
+        EmailNotifier.failure(vm)
         # There's no fail state here either

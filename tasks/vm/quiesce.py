@@ -124,7 +124,6 @@ def _quiesce_vm(vm_id: int, span: Span):
                 )
             # Email the user
             child_span = opentracing.tracer.start_span('send_email', child_of=span)
-            EmailNotifier.quiesce_success(vm)
             child_span.finish()
 
         elif vm['state'] == 8:
@@ -157,5 +156,4 @@ def _quiesce_vm(vm_id: int, span: Span):
     else:
         logger.error(f'Failed to quiesce VM #{vm_id}')
         metrics.vm_quiesce_failure()
-        # There's no fail state here either
-        # Should we add an email here? I didn't see one in the previous version
+        EmailNotifier.failure(vm)

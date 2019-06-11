@@ -31,6 +31,7 @@ def _generate_data_packet(measurement: str, fields: dict, tags: dict = {}) -> Li
     :param tags: Extra meta-data to be associated with a data point. Indexed in Influx
     :return: A prepared data packet in a form ready to be sent to InfluxDB
     """
+    tags = tags or {}
     extra_tags = getattr(settings, 'CLOUDCIX_INFLUX_TAGS', {})
     tags.update(extra_tags)
     data = [{
