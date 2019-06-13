@@ -5,14 +5,14 @@
 <hr />
 <table role="presentation" border="0" cellpadding="0" cellspacing="0">
   <tbody>
-    <tr>
+    <tr class="credentials">
       <th>Username: administrator</th>
       <th>Password: {{ admin_password }}</th>
     </tr>
   </tbody>
 </table>
 <hr />
-<p>Log on to the <a href="https://saas.cloudcix.com/compute">CloudCIX Compute App</a> to retrieve the IP Addresses for the VM in order to log in.</p>
+<p>Log on to the <a href="https://{% if stage %}stage{% endif %}saas.cloudcix.com/compute/view/vm/{{ idVM }}/">CloudCIX Compute App</a> to retrieve the IP Addresses for the VM in order to log in.</p>
 <p>We recommend you update your password once you log in to improve security.</p>
 <p>If you requested more than one Storage drive in this VM, please note that any extra drives need to be manually formatted and mounted.</p>
 {% endblock %}

@@ -4122,6 +4122,8 @@ namespace WIM2VHD {
                     $SourcePath = "$($env:Temp)\$(Split-Path $SourcePath -Leaf)"
                 }
 
+                # wait for opening iso
+                Sleep -Seconds 5
                 $SourcePath  = (Resolve-Path $SourcePath).Path
 
                 # We're good.  Open the WIM container.

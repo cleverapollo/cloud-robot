@@ -63,10 +63,10 @@ def _scrub_vrf(vrf_id: int, span: Span):
         return
     vrf = response.json()['content']
 
-    # Ensure that the state of the vrf is still currently SCRUBBING or QUIESCING
-    if vrf['state'] != state.DELETED:
+    # Ensure that the state of the vrf is still currently SCRUB_QUEUE
+    if vrf['state'] != state.SCRUB_QUEUE:
         logger.warn(
-            f'Cancelling scrub of VRF #{vrf_id}. Expected state to be SCRUBBING, found {vrf["state"]}.',
+            f'Cancelling scrub of VRF #{vrf_id}. Expected state to be SCRUB, found {vrf["state"]}.',
         )
         # Return out of this function without doing anything
         span.set_tag('return_reason', 'not_in_valid_state')

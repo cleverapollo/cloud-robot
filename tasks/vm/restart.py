@@ -53,17 +53,35 @@ def _restart_vm(vm_id: int, span: Span):
         span.set_tag('return_reason', 'invalid_vm_id')
         return
 
-    # Ensure that the state of the vm is still currently RESTARTING
-    if vm['state'] != state.RESTARTING:
+    # Ensure that the state of the vm is still currently RESTART
+    if vm['state'] != state.RESTART:
         logger.warn(
-            f'Cancelling restart of VM #{vm_id}. Expected state to be RESTARTING, found {vm["state"]}.',
+            f'Cancelling restart of VM #{vm_id}. Expected state to be RESTART, found {vm["state"]}.',
         )
         # Return out of this function without doing anything
         span.set_tag('return_reason', 'not_in_valid_state')
         return
 
-    # There's no in-between state for restart tasks, just jump straight to doing the work
-    success: bool = False
+    # Update to intermediate state here (RESTARTING - 13)
+    child_span = opentracing.tracer.start_span('update_to_restarting', child_of=span)
+    response = IAAS.vm.partial_update(
+        token=Token.get_instance().token,
+        pk=vm_id,
+        data={'state': state.RESTARTING},
+        span=child_span,
+    )
+    child_span.finish()
+
+    # Ensure the update was successful
+    if response.status_code != 204:
+        logger.error(
+            f'Could not update VM #{vm_id} to the necessary RESTARTING. Response: {response.content.decode()}.',
+        )
+        span.set_tag('return_reason', 'could_not_update_state')
+        metrics.vm_restart_failure()
+        # Update to Unresourced?
+        return
+
     # Read the VM image to get the hypervisor id
     child_span = opentracing.tracer.start_span('read_vm_image', child_of=span)
     image = utils.api_read(IAAS.image, vm['idImage'], span=child_span)
@@ -77,6 +95,9 @@ def _restart_vm(vm_id: int, span: Span):
         return
 
     hypervisor = image['idHypervisor']
+
+    # Do the actual restarting
+    success: bool = False
     child_span = opentracing.tracer.start_span('restart', child_of=span)
     try:
         if hypervisor == 1:  # HyperV -> Windows
