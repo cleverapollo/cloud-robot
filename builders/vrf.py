@@ -18,7 +18,6 @@ from netaddr import IPNetwork
 # local
 import utils
 from mixins import VrfMixin
-from net_builders import is_valid_vlan
 
 __all__ = [
     'Vrf',
@@ -150,12 +149,6 @@ class Vrf(VrfMixin):
         # Iterate through subnets for the vrf and check vlans and nat rules
         subnets = utils.api_list(IAAS.subnet, {'vrf': vrf_id}, span=span)
         for subnet in subnets:
-            if not is_valid_vlan(subnet['vLAN']):
-                Vrf.logger.error(
-                    f'VRF #{vrf_id} has invalid vlan {subnet["vLAN"]} so it is being moved to UNRESOURCED',
-                )
-                return None
-
             # Get the type of the subnet using netaddr
             subnet_address_family: str = 'inet'
             if IPNetwork(subnet['addressRange']).version == 6:
