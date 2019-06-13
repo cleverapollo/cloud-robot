@@ -18,6 +18,8 @@ __all__ = [
     'EmailNotifier',
 ]
 
+STAGE = settings.REGION_NAME == 'alpha'
+
 
 class EmailNotifier:
     # A list of image files that need to be attached to the emails
@@ -35,7 +37,7 @@ class EmailNotifier:
         # Add the pretty printed data blob to the VM
         vm_data['data'] = pformat(vm_data)
         # Render the email body
-        body = utils.JINJA_ENV.get_template('emails/failure.j2').render(**vm_data)
+        body = utils.JINJA_ENV.get_template('emails/failure.j2').render(stage=STAGE, **vm_data)
         # Format the subject
         subject = f'[CloudCIX] VM Failure Occurred!'
         EmailNotifier._compose_email('developers@cloudcix.com', subject, body)
@@ -57,7 +59,7 @@ class EmailNotifier:
             logger.error(f'No email found for VM #{vm_data["idVM"]}. Sending to developers@cloudcix.com instead.')
             email = 'developers@cloudcix.com'
         # Render the email body
-        body = utils.JINJA_ENV.get_template('emails/build_success.j2').render(**vm_data)
+        body = utils.JINJA_ENV.get_template('emails/build_success.j2').render(stage=STAGE, **vm_data)
         # Format the subject
         subject = f'[CloudCIX] Your VM "{name}" has been built successfully!'
         EmailNotifier._compose_email(email, subject, body)
@@ -75,7 +77,7 @@ class EmailNotifier:
             logger.error(f'No email found for VM #{vm_data["idVM"]}. Sending to developers@cloudcix.com instead.')
             email = 'developers@cloudcix.com'
         # Render the email body
-        body = utils.JINJA_ENV.get_template('emails/build_failure.j2').render(**vm_data)
+        body = utils.JINJA_ENV.get_template('emails/build_failure.j2').render(stage=STAGE, **vm_data)
         # Format the subject
         subject = f'[CloudCIX] Your VM "{name}" has failed to build.'
         EmailNotifier._compose_email(email, subject, body)
@@ -100,7 +102,7 @@ class EmailNotifier:
             logger.error(f'No email found for VM #{vm_data["idVM"]}. Sending to developers@cloudcix.com instead.')
             email = 'developers@cloudcix.com'
         # Render the email body
-        body = utils.JINJA_ENV.get_template('emails/scheduled_delete_success.j2').render(**vm_data)
+        body = utils.JINJA_ENV.get_template('emails/scheduled_delete_success.j2').render(stage=STAGE, **vm_data)
         # Format the subject
         subject = f'[CloudCIX] Your VM "{name}" has been scheduled for deletion!'
         EmailNotifier._compose_email(email, subject, body)
