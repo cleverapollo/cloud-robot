@@ -55,8 +55,8 @@ def _quiesce_vm(vm_id: int, span: Span):
         span.set_tag('return_reason', 'invalid_vm_id')
         return
 
-    # Ensure that the state of the vm is still currently SCRUBBING or QUIESCING
-    valid_states = [state.QUIESCING, state.SCRUBBING]
+    # Ensure that the state of the vm is still currently SCRUB or QUIESCE
+    valid_states = [state.QUIESCE, state.SCRUB]
     if vm['state'] not in valid_states:
         logger.warn(
             f'Cancelling quiesce of VM #{vm_id}. Expected state to be one of {valid_states}, found {vm["state"]}.',
@@ -65,8 +65,45 @@ def _quiesce_vm(vm_id: int, span: Span):
         span.set_tag('return_reason', 'not_in_valid_state')
         return
 
-    # There's no in-between state for Quiesce tasks, just jump straight to doing the work
-    success: bool = False
+    if vm['state'] == state.QUIESCE:
+        # Update the state to QUIESCING (12)
+        child_span = opentracing.tracer.start_span('update_to_quiescing', child_of=span)
+        response = IAAS.vm.partial_update(
+            token=Token.get_instance().token,
+            pk=vm_id,
+            data={'state': state.QUIESCING},
+            span=child_span,
+        )
+        child_span.finish()
+
+        # Ensure the update was successful
+        if response.status_code != 204:
+            logger.error(
+                f'Could not update VM #{vm_id} to the necessary QUIESCING. Response: {response.content.decode()}.',
+            )
+            span.set_tag('return_reason', 'could_not_update_state')
+            metrics.vm_quiesce_failure()
+            # Update to Unresourced?
+            return
+    else:
+        # Update the state to SCRUB_PREP (14)
+        child_span = opentracing.tracer.start_span('update_to_scrub_prep', child_of=span)
+        response = IAAS.vm.partial_update(
+            token=Token.get_instance().token,
+            pk=vm_id,
+            data={'state': state.SCRUB_PREP},
+            span=child_span,
+        )
+        child_span.finish()
+        # Ensure the update was successful
+        if response.status_code != 204:
+            logger.error(
+                f'Could not update VM #{vm_id} to the necessary SCRUB_PREP. Response: {response.content.decode()}.',
+            )
+            span.set_tag('return_reason', 'could_not_update_state')
+            metrics.vm_quiesce_failure()
+            # Update to Unresourced?
+            return
 
     # Read the VM image to get the hypervisor id
     child_span = opentracing.tracer.start_span('read_vm_image', child_of=span)
@@ -78,9 +115,13 @@ def _quiesce_vm(vm_id: int, span: Span):
             f'Could not quiesce VM #{vm_id} as its Image was not readable',
         )
         span.set_tag('return_reason', 'image_not_read')
+        # Maybe update to Unresourced here?
         return
 
     hypervisor = image['idHypervisor']
+
+    # Do the actual quiescing
+    success: bool = False
     child_span = opentracing.tracer.start_span('quiesce', child_of=span)
     try:
         if hypervisor == 1:  # HyperV -> Windows
@@ -91,7 +132,7 @@ def _quiesce_vm(vm_id: int, span: Span):
             child_span.set_tag('hypervisor', 'linux')
         else:
             logger.error(
-                f'Unsupported Hypervisor ID #{hypervisor} for VM #{vm_id}',
+                f'Unsupported Hypervisor type ({hypervisor}) for VM #{vm_id}',
             )
             child_span.set_tag('hypervisor', 'unsupported')
     except Exception:
@@ -106,8 +147,10 @@ def _quiesce_vm(vm_id: int, span: Span):
     if success:
         logger.info(f'Successfully quiesced VM #{vm_id}')
         metrics.vm_quiesce_success()
-        # Update state, depending on what state the VM is currently in (QUIESCING -> QUIESCED, SCRUBBING -> DELETED)
-        if vm['state'] == 5:
+
+        # Update state, depending on what state the VM is currently in (QUIESCE -> QUIESCED, SCRUB -> SCRUB_QUEUE)
+        # Note: Will still be the original state as our data hasn't been logged
+        if vm['state'] == state.QUIESCE:
             # Update state to QUIESCED in the API
             child_span = opentracing.tracer.start_span('update_to_quiesced', child_of=span)
             response = IAAS.vm.partial_update(
@@ -126,20 +169,20 @@ def _quiesce_vm(vm_id: int, span: Span):
             child_span = opentracing.tracer.start_span('send_email', child_of=span)
             child_span.finish()
 
-        elif vm['state'] == 8:
-            # Update state to DELETED in the API
+        elif vm['state'] == state.SCRUB:
+            # Update state to SCRUB_QUEUE in the API
             child_span = opentracing.tracer.start_span('update_to_deleted', child_of=span)
             response = IAAS.vm.partial_update(
                 token=Token.get_instance().token,
                 pk=vm_id,
-                data={'state': state.DELETED},
+                data={'state': state.SCRUB_QUEUE},
                 span=child_span,
             )
             child_span.finish()
 
             if response.status_code != 204:
                 logger.error(
-                    f'Could not update VM #{vm_id} to state DELETED. Response: {response.content.decode()}.',
+                    f'Could not update VM #{vm_id} to state SCRUB_QUEUE. Response: {response.content.decode()}.',
                 )
             # Add a deletion date in the format 'Monday September 30, 2013'
             vm['deletion_date'] = (datetime.now().date() + timedelta(days=30)).strftime('%A %B %d, %Y')
@@ -151,7 +194,7 @@ def _quiesce_vm(vm_id: int, span: Span):
         else:
             logger.error(
                 f'VM #{vm_id} has been quiesced despite not being in a valid state. '
-                f'Valid states: {valid_states}, VM is in state {vm["state"]}',
+                f'Valid states: {valid_states}, VM was in state {vm["state"]}',
             )
     else:
         logger.error(f'Failed to quiesce VM #{vm_id}')

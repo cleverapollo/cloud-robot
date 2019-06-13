@@ -50,8 +50,8 @@ def _quiesce_vrf(vrf_id: int, span: Span):
         span.set_tag('return_reason', 'invalid_vrf_id')
         return
 
-    # Ensure that the state of the vrf is still currently SCRUBBING or QUIESCING
-    valid_states = [state.QUIESCING, state.SCRUBBING]
+    # Ensure that the state of the vrf is still currently SCRUB or QUIESCE
+    valid_states = [state.QUIESCE, state.SCRUB]
     if vrf['state'] not in valid_states:
         logger.warn(
             f'Cancelling quiesce of VRF #{vrf_id}. Expected state to be one of {valid_states}, found {vrf["state"]}.',
@@ -60,7 +60,47 @@ def _quiesce_vrf(vrf_id: int, span: Span):
         span.set_tag('return_reason', 'not_in_valid_state')
         return
 
-    # There's no in-between state for Quiesce tasks, just jump straight to doing the work
+    if vrf['state'] == state.QUIESCE:
+        # Update the state to QUIESCING (12)
+        child_span = opentracing.tracer.start_span('update_to_quiescing', child_of=span)
+        response = IAAS.vrf.partial_update(
+            token=Token.get_instance().token,
+            pk=vrf_id,
+            data={'state': state.QUIESCING},
+            span=child_span,
+        )
+        child_span.finish()
+
+        # Ensure the update was successful
+        if response.status_code != 204:
+            logger.error(
+                f'Could not update VM #{vrf_id} to the necessary QUIESCING. Response: {response.content.decode()}.',
+            )
+            span.set_tag('return_reason', 'could_not_update_state')
+            metrics.vrf_quiesce_failure()
+            # Update to Unresourced?
+            return
+    else:
+        # Update the state to SCRUB_PREP (14)
+        child_span = opentracing.tracer.start_span('update_to_scrub_prep', child_of=span)
+        response = IAAS.vrf.partial_update(
+            token=Token.get_instance().token,
+            pk=vrf_id,
+            data={'state': state.SCRUB_PREP},
+            span=child_span,
+        )
+        child_span.finish()
+        # Ensure the update was successful
+        if response.status_code != 204:
+            logger.error(
+                f'Could not update VM #{vrf_id} to the necessary SCRUB_PREP. Response: {response.content.decode()}.',
+            )
+            span.set_tag('return_reason', 'could_not_update_state')
+            metrics.vrf_quiesce_failure()
+            # Update to Unresourced?
+            return
+
+    # Do the actual quiescing
     success: bool = False
     child_span = opentracing.tracer.start_span('quiesce', child_of=span)
     try:
@@ -77,8 +117,8 @@ def _quiesce_vrf(vrf_id: int, span: Span):
     if success:
         logger.info(f'Successfully quiesced VRF #{vrf_id}')
         metrics.vrf_quiesce_success()
-        # Update state, depending on what state the VRF is currently in (QUIESCING -> QUIESCED, SCRUBBING -> DELETED)
-        if vrf['state'] == state.QUIESCING:
+        # Update state, depending on what state the VRF is currently in (QUIESCE -> QUIESCED, SCRUB -> SCRUB_QUEUE)
+        if vrf['state'] == state.QUIESCE:
             child_span = opentracing.tracer.start_span('update_to_quiescing', child_of=span)
             response = IAAS.vrf.partial_update(
                 token=Token.get_instance().token,
@@ -92,19 +132,19 @@ def _quiesce_vrf(vrf_id: int, span: Span):
                 logger.error(
                     f'Could not update VRF #{vrf_id} to state QUIESCED. Response: {response.content.decode()}.',
                 )
-        elif vrf['state'] == state.SCRUBBING:
+        elif vrf['state'] == state.SCRUB:
             child_span = opentracing.tracer.start_span('update_to_deleted', child_of=span)
             response = IAAS.vrf.partial_update(
                 token=Token.get_instance().token,
                 pk=vrf_id,
-                data={'state': state.DELETED},
+                data={'state': state.SCRUB_QUEUE},
                 span=child_span,
             )
             child_span.finish()
 
             if response.status_code != 204:
                 logger.error(
-                    f'Could not update VRF #{vrf_id} to state DELETED. Response: {response.content.decode()}.',
+                    f'Could not update VRF #{vrf_id} to state SCRUB_QUEUE. Response: {response.content.decode()}.',
                 )
         else:
             logger.error(
