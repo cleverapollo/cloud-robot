@@ -19,7 +19,7 @@ mypy:
   stage: lint
   script:
     - pip3 install mypy
-    - mypy --ignore-missing-imports builders dispatchers metrics net_builders quiescers restarters scrubbers tasks updaters celery_app.py cloudcix_token.py email_notifier.py robot.py state.py utils.py
+    - mypy --ignore-missing-imports builders dispatchers metrics quiescers restarters scrubbers tasks updaters celery_app.py cloudcix_token.py email_notifier.py robot.py state.py utils.py
   except:
     - master
     - stable
