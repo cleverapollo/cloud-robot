@@ -51,7 +51,7 @@ class DummyVrf:
         vrf = utils.api_read(IAAS.vrf, vrf_id)
         if vrf is None:
             return
-        if vrf['state'] == state.QUIESCING:
+        if vrf['state'] == state.QUIESCE:
             response = IAAS.vrf.partial_update(
                 token=Token.get_instance().token,
                 pk=vrf_id,
@@ -64,15 +64,15 @@ class DummyVrf:
                 metrics.vrf_quiesce_failure()
                 return
             metrics.vrf_quiesce_success()
-        elif vrf['state'] == state.SCRUBBING:
+        elif vrf['state'] == state.SCRUB:
             response = IAAS.vrf.partial_update(
                 token=Token.get_instance().token,
                 pk=vrf_id,
-                data={'state': state.DELETED},
+                data={'state': state.SCRUB_QUEUE},
             )
             if response.status_code != 204:
                 logger.error(
-                    f'Could not update VRF #{vrf_id} to state DELETED. Response: {response.content.decode()}.',
+                    f'Could not update VRF #{vrf_id} to state SCRUB_QUEUE. Response: {response.content.decode()}.',
                 )
                 metrics.vrf_quiesce_failure()
                 return
@@ -80,7 +80,7 @@ class DummyVrf:
         else:
             logger.error(
                 f'VRF #{vrf_id} has been quiesced despite not being in a valid state. '
-                f'Valid states: [{state.QUIESCING}, {state.SCRUBBING}], VRF is in state {vrf["state"]}',
+                f'Valid states: [{state.QUIESCE}, {state.SCRUB}], VRF is in state {vrf["state"]}',
             )
             metrics.vrf_quiesce_failure()
 
@@ -114,16 +114,16 @@ class DummyVrf:
         :param vrf: The VRF data from the CloudCIX API
         """
         logger = logging.getLogger('robot.dispatchers.dummy_vrf.scrub')
-        logger.info(f'Updating VRF #{vrf_id} to state DELETED')
-        # Change the state of the VRF to DELETED and report a success to influx
+        logger.info(f'Updating VRF #{vrf_id} to state SCRUB_QUEUE')
+        # Change the state of the VRF to SCRUB_QUEUE and report a success to influx
         response = IAAS.vrf.update(
             token=Token.get_instance().token,
             pk=vrf_id,
-            data={'state': state.DELETED},
+            data={'state': state.SCRUB_QUEUE},
         )
         if response.status_code != 204:
             logger.error(
-                f'HTTP {response.status_code} error occurred when updating VRF #{vrf_id} to state DELETED\n'
+                f'HTTP {response.status_code} error occurred when updating VRF #{vrf_id} to state SCRUB_QUEUE\n'
                 f'Response Text: {response.content.decode()}',
             )
             metrics.vrf_scrub_failure()

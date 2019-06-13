@@ -66,10 +66,10 @@ def _scrub_vm(vm_id: int, span: Span):
         return
     vm = response.json()['content']
 
-    # Ensure that the state of the vm is still currently DELETED
-    if vm['state'] != state.DELETED:
+    # Ensure that the state of the vm is still currently SCRUB_QUEUE
+    if vm['state'] != state.SCRUB_QUEUE:
         logger.warn(
-            f'Cancelling scrub of VM #{vm_id}. Expected state to be DELETED, found {vm["state"]}.',
+            f'Cancelling scrub of VM #{vm_id}. Expected state to be SCRUB_QUEUE, found {vm["state"]}.',
         )
         # Return out of this function without doing anything
         span.set_tag('return_reason', 'not_in_valid_state')

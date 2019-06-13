@@ -50,16 +50,36 @@ def _restart_vrf(vrf_id: int, span: Span):
         span.set_tag('return_reason', 'invalid_vrf_id')
         return
 
-    # Ensure that the state of the vrf is still currently SCRUBBING or QUIESCING
-    if vrf['state'] != state.RESTARTING:
+    # Ensure that the state of the vrf is still currently RESTART
+    if vrf['state'] != state.RESTART:
         logger.warn(
-            f'Cancelling restart of VRF #{vrf_id}. Expected state to be RESTARTING, found {vrf["state"]}.',
+            f'Cancelling restart of VRF #{vrf_id}. Expected state to be RESTART, found {vrf["state"]}.',
         )
         # Return out of this function without doing anything
         span.set_tag('return_reason', 'not_in_valid_state')
         return
 
-    # There's no in-between state for Restart tasks, just jump straight to doing the work
+    # Update to intermediate state here (RESTARTING - 13)
+    child_span = opentracing.tracer.start_span('update_to_restarting', child_of=span)
+    response = IAAS.vrf.partial_update(
+        token=Token.get_instance().token,
+        pk=vrf_id,
+        data={'state': state.RESTARTING},
+        span=child_span,
+    )
+    child_span.finish()
+
+    # Ensure the update was successful
+    if response.status_code != 204:
+        logger.error(
+            f'Could not update VM #{vrf_id} to the necessary RESTARTING. Response: {response.content.decode()}.',
+        )
+        span.set_tag('return_reason', 'could_not_update_state')
+        metrics.vrf_restart_failure()
+        # Update to Unresourced?
+        return
+
+    # Do the actual restarting
     success: bool = False
     child_span = opentracing.tracer.start_span('restart', child_of=span)
     try:
