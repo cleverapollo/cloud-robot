@@ -189,7 +189,13 @@ def _quiesce_vm(vm_id: int, span: Span):
 
             # Email the user
             child_span = opentracing.tracer.start_span('send_email', child_of=span)
-            EmailNotifier.delete_schedule_success(vm)
+            try:
+                EmailNotifier.delete_schedule_success(vm)
+            except Exception:
+                logger.error(
+                    f'Failed to send delete schedule success email for VM #{vm["idVM"]}',
+                    exc_info=True,
+                )
             child_span.finish()
         else:
             logger.error(
@@ -199,4 +205,10 @@ def _quiesce_vm(vm_id: int, span: Span):
     else:
         logger.error(f'Failed to quiesce VM #{vm_id}')
         metrics.vm_quiesce_failure()
-        EmailNotifier.failure(vm)
+        try:
+            EmailNotifier.failure(vm)
+        except Exception:
+            logger.error(
+                f'Failed to send failure email for VM #{vm["idVM"]}',
+                exc_info=True,
+            )

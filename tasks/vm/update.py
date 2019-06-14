@@ -145,7 +145,14 @@ def _update_vm(vm_id: int, span: Span):
         logger.error(f'Failed to update VM #{vm_id}')
         metrics.vm_update_failure()
 
+        # Email the user
         child_span = opentracing.tracer.start_span('send_email', child_of=span)
-        EmailNotifier.failure(vm)
+        try:
+            EmailNotifier.failure(vm)
+        except Exception:
+            logger.error(
+                f'Failed to send failure email for VM #{vm["idVM"]}',
+                exc_info=True,
+            )
         child_span.finish()
         # There's no fail state here either

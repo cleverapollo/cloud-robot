@@ -137,5 +137,14 @@ def _scrub_vm(vm_id: int, span: Span):
     else:
         logger.error(f'Failed to scrub VM #{vm_id}')
         metrics.vm_scrub_failure()
-        EmailNotifier.failure(vm)
+        # Email the user
+        child_span = opentracing.tracer.start_span('send_email', child_of=span)
+        try:
+            EmailNotifier.failure(vm)
+        except Exception:
+            logger.error(
+                f'Failed to send failure email for VM #{vm["idVM"]}',
+                exc_info=True,
+            )
+        child_span.finish()
         # There's no fail state here either
