@@ -95,7 +95,7 @@ class Vrf(VrfBuilder):
         # Deploy the generated setconf to the router
         build_success = False
         child_span = opentracing.tracer.start_span('deploy_delete_setconf', child_of=span)
-        delete_success = Vrf.deploy(delete_conf, management_ip)
+        delete_success = Vrf.deploy(delete_conf, management_ip, True)
         child_span.finish()
         if delete_success:
             child_span = opentracing.tracer.start_span('deploy_build_setconf', child_of=span)
