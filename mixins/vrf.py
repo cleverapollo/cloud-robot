@@ -29,12 +29,12 @@ class VrfMixin:
     logger: logging.Logger
 
     @classmethod
-    def deploy(cls, setconf: str, management_ip: str, scrub: bool = False) -> bool:
+    def deploy(cls, setconf: str, management_ip: str, ignore_missing: bool = False) -> bool:
         """
         Deploy the generated configuration to the Router and return whether or not the deployment succeeded
         :param setconf: The configuration for the virtual router
         :param management_ip: The ip of the physical router to deploy to
-        :param scrub: Flag stating whether or not we are scrubbing the Router. Used to ignore statement not found issues
+        :param ignore_missing: Flag stating whether or not we should ignore the `statement not found` error
         :return: A flag stating whether or not the deployment was successful
         """
         cls.logger.debug(f'Attempting to connect to Router {management_ip} to deploy')
@@ -47,7 +47,7 @@ class VrfMixin:
                 with Config(router, mode='exclusive') as config:
                     try:
                         for cmd in setconf.split('\n'):
-                            config.load(cmd, format='set', merge=True, ignore_warning=scrub)
+                            config.load(cmd, format='set', merge=True, ignore_warning=ignore_missing)
                     except ConfigLoadError:
                         cls.logger.error(
                             f'Unable to load configuration changes onto Router {management_ip}',
@@ -65,7 +65,7 @@ class VrfMixin:
                         # Commit check either raises an error or returns True
                         config.commit_check()
                         cls.logger.debug(f'Commit check on Router {management_ip} successful, committing changes.')
-                        if not scrub:
+                        if not ignore_missing:
                             detail = config.commit(
                                 comment=commit_msg,
                             )
