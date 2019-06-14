@@ -8,7 +8,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
-from pprint import pformat
+from json import dumps
 from typing import Any, Dict
 # local
 import settings
@@ -34,8 +34,10 @@ class EmailNotifier:
         """
         Report any kind of failure to the NOC and developers emails
         """
+        logger = logging.getLogger('robot.email_notifier.failure')
+        logger.debug(f'Sending failure email for VM #{vm_data["idVM"]}')
         # Add the pretty printed data blob to the VM
-        vm_data['data'] = pformat(vm_data)
+        vm_data['data'] = dumps(vm_data, indent=2)
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/failure.j2').render(stage=STAGE, **vm_data)
         # Format the subject
@@ -52,6 +54,7 @@ class EmailNotifier:
         Given a VM's details, render and send a build success email
         """
         logger = logging.getLogger('robot.email_notifier.build_success')
+        logger.debug(f'Sending build success email for VM #{vm_data["idVM"]}')
         name = vm_data['name']
         # Check that the data contains an email
         email = vm_data.get('email', None)
@@ -70,6 +73,7 @@ class EmailNotifier:
         Given a VM's details, render and send a build failure email
         """
         logger = logging.getLogger('robot.email_notifier.build_failure')
+        logger.debug(f'Sending build failure email for VM #{vm_data["idVM"]}')
         name = vm_data['name']
         # Check that the data contains an email
         email = vm_data.get('email', None)
@@ -95,6 +99,7 @@ class EmailNotifier:
         Given a VM's details, render and send a delete_schedule success email
         """
         logger = logging.getLogger('robot.email_notifier.delete_schedule_success')
+        logger.debug(f'Sending delete scheduled email for VM #{vm_data["idVM"]}')
         name = vm_data['name']
         # Check that the data contains an email
         email = vm_data.get('email', None)
