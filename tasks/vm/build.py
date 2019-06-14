@@ -45,7 +45,13 @@ def _unresource(vm: Dict[str, Any], span: Span):
             f'Could not update VM #{vm_id} to state UNRESOURCED. Response: {response.content.decode()}.',
         )
     child_span = opentracing.tracer.start_span('send_email', child_of=span)
-    EmailNotifier.build_failure(vm)
+    try:
+        EmailNotifier.build_failure(vm)
+    except Exception:
+        logging.getLogger('robot.tasks.vm.build').error(
+            f'Failed to send build failure email for VM #{vm["idVM"]}',
+            exc_info=True,
+        )
     child_span.finish()
 
 
@@ -188,7 +194,13 @@ def _build_vm(vm_id: int, span: Span):
             )
 
         child_span = opentracing.tracer.start_span('send_email', child_of=span)
-        EmailNotifier.build_success(vm)
+        try:
+            EmailNotifier.build_success(vm)
+        except Exception:
+            logger.error(
+                f'Failed to send build success email for VM #{vm["idVM"]}',
+                exc_info=True,
+            )
         child_span.finish()
 
         # Calculate the total time it took to build the VM entirely
