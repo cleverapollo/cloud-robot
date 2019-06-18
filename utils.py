@@ -5,7 +5,8 @@ File containing some utility functions that wrap around various repeatedly used 
 import atexit
 import logging
 import subprocess
-from typing import Any, Dict, List, Optional
+from collections import deque
+from typing import Any, Deque, Dict, Optional
 # lib
 import jinja2
 from cloudcix.api import IAAS
@@ -121,7 +122,7 @@ def project_delete(project_id: int, span: Span):
 # However, we only replace the list and read method, since wrapping update and delete didn't really affect the code
 # make request -> check status code / call ro.update -> check flag
 
-def api_list(client: Client, params: Dict[str, Any], **kwargs) -> List[Any]:
+def api_list(client: Client, params: Dict[str, Any], **kwargs) -> Deque[Dict[str, Any]]:
     """
     Calls the list command on the supplied client, using the supplied parameters and kwargs and fetches all of the data
     that matches.
@@ -135,7 +136,11 @@ def api_list(client: Client, params: Dict[str, Any], **kwargs) -> List[Any]:
     logger.debug(
         f'Attempting to retrieve a list of {client_name} records with the following filters: {params}',
     )
+
+    # Set up necessary stuff for fetching all of the items for the params
     params['page'] = 0
+    objects: Deque[Dict[str, Any]] = deque()
+
     response = client.list(
         token=Token.get_instance().token,
         params=params,
@@ -146,18 +151,22 @@ def api_list(client: Client, params: Dict[str, Any], **kwargs) -> List[Any]:
             f'HTTP {response.status_code} error occurred when attempting to fetch {client_name} instances with '
             f'filters {params};\nResponse Text: {response.content.decode()}',
         )
-        return []
+        return deque()
     response_data = response.json()
-    records_found: int
-    if 'totalRecords' in response_data['_metadata']:
-        records_found = response_data['_metadata']['totalRecords']
-    else:
-        records_found = response_data['_metadata']['total_records']
-    logger.debug(
-        f'{client_name}.list retrieved {records_found} records with the following filters: {params}',
+    objects.extend(response_data['content'])
+
+    # Determine the total number of records to fetch
+    total_records: int
+    total_records = response_data['_metadata'].get(
+        'total_records',
+        response['_metadata']['totalRecords'],
     )
-    objs = response_data['content']
-    while len(objs) < records_found:
+    logger.debug(
+        f'{client_name}.list retrieved {total_records} records with the following filters: {params}',
+    )
+
+    # Go fetch the rest of the objects
+    while len(objects) < total_records:
         params['page'] += 1
         response = client.list(
             token=Token.get_instance().token,
@@ -169,9 +178,10 @@ def api_list(client: Client, params: Dict[str, Any], **kwargs) -> List[Any]:
                 f'HTTP {response.status_code} error occurred when attempting to fetch {client_name} instances with '
                 f'filters {params};\nResponse Text: {response.content.decode()}',
             )
-            return objs
-        objs.extend(response.json()['content'])
-    return objs
+            # Return what we have so fa
+            return objects
+        objects.extend(response.json()['content'])
+    return objects
 
 
 def api_read(client: Client, pk: int, **kwargs) -> Optional[Dict[str, Any]]:
