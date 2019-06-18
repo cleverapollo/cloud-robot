@@ -154,4 +154,18 @@ def _quiesce_vrf(vrf_id: int, span: Span):
     else:
         logger.error(f'Failed to quiesce VRF #{vrf_id}')
         metrics.vrf_quiesce_failure()
-        # There's no fail state here either
+
+        # Update state to UNRESOURCED in the API
+        child_span = opentracing.tracer.start_span('update_to_unresourced', child_of=span)
+        response = IAAS.vrf.partial_update(
+            token=Token.get_instance().token,
+            pk=vrf_id,
+            data={'state': state.UNRESOURCED},
+            span=child_span,
+        )
+        child_span.finish()
+
+        if response.status_code != 204:
+            logger.error(
+                f'Could not update VRF #{vrf_id} to state UNRESOURCED. Response: {response.content.decode()}.',
+            )
