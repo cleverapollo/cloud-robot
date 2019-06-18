@@ -3,7 +3,7 @@ new robot that uses a class, methods and instance variables to clean up the code
 """
 # stdlib
 import logging
-from typing import cast, Dict, Optional, Union
+from typing import cast, Optional, Union
 # lib
 from cloudcix.api import IAAS
 # local
@@ -16,7 +16,6 @@ import utils
 BUILD_FILTERS = {'state': 1}
 QUIESCE_FILTERS = {'state__in': [5, 8]}
 RESTART_FILTERS = {'state': 7}
-SCRUB_FILTERS: Dict[str, Union[str, int]] = {'state': 9}
 UPDATE_FILTERS = {'state': 10}
 
 
@@ -201,14 +200,12 @@ class Robot:
         Check the API for VRFs to scrub, and asyncronously scrub them
         :param timestamp: The timestamp to use when listing VRFs to delete
         """
-        # Add the timestamp to the filters
+        params = {'state': '9'}
         if timestamp is not None:
-            SCRUB_FILTERS['updated__lte'] = timestamp
-        else:
-            SCRUB_FILTERS.pop('updated__lte', None)
+            params['updated__lte'] = timestamp
 
         # Retrive the VRFs from the API
-        to_scrub = utils.api_list(IAAS.vrf, SCRUB_FILTERS)
+        to_scrub = utils.api_list(IAAS.vrf, params)
         if len(to_scrub) == 0:
             self.logger.debug('No VRFs found in the "Scrub" state')
             return
@@ -220,14 +217,12 @@ class Robot:
         Check the API for VMs to scrub, and asyncronously scrub them
         :param timestamp: The timestamp to use when listing VRFs to delete
         """
-        # Add the timestamp to the filters
+        params = {'state': '9'}
         if timestamp is not None:
-            SCRUB_FILTERS['updated__lte'] = timestamp
-        else:
-            SCRUB_FILTERS.pop('updated__lte', None)
+            params['updated__lte'] = timestamp
 
         # Retrive the VMs from the API
-        to_scrub = utils.api_list(IAAS.vm, SCRUB_FILTERS)
+        to_scrub = utils.api_list(IAAS.vm, params)
         if len(to_scrub) == 0:
             self.logger.debug('No VMs found in the "Scrub" state')
             return
