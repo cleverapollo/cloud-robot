@@ -3,12 +3,13 @@ Celery main runner
 """
 # stdlib
 import atexit
+import logging
 import time
 # lib
 import opentracing
 from celery import Celery
 from celery.schedules import crontab
-from celery.signals import task_prerun, task_postrun
+from celery.signals import task_failure, task_prerun, task_postrun
 from jaeger_client import Config
 # local
 import metrics
@@ -83,6 +84,18 @@ def sleep_to_flush_spans(*args, **kwargs):
     Flush spans by passing to IO loop, just to be safe
     """
     time.sleep(5)
+
+# Catch all uncaught errors
+@task_failure.connect
+def catch_uncaught_errors(task_id: str, exception: Exception, *args, **kwargs):
+    try:
+        # Raise here so we can use exc_info
+        raise exception
+    except Exception:
+        logging.getLogger('robot.celery_app').error(
+            'Uncaught error occurred in a task.',
+            exc_info=True,
+        )
 
 
 # Run the app if this is the main script
