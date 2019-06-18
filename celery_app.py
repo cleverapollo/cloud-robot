@@ -88,14 +88,10 @@ def sleep_to_flush_spans(*args, **kwargs):
 # Catch all uncaught errors
 @task_failure.connect
 def catch_uncaught_errors(task_id: str, exception: Exception, *args, **kwargs):
-    try:
-        # Raise here so we can use exc_info
-        raise exception
-    except Exception:
-        logging.getLogger('robot.celery_app').error(
-            'Uncaught error occurred in a task.',
-            exc_info=True,
-        )
+    logging.getLogger('robot.celery_app').error(
+        'Uncaught error occurred in a task.',
+        exc_info=exception,
+    )
 
 
 # Run the app if this is the main script
