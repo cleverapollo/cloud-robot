@@ -53,6 +53,9 @@ CLOUDCIX_INFLUX_PORT = 443
 # Hostname of influx endpoint
 CLOUDCIX_INFLUX_URL = 'influx.cloudcix.com'
 
+# Flag stating whether a region is in production or not
+IN_PRODUCTION = False  # Alpha should never have this set to True
+
 # IP Address of logstash for centralised logging
 LOGSTASH_IP = '2a02:2078:0:cb00::f12'
 

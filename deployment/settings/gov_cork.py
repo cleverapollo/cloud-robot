@@ -53,6 +53,9 @@ CLOUDCIX_INFLUX_URL = 'influx.cloudcix.com'
 # IP Address of logstash for centralised logging
 LOGSTASH_IP = '10.1.1.7'
 
+# Flag stating whether a region is in production or not
+IN_PRODUCTION = False
+
 # Password for connecting to routers and servers
 NETWORK_PASSWORD = 'C1xacc355'
 
