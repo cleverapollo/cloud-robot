@@ -4,8 +4,9 @@ Module containing all of the non beat celery tasks
 In this file, we define the robot based tasks that will be run by celery beat
 """
 # stdlib
-# from datetime import datetime, timedelta
+from datetime import datetime, timedelta
 # local
+import settings
 from celery_app import app
 from robot import Robot
 
@@ -26,7 +27,7 @@ def scrub():
     """
     # Add the Scrub timestamp when the region isn't Alpha
     timestamp = None
-    # if settings.REGION_NAME != 'alpha':
-    #     timestamp = (datetime.now() - timedelta(days=30)).isoformat()
+    if settings.IN_PRODUCION:
+        timestamp = (datetime.now() - timedelta(days=30)).isoformat()
     robot = Robot.get_instance()
     robot.scrub(timestamp)
