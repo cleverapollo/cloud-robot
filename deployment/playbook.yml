@@ -54,6 +54,17 @@
         network_mode: host
         env:
           COLLECTOR_HOST_PORT: "logstash.cloudcix.com:14267"
+          
+    - name: Deploy flower for monitoring Celery
+      docker_container:
+        name: "flower"
+        image: "gitlab.cloudcix.com:5005/dockerproxy/flower"
+        pull: true
+        state: started
+        restart_policy: "unless-stopped"
+        ports:
+          - "80:8080"
+        command: flower --port=8080 --broker=amqp://172.17.0.1:6572/
 
     - name: Deploy RabbitMQ for Celery
       docker_container:
