@@ -107,6 +107,9 @@ function Convert-WindowsImage
     .PARAMETER Edition
         The name or image index of the image to apply from the WIM.
 
+    .PARAMETER ActivationKey
+        AVMA(Automatic Virtual Machine Activation) Key to activate system
+
     .PARAMETER Passthru
         Specifies that the full path to the VHD(X) that is created should be
         returned on the pipeline.
@@ -224,6 +227,10 @@ function Convert-WindowsImage
             [string[]]
             [ValidateNotNullOrEmpty()]
             $Edition,
+
+            [Parameter(ParameterSetName="SRC")]
+            [string[]]
+            $ActivationKey,
 
             [Parameter(ParameterSetName="SRC")]
             [Alias("WorkDir")]
@@ -4309,15 +4316,26 @@ format fs=fat32 label="System"
                     # Commands used to execute soon after setup complete
                     Write-W2VInfo "Writing SetupComplete.cmd file"
                     $setup_complete = @"
-Netsh advfirewall firewall set rule groups="remote desktop" new enable=yes
-del C:\unattend.xml
-del C:\Windows\Panther\unattend.xml
-cscript //B %windir%/system32/slmgr.vbs /ipk C3RCX-M6NRP-6CXC9-TW2F2-4RHYD
-shutdown /r /t 60
+powershell %windir%\Setup\Scripts\PostInstallation.ps1; DEL %windir%\Setup\Scripts\PostInstallation.ps1
+"@
+                    $post_installation = @"
+# Enable Firewall Rule for Remote Desktop
+netsh advfirewall firewall set rule group="remote desktop" new enable=yes;
+# Enable Ping
+netsh advfirewall firewall add rule name="Allow incoming ping requests IPv4" dir=in action=allow protocol=icmpv4;
+# Remove unattend.xmls
+Remove-Item -Path "C:/unattend.xml" -Force;
+Remove-Item -Path "C:/Windows/Panther/unattend.xml" -Force;
+# AVMA(Automatic Virtual Machine Activation)
+cscript //B %windir%/system32/slmgr.vbs /ipk $ActivationKey;
+# Windows Updation
+while((Test-Connection -ComputerName google.com -Count 1 -Quiet) -eq 0) {Sleep -Seconds 2}
+usoclient startscan startdownload startinstall
 "@
                     $setup_complete_path = Join-Path $drive "Windows\Setup\Scripts"
                     New-Item -Path $setup_complete_path -ItemType "directory"
-                    $setup_complete | Out-File -FilePath (Join-Path $setup_complete_path "SetupComplete.cmd") -Encoding Unicode -Force
+                    $setup_complete | Out-File -FilePath (Join-Path $setup_complete_path "SetupComplete.cmd") -Encoding ascii -Force
+                    $post_installation | Out-File -FilePath (Join-Path $setup_complete_path "PostInstallation.ps1") -Encoding ascii -Force
 
                     Write-W2VInfo "Signing disk..."
                     #$flagText | Out-File -FilePath (Join-Path $drive "Convert-WindowsImageInfo.txt") -Encoding Unicode -Force
@@ -4701,18 +4719,14 @@ try {
     [string] $ISOPath = "Z:\HyperV\ISOs\SW_DVD9_Win_Svr_STD_Core_and_DataCtr_Core_2016_64Bit_English_-3_MLF_X21-30350.ISO"
     [ValidateNotNullorEmpty()]
     $edition = "Windows Server 2016 SERVERSTANDARD"
+    $activation_key = "C3RCX-M6NRP-6CXC9-TW2F2-4RHYD"
   }
   elseif($OSName -like "SW_DVD9_Windows_Svr_Std_and_DataCtr_2012_R2_64Bit_English_-4_MLF_X19-82891.ISO") {
     [ValidateScript({Test-Path $_ })]
     $ISOPath = "Z:\HyperV\ISOs\SW_DVD9_Windows_Svr_Std_and_DataCtr_2012_R2_64Bit_English_-4_MLF_X19-82891.ISO"
     [ValidateNotNullorEmpty()]
     $edition = "Windows Server 2012 R2 SERVERSTANDARD"
-  }
-  elseif($OSName -like "SW_DVD5_Windows_Svr_DC_EE_SE_Web_2008_R2_64Bit_English_w_SP1_MLF_X17-22580.ISO") {
-    [ValidateScript({Test-Path $_ })]
-    $ISOPath =  "Z:\HyperV\ISOs\SW_DVD5_Windows_Svr_DC_EE_SE_Web_2008_R2_64Bit_English_w_SP1_MLF_X17-22580.ISO"
-    [ValidateNotNullorEmpty()]
-    $edition = "Windows Server 2008 R2 SERVERSTANDARD"
+    $activation_key = "DBGBW-NPF86-BJVTX-K3WKJ-MTB6V"
   }
   else{
     Write-Error "Invalid OSName $OSName, Aborting the build."
@@ -4739,7 +4753,7 @@ catch {
 ######################################################
 Write-Host "Converting ISO into VHD"
 try {
-  Convert-WindowsImage -SourcePath $ISOPath -Edition $edition -UnattendPath $unattend -VHDPath $vhdPath -SizeBytes $size -VHDType "Dynamic" -VHDPartitionStyle $vhdPartitionStyle -VHDFormat "VHDX"
+  Convert-WindowsImage -SourcePath $ISOPath -Edition $edition -ActivationKey $activation_key -UnattendPath $unattend -VHDPath $vhdPath -SizeBytes $size -VHDType "Dynamic" -VHDPartitionStyle $vhdPartitionStyle -VHDFormat "VHDX"
 
   ######################################################
   ###           VM Creation and Configuration        ###
