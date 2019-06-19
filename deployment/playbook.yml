@@ -64,7 +64,7 @@
         restart_policy: "unless-stopped"
         ports:
           - "80:8080"
-        command: flower --port=8080 --broker=amqp://172.17.0.1:6572/
+        command: flower --port=8080 --broker=amqp://172.17.0.1:5672/
 
     - name: Deploy RabbitMQ for Celery
       docker_container:
