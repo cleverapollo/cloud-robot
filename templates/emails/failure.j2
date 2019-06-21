@@ -2,6 +2,7 @@
 {# A general failure email to be sent to the NOC #}
 {% block content %}
 <h2>An error occurred while processing VM #{{ idVM }}.</h1>
+<p>Task: <em>{{ task }}</em></p>
 <p>Below is the data that was involved in the error.</p>
 <hr />
 <pre><code>{{ data }}</code></pre>

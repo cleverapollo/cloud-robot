@@ -30,7 +30,7 @@ class EmailNotifier:
     # ############################################################## #
 
     @staticmethod
-    def failure(vm_data: Dict[str, Any]):
+    def failure(vm_data: Dict[str, Any], task: str):
         """
         Report any kind of failure to the NOC and developers emails
         """
@@ -39,7 +39,7 @@ class EmailNotifier:
         # Add the pretty printed data blob to the VM
         vm_data['data'] = dumps(vm_data, indent=2)
         # Render the email body
-        body = utils.JINJA_ENV.get_template('emails/failure.j2').render(stage=STAGE, **vm_data)
+        body = utils.JINJA_ENV.get_template('emails/failure.j2').render(stage=STAGE, task=task, **vm_data)
         # Format the subject
         subject = f'[CloudCIX] VM Failure Occurred!'
         EmailNotifier._compose_email('developers@cloudcix.com', subject, body)
@@ -87,7 +87,7 @@ class EmailNotifier:
         EmailNotifier._compose_email(email, subject, body)
 
         # Also run the generic failure method to pass failures to us
-        EmailNotifier.failure(vm_data)
+        EmailNotifier.failure(vm_data, 'build')
 
     # ############################################################## #
     #                             QUIESCE                            #

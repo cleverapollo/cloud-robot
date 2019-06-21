@@ -48,7 +48,7 @@ def _unresource(vm: Dict[str, Any], span: Span):
 
     child_span = opentracing.tracer.start_span('send_email', child_of=span)
     try:
-        EmailNotifier.failure(vm)
+        EmailNotifier.failure(vm, 'restart')
     except Exception:
         logger.error(
             f'Failed to send failure email for VM #{vm["idVM"]}',
