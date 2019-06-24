@@ -228,8 +228,10 @@ class Vrf(VrfMixin):
             }
             # Gather the required data for the vpns
             # Fetch the subnet
-            subnet = utils.api_read(IAAS.subnet, vpn['vpnLocalSubnet'], span=span)
-            vpn_data['vlan'] = subnet['vLAN']
+            vpn_subnet = utils.api_read(IAAS.subnet, vpn['vpnLocalSubnet'], span=span)
+            if vpn_subnet is None:
+                return None
+            vpn_data['vlan'] = vpn_subnet['vLAN']
             vpn_data['remote_subnet'] = IPNetwork(
                 f'{vpn["vpnRemoteSubnetIP"]}/{vpn["vpnRemoteSubnetMask"]}',
             ).cidr

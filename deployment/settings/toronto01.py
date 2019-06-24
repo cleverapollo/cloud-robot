@@ -12,6 +12,9 @@ CLOUDCIX_API_PASSWORD = 'T0roN7@C1x'
 # Name of region (used to tag data sent to influx)
 REGION_NAME = 'toronto01'
 
+# Flag stating whether a region is in production or not
+IN_PRODUCTION = False
+
 # Webmail settings
 # Region's email id
 CLOUDCIX_EMAIL_USERNAME = 'CloudCIX Toronto01 <toronto01@cloudcix.net>'

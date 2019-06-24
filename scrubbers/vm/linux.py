@@ -268,8 +268,15 @@ class Linux(LinuxMixin):
             - If we make it through the entire loop, return True
         """
         vm_id = vm_data['idVM']
-        # Get the id of the VM's private IP Address
-        priv_ip = utils.api_list(IAAS.ipaddress, {'vm': vm_id, 'fip_id__isnull': False}, span=span)[0]
+        # Get the details of the VM's private IP by getting all IPs associated with the VM and finding the private one
+        priv_ip: Optional[Dict[str, Any]] = None
+        for ip_data in utils.api_list(IAAS.ipaddress, {'vm': vm_id}, span=span):
+            if IPAddress(ip_data['address']).is_private():
+                priv_ip = ip_data
+                break
+        if priv_ip is None:
+            Linux.logger.error(f'Unable to find private IP Address for VM #{vm_data["idVM"]}.')
+            return False
 
         # Find the other private ip addresses in the subnet
         params = {

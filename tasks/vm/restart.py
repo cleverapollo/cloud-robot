@@ -1,5 +1,6 @@
 # stdlib
 import logging
+from typing import Any, Dict
 # lib
 import opentracing
 from cloudcix.api import IAAS
@@ -19,6 +20,41 @@ from restarters.vm import (
 __all__ = [
     'restart_vm',
 ]
+
+
+def _unresource(vm: Dict[str, Any], span: Span):
+    """
+    unresource the specified vm because something went wrong
+    """
+    logger = logging.getLogger('robot.tasks.vm.restart')
+    vm_id = vm['idVM']
+    # Send failure metric
+    metrics.vm_restart_failure()
+
+    # Update state to UNRESOURCED in the API
+    child_span = opentracing.tracer.start_span('update_to_unresourced', child_of=span)
+    response = IAAS.vm.partial_update(
+        token=Token.get_instance().token,
+        pk=vm_id,
+        data={'state': state.UNRESOURCED},
+        span=child_span,
+    )
+    child_span.finish()
+
+    if response.status_code != 204:
+        logger.error(
+            f'Could not update VM #{vm_id} to state UNRESOURCED. Response: {response.content.decode()}.',
+        )
+
+    child_span = opentracing.tracer.start_span('send_email', child_of=span)
+    try:
+        EmailNotifier.failure(vm, 'restart')
+    except Exception:
+        logger.error(
+            f'Failed to send failure email for VM #{vm["idVM"]}',
+            exc_info=True,
+        )
+    child_span.finish()
 
 
 @app.task
@@ -75,7 +111,7 @@ def _restart_vm(vm_id: int, span: Span):
     # Ensure the update was successful
     if response.status_code != 204:
         logger.error(
-            f'Could not update VM #{vm_id} to the necessary RESTARTING. Response: {response.content.decode()}.',
+            f'Could not update VM #{vm_id} to RESTARTING. Response: {response.content.decode()}.',
         )
         span.set_tag('return_reason', 'could_not_update_state')
         metrics.vm_restart_failure()
@@ -92,6 +128,7 @@ def _restart_vm(vm_id: int, span: Span):
             f'Could not restart VM #{vm_id} as its Image was not readable',
         )
         span.set_tag('return_reason', 'image_not_read')
+        _unresource(vm, span)
         return
 
     hypervisor = image['idHypervisor']
@@ -135,22 +172,6 @@ def _restart_vm(vm_id: int, span: Span):
             logger.error(
                 f'Could not update VM #{vm_id} to state RUNNING. Response: {response.content.decode()}.',
             )
-
-        # Email the user
-        child_span = opentracing.tracer.start_span('send_email', child_of=span)
-        child_span.finish()
     else:
         logger.error(f'Failed to restart VM #{vm_id}')
-        metrics.vm_restart_failure()
-
-        # Email the user
-        child_span = opentracing.tracer.start_span('send_email', child_of=span)
-        try:
-            EmailNotifier.failure(vm)
-        except Exception:
-            logger.error(
-                f'Failed to send failure email for VM #{vm["idVM"]}',
-                exc_info=True,
-            )
-        child_span.finish()
-        # There's no fail state here either
+        _unresource(vm, span)

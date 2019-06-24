@@ -16,6 +16,9 @@ REGION_NAME = 'cork01'
 # Region's email id
 CLOUDCIX_EMAIL_USERNAME = 'CloudCIX Cork01 <cork01@cloudcix.net>'
 
+# Flag stating whether a region is in production or not
+IN_PRODUCTION = True
+
 # Configuration settings
 # KVM path
 KVM_HOST_NETWORK_DRIVE_PATH = '/var/lib/libvirt/ISOs/KVM'

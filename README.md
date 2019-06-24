@@ -21,3 +21,8 @@ Robot itself is split into two major parts, both run by celery;
 Some things to take note of regarding our set up for Celery;
 
 - `-Ofair` causes celery to distribute tasks to workers that are ready, not as soon as they are received. This means workers that get short running tasks can handle the next task as soon as they are done, instead of piling work onto a worker that is running a long job [see here](https://medium.com/@taylorhughes/three-quick-tips-from-two-years-with-celery-c05ff9d7f9eb)
+
+## Flower
+Accessing the IP of the Robot host in the browser will give you access to the Flower instance for the region.
+
+This provides a web UI for monitoring the tasks, queues and workers in Celery for the region.
