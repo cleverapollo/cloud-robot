@@ -81,7 +81,7 @@ class Vrf(VrfMixin):
 
         # Deploy the generated setconf to the router
         child_span = opentracing.tracer.start_span('deploy_setconf', child_of=span)
-        success = Vrf.deploy(conf, management_ip)
+        success = Vrf.deploy(conf, management_ip, True)
         child_span.finish()
         return success
 
