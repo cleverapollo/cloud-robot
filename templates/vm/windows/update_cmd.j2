@@ -21,7 +21,7 @@ try {
 
   {# 2. Updates the processor/cpu count and Ram sizes even if changed or not #}
   Set-VMProcessor $VMName -Count {{ cpu }}
-  Set-VMMemory $VMName -DynamicMemoryEnabled $true -MinimumBytes 64MB -StartupBytes {{ ram }}MB -MaximumBytes {{ ram }}MB
+  Set-VMMemory $VMName -DynamicMemoryEnabled $false -StartupBytes {{ ram }}MB
 
   {# 3. Set the vLan #}
   Set-VMNetworkAdapterVlan -VMName {{ vm_identifier }} -Access -VlanId {{ vlan }}
