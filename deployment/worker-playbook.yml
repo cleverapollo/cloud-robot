@@ -72,6 +72,6 @@
         restart_policy: "no"
         env:
           ROBOT_ENV: "{{ env }}"
-        command: "celery -A celery_app -l info worker -Q celery -O fair -n {{ inventory_hostname }}"
+        command: "celery -A celery_app -l info worker -Q celery -O fair -n {{ inventory_hostname }} --concurrency 25"
         volumes:
           - "/mnt:/mnt"
