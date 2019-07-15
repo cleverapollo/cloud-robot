@@ -14,7 +14,7 @@ RUN pip3 install -r deployment/requirements.txt
 RUN mv deployment/supervisord.conf /etc
 
 # Install the Robot ssh key
-install -o $(id -u) -g $(id -g) -m 600 deployment/ssh-key ~/.ssh/id_rsa
+RUN install -o $(id -u) -g $(id -g) -m 600 deployment/ssh-key ~/.ssh/id_rsa
 
 # Set up ENV vars for the Robot script
 ENV CLOUDCIX_SETTINGS_MODULE settings
