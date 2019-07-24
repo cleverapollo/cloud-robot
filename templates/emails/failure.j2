@@ -1,7 +1,9 @@
 {% extends "emails/base.j2" %}
 {# A general failure email to be sent to the NOC #}
+
+{% block title %}An error occurred while processing VM #{{ idVM }}.{% endblock %}
+
 {% block content %}
-<h2>An error occurred while processing VM #{{ idVM }}.</h1>
 <p>Task: <em>{{ task }}</em></p>
 <p>Below is the data that was involved in the error.</p>
 <hr />
