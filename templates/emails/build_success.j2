@@ -1,6 +1,8 @@
 {% extends "emails/base.j2" %}
+
+{% block title %}Your VM "{{ name }}" has been successfully built!{% endblock %}
+
 {% block content %}
-<h2>Your VM "{{ name }}" has been successfully built!</h1>
 <p>Your credentials are provided below.</p>
 <hr />
 <table role="presentation" border="0" cellpadding="0" cellspacing="0">

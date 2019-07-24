@@ -299,7 +299,6 @@
     </style>
   </head>
   <body class="">
-    <span class="preheader">Your mail reader does not support the report format. This is an HTML email.</span>
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" class="body">
       <tr>
         <td>&nbsp;</td>
@@ -314,6 +313,7 @@
                         <a href="https://www.cloudcix.com" target="_blank">
                           <img src="cid:cloudcix_logo.bmp" alt="CloudCIX Logo" width="100" height="50" />
                         </a>
+                        <h2>{% block title %}{% endblock %}</h2>
                         {% block content %}{% endblock %}
                     </tr>
                   </table>
