@@ -46,8 +46,7 @@ class VrfMixin:
                 cls.logger.debug(f'Successfully connected to Router {management_ip}, now attempting to load config')
                 with Config(router, mode='exclusive') as config:
                     try:
-                        for cmd in setconf.split('\n'):
-                            config.load(cmd, format='set', merge=True, ignore_warning=ignore_missing)
+                        config.load(setconf, format='set', merge=True, ignore_warning=ignore_missing)
                     except ConfigLoadError:
                         cls.logger.error(
                             f'Unable to load configuration changes onto Router {management_ip}',

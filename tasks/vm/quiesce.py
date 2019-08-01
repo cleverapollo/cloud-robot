@@ -216,7 +216,7 @@ def _quiesce_vm(vm_id: int, span: Span):
                     f'Could not update VM #{vm_id} to state SCRUB_QUEUE. Response: {response.content.decode()}.',
                 )
             # Add a deletion date in the format 'Monday September 30, 2013'
-            vm['deletion_date'] = (datetime.now().date() + timedelta(days=30)).strftime('%A %B %d, %Y')
+            vm['deletion_date'] = (datetime.now().date() + timedelta(days=7)).strftime('%A %B %d, %Y')
 
             # Email the user
             child_span = opentracing.tracer.start_span('send_email', child_of=span)

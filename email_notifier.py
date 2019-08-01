@@ -128,7 +128,6 @@ class EmailNotifier:
         message['To'] = email
         message['From'] = settings.CLOUDCIX_EMAIL_USERNAME
         message['Reply-To'] = 'CloudCIX <no-reply@cloudcix.net>'
-        message.preamble = 'Your mail reader does not support the report format. This is an HTML email.'
 
         # Attach the body of the email
         message.attach(MIMEText(body, 'html'))

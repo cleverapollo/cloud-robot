@@ -1,6 +1,8 @@
 {% extends "emails/base.j2" %}
+
+{% block title %}Your VM "{{ name }}" has been scheduled for deletion.{% endblock %}
+
 {% block content %}
-<h2>Your VM "{{ name }}" has been scheduled for deletion.</h1>
 <p>This VM will be deleted on;</p>
 <hr />
 <table role="presentation" border="0" cellpadding="0" cellspacing="0">

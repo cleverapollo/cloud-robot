@@ -28,6 +28,6 @@ def scrub():
     # Add the Scrub timestamp when the region isn't Alpha
     timestamp = None
     if settings.IN_PRODUCTION:
-        timestamp = (datetime.now() - timedelta(days=30)).isoformat()
+        timestamp = (datetime.now() - timedelta(days=7)).isoformat()
     robot = Robot.get_instance()
     robot.scrub(timestamp)
