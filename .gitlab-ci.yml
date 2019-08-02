@@ -95,6 +95,16 @@ build_cork01:
   only:
   - stable
 
+build_nti-cork01:
+  stage: build
+  tags:
+  - docker-build
+  script:
+  - docker build -f deployment/dockerfiles/nti-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/nti-cork01:latest --no-cache .
+  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/nti-cork01:latest
+  only:
+  - stable
+
 ###############################################################################
 #                          Production Build Jobs End                          #
 ###############################################################################
