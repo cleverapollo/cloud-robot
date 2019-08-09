@@ -217,35 +217,14 @@ class Vrf(VrfMixin):
         # Finally, get the VPNs for the Project
         vpns: Deque[Dict[str, Any]] = deque()
         for vpn in utils.api_list(IAAS.vpn_tunnel, {'vrf': vrf_id}, span=span):
-            vpn_data = {
-                'vlan': '',
-                'site_to_site': vpn['siteToSite'],
-                'ike': '',
-                'pre_shared_key': vpn['preSharedKey'],
-                'remote_ip_address': vpn['ipRemoteAddress'],
-                'ipsec': '',
-                'remote_subnet': '',
-            }
-            # Gather the required data for the vpns
-            # Fetch the subnet
-            vpn_subnet = utils.api_read(IAAS.subnet, vpn['vpnLocalSubnet'], span=span)
-            if vpn_subnet is None:
-                return None
-            vpn_data['vlan'] = vpn_subnet['vLAN']
-            vpn_data['remote_subnet'] = IPNetwork(
-                f'{vpn["vpnRemoteSubnetIP"]}/{vpn["vpnRemoteSubnetMask"]}',
-            ).cidr
-            # Fetch the IKE name
-            ike = utils.api_read(IAAS.ike, vpn['ike_id'], span=span)
-            if ike is None:
-                return None
-            vpn['ike'] = ike['name']
-            # Fetch the IPSec Name
-            ipsec = utils.api_read(IAAS.ipsec, vpn['ipsec_id'], span=span)
-            if ipsec is None:
-                return None
-            vpn['ipsec'] = ipsec['name']
-            vpns.append(vpn)
+            vpns.append(
+                {
+                    'vlan': dict(vpn['vpnLocalSubnetDict'])['vLAN'],  # dict(OrderedDict)
+                    'ike': dict(vpn['ike']),
+                    'ipsec': dict(vpn['ipsec']),
+                    'remote_subnet': IPNetwork(f'{vpn["vpnRemoteSubnetIP"]}/{vpn["vpnRemoteSubnetMask"]}').cidr,
+                },
+            )
         data['vpns'] = vpns
 
         return data
