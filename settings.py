@@ -77,4 +77,7 @@ OS_TEMPLATE_MAP = {
         3: '2016',
         13: '2019',
     },
+    'Phantom': {
+        14: 'phantom',
+    },
 }

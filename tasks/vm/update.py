@@ -140,6 +140,9 @@ def _update_vm(vm_id: int, span: Span):
         elif hypervisor == 2:  # KVM -> Linux
             success = LinuxVmUpdater.update(vm, child_span)
             child_span.set_tag('hypervisor', 'linux')
+        elif hypervisor == 3:  # Phantom
+            success = True
+            child_span.set_tag('hypervisor', 'phantom')
         else:
             logger.error(
                 f'Unsupported Hypervisor ID #{hypervisor} for VM #{vm_id}',
@@ -174,10 +177,6 @@ def _update_vm(vm_id: int, span: Span):
             metrics.vm_update_failure()
             return
         metrics.vm_update_success()
-
-        # Email the user
-        child_span = opentracing.tracer.start_span('send_email', child_of=span)
-        child_span.finish()
     else:
         logger.error(f'Failed to update VM #{vm_id}')
         _unresource(vm, span)
