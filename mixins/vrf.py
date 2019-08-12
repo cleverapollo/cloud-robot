@@ -6,13 +6,13 @@ methods included;
 """
 # stdlib
 import logging
-from time import asctime
+from time import asctime, sleep
 from typing import Dict, Optional, Union
 # lib
 from cloudcix.api import IAAS
 from jaeger_client import Span
 from jnpr.junos import Device
-from jnpr.junos.exception import CommitError, ConfigLoadError, ConnectError
+from jnpr.junos.exception import CommitError, ConfigLoadError, ConnectError, LockError
 from jnpr.junos.utils.config import Config
 from netaddr import IPAddress
 # local
@@ -44,45 +44,69 @@ class VrfMixin:
             with Device(host=management_ip, user='robot', port=22) as router:
                 router.timeout = 2 * 60  # 2 minute timeout
                 cls.logger.debug(f'Successfully connected to Router {management_ip}, now attempting to load config')
-                with Config(router, mode='exclusive') as config:
+
+                for attempt in range(3):
                     try:
-                        config.load(setconf, format='set', merge=True, ignore_warning=ignore_missing)
-                    except ConfigLoadError:
-                        cls.logger.error(
-                            f'Unable to load configuration changes onto Router {management_ip}',
+                        return cls._configure(setconf, management_ip, router, ignore_missing)
+                    except LockError:
+                        cls.logger.warning(
+                            f'Unable to lock config on Router {management_ip}. (Attempt #{attempt + 1} / 3)',
                             exc_info=True,
                         )
-                        return False
-
-                    # Attempt to commit
-                    try:
-                        commit_msg = f'Loaded by robot at {asctime()}.'
-                        cls.logger.debug(
-                            f'All commands successfully loaded onto Router {management_ip}, '
-                            'now checking the commit status',
-                        )
-                        # Commit check either raises an error or returns True
-                        config.commit_check()
-                        cls.logger.debug(f'Commit check on Router {management_ip} successful, committing changes.')
-                        if not ignore_missing:
-                            detail = config.commit(
-                                comment=commit_msg,
-                            )
-                        else:
-                            detail = config.commit(
-                                comment=commit_msg,
-                                ignore_warning=['statement not found'],
-                            )
-                        cls.logger.debug(f'Response from commit on Router {management_ip}\n{detail}')
-                    except CommitError:
-                        cls.logger.error(f'Unable to commit changes onto Router {management_ip}', exc_info=True)
-                        return False
-
-                cls.logger.debug(f'Changes successfully committed onto Router {management_ip}')
-                return True
+                        sleep(45)
+                cls.logger.debug(
+                    f'3 attempts to lock Router {management_ip} have failed. This request is now considered a failure.',
+                )
+                return False
         except ConnectError:
             cls.logger.error(f'Unable to connect to Router {management_ip}', exc_info=True)
             return False
+
+    @classmethod
+    def _configure(cls, setconf: str, management_ip: str, router: Device, ignore_missing: bool) -> bool:
+        """
+        Open the configuration for the router and attempt to deploy to the router.
+        This has been turned into a method to make it easier to repeat this function multiple times.
+        :param setconf: The configuration for the virtual router
+        :param management_ip: The ip of the physical router to deploy to
+        :param router: A Device object representing the Router being configured.
+        :param ignore_missing: Flag stating whether or not we should ignore the `statement not found` error
+        :return: A flag stating whether or not the deployment was successful
+        """
+        with Config(router, mode='exclusive') as config:
+            try:
+                config.load(setconf, format='set', merge=True, ignore_warning=ignore_missing)
+            except ConfigLoadError:
+                cls.logger.error(
+                    f'Unable to load configuration changes onto Router {management_ip}',
+                    exc_info=True,
+                )
+                return False
+
+            # Attempt to commit
+            try:
+                commit_msg = f'Loaded by robot at {asctime()}.'
+                cls.logger.debug(
+                    f'All commands successfully loaded onto Router {management_ip}, '
+                    'now checking the commit status',
+                )
+                # Commit check either raises an error or returns True
+                config.commit_check()
+                cls.logger.debug(f'Commit check on Router {management_ip} successful, committing changes.')
+                if not ignore_missing:
+                    detail = config.commit(
+                        comment=commit_msg,
+                    )
+                else:
+                    detail = config.commit(
+                        comment=commit_msg,
+                        ignore_warning=['statement not found'],
+                    )
+                cls.logger.debug(f'Response from commit on Router {management_ip}\n{detail}')
+            except CommitError:
+                cls.logger.error(f'Unable to commit changes onto Router {management_ip}', exc_info=True)
+                return False
+            return True
 
     @classmethod
     def _get_router_data(cls, router_id: int, span: Span) -> RouterData:
