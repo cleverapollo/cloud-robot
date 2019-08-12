@@ -220,8 +220,8 @@ class Vrf(VrfMixin):
             vpns.append(
                 {
                     'vlan': dict(vpn['vpnLocalSubnetDict'])['vLAN'],  # dict(OrderedDict)
-                    'ike': dict(vpn['ike']),
-                    'ipsec': dict(vpn['ipsec']),
+                    'ike': dict(vpn['ike_data']),
+                    'ipsec': dict(vpn['ipsec_data']),
                     'remote_subnet': IPNetwork(f'{vpn["vpnRemoteSubnetIP"]}/{vpn["vpnRemoteSubnetMask"]}').cidr,
                 },
             )
