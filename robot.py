@@ -32,7 +32,7 @@ class Robot:
     # vm dispatcher
     vm_dispatcher: dispatchers.Vm
     # vrf dispatcher
-    vrf_dispatcher: Union[dispatchers.DummyVrf, dispatchers.Vrf]
+    vrf_dispatcher: Union[dispatchers.PhantomVrf, dispatchers.Vrf]
     # instance
     __instance = None
 
@@ -47,7 +47,7 @@ class Robot:
         if settings.VRFS_ENABLED:
             self.vrf_dispatcher = dispatchers.Vrf(settings.NETWORK_PASSWORD)
         else:
-            self.vrf_dispatcher = dispatchers.DummyVrf()
+            self.vrf_dispatcher = dispatchers.PhantomVrf()
         # Save the instance
         Robot.__instance = self
 

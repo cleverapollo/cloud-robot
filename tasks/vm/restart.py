@@ -143,6 +143,9 @@ def _restart_vm(vm_id: int, span: Span):
         elif hypervisor == 2:  # KVM -> Linux
             success = LinuxVmRestarter.restart(vm, child_span)
             child_span.set_tag('hypervisor', 'linux')
+        elif hypervisor == 3:  # Phantom
+            success = True
+            child_span.set_tag('hypervisor', 'phantom')
         else:
             logger.error(
                 f'Unsupported Hypervisor ID #{hypervisor} for VM #{vm_id}',

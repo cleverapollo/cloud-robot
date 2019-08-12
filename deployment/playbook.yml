@@ -54,7 +54,7 @@
         network_mode: host
         env:
           COLLECTOR_HOST_PORT: "logstash.cloudcix.com:14267"
-          
+
     - name: Deploy flower for monitoring Celery
       docker_container:
         name: "flower"
