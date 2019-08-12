@@ -10,9 +10,9 @@ import utils
 from cloudcix_token import Token
 
 
-class DummyVrf:
+class PhantomVrf:
     """
-    A dummy VRF dispatcher that just updates the state of the objects to whatever state they should end up.
+    A phantom VRF dispatcher that just updates the state of the objects to whatever state they should end up.
     Used in systems where Robot does not / cannot build VRFs
     """
 
@@ -22,7 +22,20 @@ class DummyVrf:
         in the assigned physical Router.
         :param vrf: The VRF data from the CloudCIX API
         """
-        logger = logging.getLogger('robot.dispatchers.dummy_vrf.build')
+        logger = logging.getLogger('robot.dispatchers.phantom_vrf.build')
+        logger.info(f'Updating VRF #{vrf_id} to state BUILDING')
+        # Change the state to BUILDING and report a success to influx
+        response = IAAS.vrf.update(
+            token=Token.get_instance().token,
+            pk=vrf_id,
+            data={'state': state.BUILDING},
+        )
+        if response.status_code != 204:
+            logger.error(
+                f'HTTP {response.status_code} error occurred when updating VRF #{vrf_id} to state BUILDING\n'
+                f'Response Text: {response.content.decode()}',
+            )
+            metrics.vrf_build_failure()
         logger.info(f'Updating VRF #{vrf_id} to state RUNNING')
         # Change the state to RUNNING and report a success to influx
         response = IAAS.vrf.update(
@@ -45,13 +58,25 @@ class DummyVrf:
         in the assigned physical Router.
         :param vrf: The VRF data from the CloudCIX API
         """
-        logger = logging.getLogger('robot.dispatchers.dummy_vrf.quiesce')
-        logger.info(f'Updating VRF #{vrf_id} to state QUIESCED')
+        logger = logging.getLogger('robot.dispatchers.phantom_vrf.quiesce')
         # In order to change the state to the correct value we need to read the VRF and check its state
         vrf = utils.api_read(IAAS.vrf, vrf_id)
         if vrf is None:
             return
         if vrf['state'] == state.QUIESCE:
+            logger.info(f'Updating VRF #{vrf_id} to state QUIESCING')
+            response = IAAS.vrf.partial_update(
+                token=Token.get_instance().token,
+                pk=vrf_id,
+                data={'state': state.QUIESCING},
+            )
+            if response.status_code != 204:
+                logger.error(
+                    f'Could not update VRF #{vrf_id} to state QUIESCING. Response: {response.content.decode()}.',
+                )
+                metrics.vrf_quiesce_failure()
+                return
+            logger.info(f'Updating VRF #{vrf_id} to state QUIESCED')
             response = IAAS.vrf.partial_update(
                 token=Token.get_instance().token,
                 pk=vrf_id,
@@ -65,6 +90,19 @@ class DummyVrf:
                 return
             metrics.vrf_quiesce_success()
         elif vrf['state'] == state.SCRUB:
+            logger.info(f'Updating VRF #{vrf_id} to state SCRUB_PREP')
+            response = IAAS.vrf.partial_update(
+                token=Token.get_instance().token,
+                pk=vrf_id,
+                data={'state': state.SCRUB_PREP},
+            )
+            if response.status_code != 204:
+                logger.error(
+                    f'Could not update VRF #{vrf_id} to state SCRUB_PREP. Response: {response.content.decode()}.',
+                )
+                metrics.vrf_quiesce_failure()
+                return
+            logger.info(f'Updating VRF #{vrf_id} to state SCRUB_QUEUE')
             response = IAAS.vrf.partial_update(
                 token=Token.get_instance().token,
                 pk=vrf_id,
@@ -90,7 +128,19 @@ class DummyVrf:
         in the assigned physical Router.
         :param vrf: The VRF data from the CloudCIX API
         """
-        logger = logging.getLogger('robot.dispatchers.dummy_vrf.restart')
+        logger = logging.getLogger('robot.dispatchers.phantom_vrf.restart')
+        logger.info(f'Updating VRF #{vrf_id} to state RESTARTING')
+        response = IAAS.vrf.update(
+            token=Token.get_instance().token,
+            pk=vrf_id,
+            data={'state': state.RESTARTING},
+        )
+        if response.status_code != 204:
+            logger.error(
+                f'HTTP {response.status_code} error occurred when updating VRF #{vrf_id} to state RESTARTING\n'
+                f'Response Text: {response.content.decode()}',
+            )
+            metrics.vrf_restart_failure()
         logger.info(f'Updating VRF #{vrf_id} to state RUNNING')
         # Change the state of the VRF to RUNNING and report a success to influx
         response = IAAS.vrf.update(
@@ -113,29 +163,16 @@ class DummyVrf:
         in the assigned physical Router.
         :param vrf: The VRF data from the CloudCIX API
         """
-        logger = logging.getLogger('robot.dispatchers.dummy_vrf.scrub')
-        logger.info(f'Updating VRF #{vrf_id} to state SCRUB_QUEUE')
-        # Change the state of the VRF to SCRUB_QUEUE and report a success to influx
-        response = IAAS.vrf.update(
-            token=Token.get_instance().token,
-            pk=vrf_id,
-            data={'state': state.SCRUB_QUEUE},
-        )
-        if response.status_code != 204:
-            logger.error(
-                f'HTTP {response.status_code} error occurred when updating VRF #{vrf_id} to state SCRUB_QUEUE\n'
-                f'Response Text: {response.content.decode()}',
-            )
-            metrics.vrf_scrub_failure()
-        else:
-            metrics.vrf_scrub_success()
-            # In order to check the project for deletion, we need to read the vrf and get the project id from it
-            vrf = utils.api_read(IAAS.vrf, vrf_id)
-            if vrf is None:
-                return
-            span = opentracing.tracer.start_span('dummy_vrf_project_delete')
-            utils.project_delete(vrf['idProject'], span)
-            span.finish()
+        logger = logging.getLogger('robot.dispatchers.phantom_vrf.scrub')
+        logger.debug(f'Scrubbing phantom VRF #{vrf_id}')
+        # In order to check the project for deletion, we need to read the vrf and get the project id from it
+        vrf = utils.api_read(IAAS.vrf, vrf_id)
+        if vrf is None:
+            return
+        span = opentracing.tracer.start_span('phantom_vrf_project_delete')
+        utils.project_delete(vrf['idProject'], span)
+        span.finish()
+        metrics.vrf_scrub_success()
 
     def update(self, vrf_id: int):
         """
@@ -143,9 +180,21 @@ class DummyVrf:
         in the assigned physical Router.
         :param vrf: The VRF data from the CloudCIX API
         """
-        logger = logging.getLogger('robot.dispatchers.dummy_vrf.update')
-        logger.info(f'Updating VRF #{vrf_id} to state RUNNING')
+        logger = logging.getLogger('robot.dispatchers.phantom_vrf.update')
+        logger.info(f'Updating VRF #{vrf_id} to state UPDATING')
+        response = IAAS.vrf.update(
+            token=Token.get_instance().token,
+            pk=vrf_id,
+            data={'state': state.UPDATING},
+        )
+        if response.status_code != 204:
+            logger.error(
+                f'HTTP {response.status_code} error occurred when updating VRF #{vrf_id} to state UPDATING\n'
+                f'Response Text: {response.content.decode()}',
+            )
+            metrics.vrf_update_failure()
         # Change the state of the VRF to RUNNING and report a success to influx
+        logger.info(f'Updating VRF #{vrf_id} to state RUNNING')
         response = IAAS.vrf.update(
             token=Token.get_instance().token,
             pk=vrf_id,

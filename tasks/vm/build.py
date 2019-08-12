@@ -138,6 +138,7 @@ def _build_vm(vm_id: int, span: Span):
 
     # Call the appropriate builder
     success: bool = False
+    send_email = True
 
     # Read the VM image to get the hypervisor id
     child_span = opentracing.tracer.start_span('read_vm_image', child_of=span)
@@ -161,6 +162,10 @@ def _build_vm(vm_id: int, span: Span):
         elif hypervisor == 2:  # KVM -> Linux
             success = LinuxVmBuilder.build(vm, image, child_span)
             child_span.set_tag('hypervisor', 'linux')
+        elif hypervisor == 3:  # Phantom
+            success = True
+            send_email = False
+            child_span.set_tag('hypervisor', 'phantom')
         else:
             logger.error(
                 f'Unsupported Hypervisor ID #{hypervisor} for VM #{vm_id}',
@@ -193,15 +198,16 @@ def _build_vm(vm_id: int, span: Span):
                 f'Could not update VM #{vm_id} to state RUNNING. Response: {response.content.decode()}.',
             )
 
-        child_span = opentracing.tracer.start_span('send_email', child_of=span)
-        try:
-            EmailNotifier.build_success(vm)
-        except Exception:
-            logger.error(
-                f'Failed to send build success email for VM #{vm["idVM"]}',
-                exc_info=True,
-            )
-        child_span.finish()
+        if send_email:
+            child_span = opentracing.tracer.start_span('send_email', child_of=span)
+            try:
+                EmailNotifier.build_success(vm)
+            except Exception:
+                logger.error(
+                    f'Failed to send build success email for VM #{vm["idVM"]}',
+                    exc_info=True,
+                )
+            child_span.finish()
 
         # Calculate the total time it took to build the VM entirely
         # uctnow - vm created time
