@@ -219,9 +219,10 @@ class Vrf(VrfMixin):
         for vpn in utils.api_list(IAAS.vpn_tunnel, {'vrf': vrf_id}, span=span):
             vpns.append(
                 {
-                    'vlan': dict(vpn['vpnLocalSubnetDict'])['vLAN'],  # dict(OrderedDict)
-                    'ike': dict(vpn['ike_data']),
-                    'ipsec': dict(vpn['ipsec_data']),
+                    'vlan': vpn['vpnLocalSubnetDict']['vLAN'],
+                    'local_subnet': IPNetwork(vpn['vpnLocalSubnetDict']['addressRange']).cidr,
+                    'ike': vpn['ike_data'],
+                    'ipsec': vpn['ipsec_data'],
                     'remote_subnet': IPNetwork(f'{vpn["vpnRemoteSubnetIP"]}/{vpn["vpnRemoteSubnetMask"]}').cidr,
                 },
             )
