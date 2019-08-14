@@ -25,5 +25,6 @@
   --location {{ network_drive_path }}/ISOs/{{ image_filename }} \
   --os-variant rhel6 \
   --initrd-inject={{ network_drive_path }}/kickstarts/{{ vm_identifier }}.cfg -x "ks=file:/{{ vm_identifier }}.cfg" \
-  --network bridge=br{{ vlan }}
+  --network bridge=br{{ vlan }} \
+  --autostart
 }
