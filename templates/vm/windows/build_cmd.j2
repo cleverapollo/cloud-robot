@@ -3,8 +3,9 @@ try {
   $ErrorActionPreference = "Stop"
   $drive_letter = ls function:[d-z]: -n | ?{ !(Test-Path $_) } | random
   cmd.exe /c "mount -o nolock {{ freenas_url }} $drive_letter"
-  if($(Test-Path -Path "$drive_letter\HyperV\scripts\VMCreator.ps1") -eq $True) {
-    powershell -File "$drive_letter\HyperV\scripts\VMCreator.ps1" -VMName {{ vm_identifier }} -Gen 1 -OSName {{ image_filename }} -ProcessorCount {{ cpu }} -Dynamic 0 -Ram {{ ram }} -Hdd {{ hdd }} -Ssd {{ ssd }} -MulDrive {{ drives }} -VlanId {{ vlan }} -Ntwdrive $drive_letter
+  $file_path = "$drive_letter\HyperV\scripts\VMCreator.ps1"
+  if($(Test-Path -Path $file_path) -eq $True) {
+    powershell -File $file_path -VMName {{ vm_identifier }} -Gen 1 -OSName {{ image_filename }} -ProcessorCount {{ cpu }} -Dynamic 0 -Ram {{ ram }} -Hdd {{ hdd }} -Ssd {{ ssd }} -MulDrive {{ drives }} -VlanId {{ vlan }} -Ntwdrive $drive_letter
   } else {
     Write-Error "Failed to mount the NFS drive, exiting build"
   }
