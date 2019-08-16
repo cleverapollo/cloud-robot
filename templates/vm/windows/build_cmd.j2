@@ -1,9 +1,10 @@
 try {
-  # Set the script to stop at the first error
+  # Set the script to stop at the first error.
   $ErrorActionPreference = "Stop"
-  cmd.exe /c "mount -o nolock {{ freenas_url }} Z:"
-  if($(Test-Path -Path "Z:\HyperV\") -eq $True) {
-    Z:\HyperV\scripts\VMCreator.ps1 -VMName {{ vm_identifier }} -Gen 1 -OSName {{ image_filename }} -ProcessorCount {{ cpu }} -Dynamic 0 -Ram {{ ram }} -Hdd {{ hdd }} -Ssd {{ ssd }} -MulDrive {{ drives }} -VlanId {{ vlan }} -Verbose
+  $drive_letter = ls function:[d-z]: -n | ?{ !(Test-Path $_) } | random
+  cmd.exe /c "mount -o nolock {{ freenas_url }} $drive_letter"
+  if($(Test-Path -Path "$drive_letter\HyperV\") -eq $True) {
+    $drive_letter\HyperV\scripts\VMCreator.ps1 -VMName {{ vm_identifier }} -Gen 1 -OSName {{ image_filename }} -ProcessorCount {{ cpu }} -Dynamic 0 -Ram {{ ram }} -Hdd {{ hdd }} -Ssd {{ ssd }} -MulDrive {{ drives }} -VlanId {{ vlan }} -DriveLetter $drive_letter -Verbose
   } else {
     Write-Error "Failed to mount the NFS drive, exiting build"
   }
@@ -13,5 +14,5 @@ try {
   }
   Write-Error "VM Build Failed. Error Message: $_.Exception.Message";
 } finally {
-  cmd.exe /c "umount Z:"
+  cmd.exe /c "umount $drive_letter"
 }
