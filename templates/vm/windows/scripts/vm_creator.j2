@@ -4005,7 +4005,13 @@ else {
 
 # VM Path
 $vmPath = "D:\HyperV\"
+try{
 New-Item -ItemType directory -Path "$vmPath$VMName"
+}
+catch {
+Write-Error "An item with the specified name $vmPath$VMName already exists"
+Exit-PSSession
+}
 
 # VHDX Path
 try {
@@ -4027,21 +4033,21 @@ catch {
 try {
   if($OSName -like "SW_DVD9_Win_Server_STD_CORE_2019_1809.1_64Bit_English_DC_STD_MLF_X22-02970.ISO") {
     [ValidateScript({Test-Path $_ })]
-    [string] $ISOPath = "$DriveLetter\HyperV\ISOs\SW_DVD9_Win_Server_STD_CORE_2019_1809.1_64Bit_English_DC_STD_MLF_X22-02970.ISO"
+    [string] $ISOPath = "$Ntwdrive\HyperV\ISOs\SW_DVD9_Win_Server_STD_CORE_2019_1809.1_64Bit_English_DC_STD_MLF_X22-02970.ISO"
     [ValidateNotNullorEmpty()]
     $edition = "Windows Server 2019 SERVERSTANDARD"
     $activation_key = "TNK62-RXVTB-4P47B-2D623-4GF74"
   }
   elseif($OSName -like "SW_DVD9_Win_Svr_STD_Core_and_DataCtr_Core_2016_64Bit_English_-3_MLF_X21-30350.ISO") {
     [ValidateScript({Test-Path $_ })]
-    [string] $ISOPath = "$DriveLetter\HyperV\ISOs\SW_DVD9_Win_Svr_STD_Core_and_DataCtr_Core_2016_64Bit_English_-3_MLF_X21-30350.ISO"
+    [string] $ISOPath = "$Ntwdrive\HyperV\ISOs\SW_DVD9_Win_Svr_STD_Core_and_DataCtr_Core_2016_64Bit_English_-3_MLF_X21-30350.ISO"
     [ValidateNotNullorEmpty()]
     $edition = "Windows Server 2016 SERVERSTANDARD"
     $activation_key = "C3RCX-M6NRP-6CXC9-TW2F2-4RHYD"
   }
   elseif($OSName -like "SW_DVD9_Windows_Svr_Std_and_DataCtr_2012_R2_64Bit_English_-4_MLF_X19-82891.ISO") {
     [ValidateScript({Test-Path $_ })]
-    $ISOPath = "$DriveLetter\HyperV\ISOs\SW_DVD9_Windows_Svr_Std_and_DataCtr_2012_R2_64Bit_English_-4_MLF_X19-82891.ISO"
+    $ISOPath = "$Ntwdrive\HyperV\ISOs\SW_DVD9_Windows_Svr_Std_and_DataCtr_2012_R2_64Bit_English_-4_MLF_X19-82891.ISO"
     [ValidateNotNullorEmpty()]
     $edition = "Windows Server 2012 R2 SERVERSTANDARD"
     $activation_key = "DBGBW-NPF86-BJVTX-K3WKJ-MTB6V"
