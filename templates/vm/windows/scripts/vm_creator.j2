@@ -43,7 +43,12 @@ Param(
       [Parameter(Mandatory=$true)]
       [ValidateNotNullorEmpty()]
       [ValidateRange(1000, 4000)]
-      [int64]$VlanId
+      [int64]$VlanId,
+
+      # Network drive letter
+      [Parameter(Mandatory=$true)]
+      [ValidateScript({Test-Path $_ })]
+      $DriveLetter
 )
 
 #####################################################
@@ -4716,21 +4721,21 @@ catch {
 try {
   if($OSName -like "SW_DVD9_Win_Server_STD_CORE_2019_1809.1_64Bit_English_DC_STD_MLF_X22-02970.ISO") {
     [ValidateScript({Test-Path $_ })]
-    [string] $ISOPath = "Z:\HyperV\ISOs\SW_DVD9_Win_Server_STD_CORE_2019_1809.1_64Bit_English_DC_STD_MLF_X22-02970.ISO"
+    [string] $ISOPath = "$DriveLetter\HyperV\ISOs\SW_DVD9_Win_Server_STD_CORE_2019_1809.1_64Bit_English_DC_STD_MLF_X22-02970.ISO"
     [ValidateNotNullorEmpty()]
     $edition = "Windows Server 2019 SERVERSTANDARD"
     $activation_key = "TNK62-RXVTB-4P47B-2D623-4GF74"
   }
   elseif($OSName -like "SW_DVD9_Win_Svr_STD_Core_and_DataCtr_Core_2016_64Bit_English_-3_MLF_X21-30350.ISO") {
     [ValidateScript({Test-Path $_ })]
-    [string] $ISOPath = "Z:\HyperV\ISOs\SW_DVD9_Win_Svr_STD_Core_and_DataCtr_Core_2016_64Bit_English_-3_MLF_X21-30350.ISO"
+    [string] $ISOPath = "$DriveLetter\HyperV\ISOs\SW_DVD9_Win_Svr_STD_Core_and_DataCtr_Core_2016_64Bit_English_-3_MLF_X21-30350.ISO"
     [ValidateNotNullorEmpty()]
     $edition = "Windows Server 2016 SERVERSTANDARD"
     $activation_key = "C3RCX-M6NRP-6CXC9-TW2F2-4RHYD"
   }
   elseif($OSName -like "SW_DVD9_Windows_Svr_Std_and_DataCtr_2012_R2_64Bit_English_-4_MLF_X19-82891.ISO") {
     [ValidateScript({Test-Path $_ })]
-    $ISOPath = "Z:\HyperV\ISOs\SW_DVD9_Windows_Svr_Std_and_DataCtr_2012_R2_64Bit_English_-4_MLF_X19-82891.ISO"
+    $ISOPath = "$DriveLetter\HyperV\ISOs\SW_DVD9_Windows_Svr_Std_and_DataCtr_2012_R2_64Bit_English_-4_MLF_X19-82891.ISO"
     [ValidateNotNullorEmpty()]
     $edition = "Windows Server 2012 R2 SERVERSTANDARD"
     $activation_key = "DBGBW-NPF86-BJVTX-K3WKJ-MTB6V"
@@ -4748,7 +4753,7 @@ catch {
 # Unattend XML file path
 try {
   [ValidateScript({Test-Path $_ })]
-  $unattend = "Z:\HyperV\unattend_xmls\$VMName.xml"
+  $unattend = "$DriveLetter\HyperV\unattend_xmls\$VMName.xml"
 }
 catch {
   Write-Error "Unattend.xml file Not found, exiting the VM Build. Details: $_"
