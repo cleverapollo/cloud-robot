@@ -30,15 +30,37 @@ try {
   {# 4a. Primary Drive #}
   {# considering new_size > old_size always #}
   {% if hdd and int(hdd.split(':')[1]) > int(hdd.split(':')[2]) %}
-    Resize-VHD -Path D:\HyperV\$VMName\{$VMName}_HDD_{{ hdd.split(':')[0] }}.vhdx -SizeBytes {{ hdd.split(':')[1] }}GB
+    $vhdPath = D:\HyperV\$VMName\{$VMName}_HDD_{{ ssd.split(':')[0] }}.vhdx
   {% elif ssd and int(ssd.split(':')[1]) > int(ssd.split(':')[2]) %}
-    Resize-VHD -Path D:\HyperV\$VMName\{$VMName}_SSD_{{ ssd.split(':')[0] }}.vhdx -SizeBytes {{ ssd.split(':')[1] }}GB
+    $vhdPath = D:\HyperV\$VMName\{$VMName}_SSD_{{ ssd.split(':')[0] }}.vhdx
   {% endif %}
+  Resize-VHD -Path $vhdPath -SizeBytes {{ ssd.split(':')[1] }}GB
+  $drive_letter = (Mount-VHD -Path $vhdPath -Passthru | Get-Partition).DriveLetter
+  try{
+    Write-Host "Changing the VHDx drive to its requested size..."
+    $size = Get-PartitionSupportedSize -DriveLetter $drive_letter
+    Resize-Partition -DriveLetter $drive_letter -Size $size.SizeMax
+  }
+  catch{
+    Write-Error "Failed to expand the VHDx drive: $_"
+  }
+  Dismount-VHD -Path $vhdPath
 
   {# 4b. Extra Drives #}
   {% for drive in drives %}
     {% if int(drive['new_size']) > int(drive['old_size']) %}
-      Resize-VHD -Path D:\HyperV\$VMName\{$VMName}_{{ drive['type'] }}_{{ drive['id'] }}.vhdx -SizeBytes {{ drive['new_size'] }}GB
+      $vhdxPath = D:\HyperV\$VMName\{$VMName}_{{ drive['type'] }}_{{ drive['id'] }}.vhdx
+      Resize-VHD -Path $vhdxPath -SizeBytes {{ drive['new_size'] }}GB
+      $drive_letter = (Mount-VHD -Path $vhdxPath -Passthru | Get-Partition).DriveLetter
+      try{
+        Write-Host "Changing the VHDx drive to its requested size..."
+        $size = Get-PartitionSupportedSize -DriveLetter $drive_letter
+        Resize-Partition -DriveLetter $drive_letter -Size $size.SizeMax
+      }
+      catch{
+        Write-Error "Failed to expand the VHDx drive: $_"
+      }
+  Dismount-VHD -Path $vhdPath
     {% elif int(drive['new_size']) == 0 %}
       Remove-Item -Recurse D:\HyperV\$VMName\{$VMName}_{{ drive['type'] }}_{{ drive['id'] }}.vhdx
     {% elif drive['old_size'] is in [0, None, ''] %}
