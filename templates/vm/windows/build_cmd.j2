@@ -21,11 +21,11 @@ New-Item -ItemType directory -Path {{ vm_path }}{{ vm_identifier }}
 {% set vhd_path = f'{ vm_path }{ vm_identifier }\{ vm_identifier }_{ drive_format }_{ drive_id }.vhdx' %}
 {# IMAGE VHDX Path #}
 {% set gen = 1 %}
-{% if image_filename == "SW_DVD9_Win_Server_STD_CORE_2019_1809.1_64Bit_English_DC_STD_MLF_X22-02970.ISO" %}
+{% if image_filename == 'SW_DVD9_Win_Server_STD_CORE_2019_1809.1_64Bit_English_DC_STD_MLF_X22-02970.ISO' %}
 {% set win_version = 2019 %}
-{% elif image_filename == "SW_DVD9_Win_Svr_STD_Core_and_DataCtr_Core_2016_64Bit_English_-3_MLF_X21-30350.ISO" %}
+{% elif image_filename == 'SW_DVD9_Win_Svr_STD_Core_and_DataCtr_Core_2016_64Bit_English_-3_MLF_X21-30350.ISO' %}
 {% set win_version = 2016 %}
-{% elif image_filename == "SW_DVD9_Windows_Svr_Std_and_DataCtr_2012_R2_64Bit_English_-4_MLF_X19-82891.ISO" %}
+{% elif image_filename == 'SW_DVD9_Windows_Svr_Std_and_DataCtr_2012_R2_64Bit_English_-4_MLF_X19-82891.ISO' %}
 {% set win_version = 2012 %}
 {% else %}
 Write-Error "Invalid image name"
@@ -48,7 +48,7 @@ Dismount-VHD -Path {{ vhd_path }}
 {#                                                  #}
 {# VM Creation and Configuration #}
 {# Virtual Switch is the standard name on all hosts #}
-{% set switch_name = "Virtual Switch" %}
+{% set switch_name = 'Virtual Switch' %}
 {# Creation of VM #}
 try{ New-VM -Name {{ vm_identifier }} -Path {{ vm_path }} -VHDPath {{ vhd_path }} -Generation {{ gen }} -SwitchName {{ switch_name }} }catch{Write-Error "Could not create VM, error details: $_"}
 {# Changing the number of processor and the memory #}
