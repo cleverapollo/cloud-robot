@@ -28,7 +28,7 @@ New-Item -ItemType directory -Path {{ vm_path }}{{ vm_identifier }}
 {% elif image_filename == 'SW_DVD9_Windows_Svr_Std_and_DataCtr_2012_R2_64Bit_English_-4_MLF_X19-82891.ISO' %}
 {% set win_version = 2012 %}
 {% else %}
-Write-Error "Invalid image name"
+Write-Error 'Invalid image name'
 {% endif %}
 try{[ValidateScript({Test-Path $_ })][string]$VHDXPath = "$drive_letter\HyperV\VHDXs\WIN_SRV_{{ win_version }}_GEN_{{ gen }}.vhdx"}catch{Write-Error "$VHDXPath not found"}
 {# Unattend XML file path #}
