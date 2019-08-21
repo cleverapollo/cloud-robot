@@ -16,7 +16,7 @@ $drive_size = [int64]{{ ssd }}*1GB
 {# Path Configuration #}
 {# VM Path #}
 {% set vm_path  = "D:\HyperV\" %}
-New-Item -ItemType directory -Path "{{ vm_path }}{{ vm_identifier }}"
+New-Item -ItemType directory -Path {{ vm_path }}{{ vm_identifier }}
 {# VHDX Path #}
 {% set vhd_path = "{{ vm_path }}{{ vm_identifier }}\{{ vm_identifier }}_{{ drive_format }}_{{ drive_id }}.vhdx" %}
 {# IMAGE VHDX Path #}
