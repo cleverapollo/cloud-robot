@@ -1,316 +1,75 @@
-function VM-Build
-{
-[CmdletBinding()]
-Param(
-      # VM Name
-      [Parameter(Mandatory=$true)]
-      [ValidateNotNullorEmpty()]
-      [string]$VMName,
-
-      # VM Generation (1 or 2)
-      [Parameter(Mandatory=$true)]
-      [ValidateRange(1, 2)]
-      [int]$Gen,
-
-      # OS Name
-      [Parameter(Mandatory=$true)]
-      $OSName,
-
-      # Processor Number
-      [Parameter(Mandatory=$true)]
-      [ValidateScript({$_ -ge 1})]
-      [int]$ProcessorCount,
-
-      # Ram Memory nature (Static = 0 or Dynamic = 1)
-      [Parameter(Mandatory=$true)]
-      [int]$Dynamic,
-
-      # Ram Memory max size
-      [Parameter(Mandatory=$true)]
-      $Ram,
-
-      # HDD Memory
-      [Parameter(Mandatory=$true)]
-      $Hdd,
-
-      # SSD Memory
-      [Parameter(Mandatory=$true)]
-      $Ssd,
-
-      # For multiple drives
-      [Parameter(Mandatory=$true)]
-      $MulDrive,
-
-      # VLAN id
-      [Parameter(Mandatory=$true)]
-      [ValidateNotNullorEmpty()]
-      [ValidateRange(1000, 4000)]
-      [int64]$VlanId,
-
-      # Network drive letter
-      [Parameter(Mandatory=$true)]
-      [ValidateScript({Test-Path $_ })]
-      $Ntwdrive
-)
-# Global Variables #
-$minMemory = 64MB
-$ram = [int64] $Ram * 1MB
-
-if($Hdd) {
-  $drive_details = $Hdd.Split(':')
-  $drive_format = 'HDD'
-}
-elseif($Ssd){
-  $drive_details = $Ssd.Split(':')
-  $drive_format = 'SSD'
-}
-$drive_id = $drive_details[0]
-$drive_size = [int64] $drive_details[1] * 1GB
-
-
-###### Path Configuration ######
-# VM Path
-$vmPath = "D:\HyperV\"
-New-Item -ItemType directory -Path "$vmPath$VMName"
-
-# VHDX Path
-$vhdPath = "$vmPath$VMName\$VMName" + '_' + $drive_format + '_' + "$drive_id.vhdx"
-
-
-# IMAGE VHDX Path
 try {
-  if($OSName -like "SW_DVD9_Win_Server_STD_CORE_2019_1809.1_64Bit_English_DC_STD_MLF_X22-02970.ISO") {
-    if ($Gen -eq 1){
-        [ValidateScript({Test-Path $_ })]
-        [string] $VHDXPath = "$Ntwdrive\HyperV\VHDXs\WIN_SRV_2019_GEN_1.vhdx"
-    }
-    elseif($Gen -eq 2){
-        [ValidateScript({Test-Path $_ })]
-        [string] $VHDXPath = "$Ntwdrive\HyperV\VHDXs\WIN_SRV_2019_GEN_2.vhdx"
-    }
-    else{
-    Write-Error "Invalid Generation $Gen, Aborting the build."
-    }
-  }
-  elseif($OSName -like "SW_DVD9_Win_Svr_STD_Core_and_DataCtr_Core_2016_64Bit_English_-3_MLF_X21-30350.ISO") {
-    if ($Gen -eq 1){
-        [ValidateScript({Test-Path $_ })]
-        [string] $VHDXPath = "$Ntwdrive\HyperV\VHDXs\WIN_SRV_2016_GEN_1.vhdx"
-    }
-    elseif($Gen -eq 2){
-        [ValidateScript({Test-Path $_ })]
-        [string] $VHDXPath = "$Ntwdrive\HyperV\VHDXs\WIN_SRV_2016_GEN_2.vhdx"
-    }
-    else{
-    Write-Error "Invalid Generation $Gen, Aborting the build."
-    }
-  }
-  elseif($OSName -like "SW_DVD9_Windows_Svr_Std_and_DataCtr_2012_R2_64Bit_English_-4_MLF_X19-82891.ISO") {
-    if ($Gen -eq 1){
-        [ValidateScript({Test-Path $_ })]
-        [string] $VHDXPath = "$Ntwdrive\HyperV\VHDXs\WIN_SRV_2012_GEN_1.vhdx"
-    }
-    elseif($Gen -eq 2){
-        [ValidateScript({Test-Path $_ })]
-        [string] $VHDXPath = "$Ntwdrive\HyperV\VHDXs\WIN_SRV_2012_GEN_2.vhdx"
-    }
-    else{
-    Write-Error "Invalid Generation $Gen, Aborting the build."
-    }
-  }
-  else{
-    Write-Error "Invalid OSName $OSName, Aborting the build."
-  }
-}
-catch {
-  Write-Error "Failed to locate images location, exiting the VM Build. Details: $_"
-}
-
-# Unattend XML file path
-try {
-  [ValidateScript({Test-Path $_ })]
-  $unattend = "$Ntwdrive\HyperV\unattend_xmls\$VMName.xml"
-}
-catch {
-  Write-Error "Unattend xml: $VMName.xml file Not found, exiting the VM Build. Details: $_"
-}
-
-########################################################################
-# Copying VHDX to the folder, mounting, copying unattend.xml into vhd, #
-# expanding the partition and unmounting                               #
-########################################################################
-try{
-  Copy-Item $VHDXPath -Destination $vhdPath
-  Write-Host "Copying VHDx file from Network drive...this may take some time"
-}
-catch{
-  Write-Error "Failed to copy VHDx file from Network drive"
-}
-try{
-  Write-Host "Resizing the VHDx drive to the requested size..."
-  Resize-VHD -Path $vhdPath -SizeBytes $drive_size
-}
-catch{
-  Write-Error "Failed to Resize VHDx drive..."
-}
-try{
-  Write-Host "Mounting VHDx drive..."
-  $DriveLetter = (Mount-VHD -Path $vhdPath -Passthru | Get-Partition).DriveLetter
-}
-catch{
-  Write-Error "Failed to mount VHDx drive...: $_"
-}
-try{
-  Write-Host "Copying unattend xml file into mounded drive..."
-  # copy unatttend xml into drive
-  $drive = $DriveLetter+':\unattend.xml'
-  Copy-Item "$Ntwdrive\HyperV\unattend_xmls\$VMName.xml" $drive
-}
-catch{
-  Write-Error "Failed to copy unattend xml file into mounted drive: $_"
-}
-try{
-  Write-Host "Expanding the VHDx drive to its requested size..."
-  $size = Get-PartitionSupportedSize -DriveLetter $DriveLetter
-  Resize-Partition -DriveLetter $DriveLetter -Size $size.SizeMax
-}
-catch{
-  Write-Error "Failed to expand the VHDx drive: $_"
-}
-
-Dismount-VHD -Path $vhdPath
-
-######################################################
-###           VM Creation and Configuration        ###
-######################################################
-
-# Get the SwitchName first
-try {
-  # (Get-VMSwitch | Where-Object {$_.SwitchType -eq "External"} | Select-Object -first 1).Name
-  [string] $switchName = "Virtual Switch"  # Wil has informed me that this will be the standard name on all hosts
-}
-catch {
-  Write-Error "Virtual Switch Not found, exiting the VM Build Details: $_"
-}
-
-# Creation without VHD and with a default memory value (will be changed after)
-Write-Host "Creating VM $VMName"
-try {
-  New-VM -Name $VMName -Path $vmPath -VHDPath $vhdPath -Generation $Gen -SwitchName $switchName
-}
-catch {
-  Write-Error "Could not create VM, error details: $_"
-}
-
-# Changing the number of processor and the memory
-Write-Host "Setting VM Processor count $ProcessorCount"
-try {
-  Set-VMProcessor $VMName -Count $ProcessorCount
-}
-catch {
-  Write-Error "Failed to set processor count for VM, error details: $_"
-}
-
-# Setting the RAM
-Write-Host "Setting VM memory RAM=$ram"
-try {
-  # Static Memory
-  if ($Dynamic -eq 0) {
-    Set-VMMemory $VMName -DynamicMemoryEnabled $false -StartupBytes $ram
-  }
-  else {
-  # Dynamic Memory
-  Set-VMMemory $VMName -DynamicMemoryEnabled $true -MinimumBytes $minMemory -StartupBytes $ram -MaximumBytes $ram
-  }
-}
-catch {
-    Write-Error "Failed to set Ram for the VM, error details: $_ "
-}
-
-# Setting Network Adapter
-Write-Host "Setting Network Adapter"
-try {
-  Set-VMNetworkAdapterVlan -VMName $VMName -Access -VlanId $VlanId
-}
-catch {
-  Write-Error "Failed to set network adapter for VM, error details: $_ "
-}
-
-# Adding Additional Drives
-if ($MulDrive -ine 0) {
-
-  Write-Host "Found extra drives, parsing them."
-  $mulDrives = $MulDrive.Split(',')
-  $extraDrives  = @()
-
-  foreach($drive in $mulDrives){
-      $driveData = $drive.Split(':')
-      $driveId = $driveData[0]
-      $driveSize = [int64] $driveData[1] * 1GB
-      $driveObject = New-Object System.Object
-      $vhdPath = "$vmPath$VMName\$VMName" + '_' + $drive_format + '_' + "$driveId.vhdx"
-      $driveObject | Add-Member -MemberType NoteProperty -Name Path -Value $vhdPath
-      $driveObject | Add-Member -MemberType NoteProperty -Name Size -Value $driveSize
-      $driveObject | Add-Member -MemberType NoteProperty -Name Type -Value Dynamic
-      $extraDrives += $driveObject
-  }
-
-  Write-Host "Adding extra drives"
-  foreach ($extraDrive in $extraDrives) {
-    try {
-         # Check if the drive is Dynamic or Fixed
-         if ($extraDrive.Type -like "Dynamic") {
-           New-VHD -Path $extraDrive.Path -SizeBytes $extraDrive.Size -Dynamic
-         }
-         elseif ($extraDrive.Type -like "Fixed") {
-           New-VHD -Path $extraDrive.Path -SizeBytes $extraDrive.Size -Fixed
-         }
-       }
-    catch {
-         Write-Error " Failed to create new drive $extraDrive.Path, error details: $_"
-       }
-    # Attach the VHD(x) to the Vm
-    try {
-        Add-VMHardDiskDrive -VMName $VMName -Path $extraDrive.Path
-      }
-    catch {
-        Write-Error " Failed to add drive $extraDrive.Path for VM $VMName, error details: $_"
-      }
-  }
-}  # End of mulDrive check
-
-# Start the VM
-try {
-    Write-Host "Starting VM..."
-    Start-VM -Name $VMName
-    Wait-VM -Name $VMName
-    Write-Host "VM Successfully Created and Hosted"
-  }
-catch {
-    Write-Error " VM $VMName failed to start, error details: $_"
-
-  }
-}
-#########################################
-# Process starts from here
-try {
-  # Set the script to stop at the first error.
-  $ErrorActionPreference = "Stop"
-  $drive_letter = ls function:[d-z]: -n | ?{ !(Test-Path $_) } | random
-  cmd.exe /c "mount -o nolock {{ freenas_url }} $drive_letter"
-  $file_path = "$drive_letter\HyperV\"
-  if($(Test-Path -Path $file_path) -eq $True) {
-    VM-Build -VMName {{ vm_identifier }} -Gen 1 -OSName {{ image_filename }} -ProcessorCount {{ cpu }} -Dynamic 0 -Ram {{ ram }} -Hdd {{ hdd }} -Ssd {{ ssd }} -MulDrive {{ drives }} -VlanId {{ vlan }} -Ntwdrive $drive_letter
-  } else {
-    Write-Error "Failed to mount the NFS drive, exiting build"
-  }
-}
-catch {
-  if ($(Test-Path -Path D:\HyperV\{{ vm_identifier }}) -eq $True) {
-    Remove-Item -Path D:\HyperV\{{ vm_identifier }} -Recurse
-  }
-  Write-Error "VM Build Failed. Error Message: $_.Exception.Message";
-}
-finally {
-  cmd.exe /c "umount $drive_letter"
-}
+{# Set the script to stop at the first error. #}
+$ErrorActionPreference = "Stop"
+$drive_letter = ls function:[d-z]: -n | ?{ !(Test-Path $_) } | random
+cmd.exe /c "mount -o nolock {{ freenas_url }} $drive_letter"
+$file_path = "$drive_letter\HyperV\"
+if($(Test-Path -Path $file_path) -eq $True){
+{# Define Ram #}
+$ram = [int64]{{ ram }}*1MB
+{# Define primary drive #}
+{% if hdd %}
+$drive_size = [int64]{{ hdd }}*1GB
+{% elif ssd %}
+$drive_size = [int64]{{ ssd }}*1GB
+{% endif %}
+{# Path Configuration #}
+{# VM Path #}
+{% set vm_path  = "D:\HyperV\" %}
+New-Item -ItemType directory -Path "{{ vm_path }}{{ vm_identifier }}"
+{# VHDX Path #}
+{% set vhd_path = "{{ vm_path }}{{ vm_identifier }}\{{ vm_identifier }}_{{ drive_format }}_{{ drive_id }}.vhdx" %}
+{# IMAGE VHDX Path #}
+{% set gen = 1 %}
+{% if image_filename == "SW_DVD9_Win_Server_STD_CORE_2019_1809.1_64Bit_English_DC_STD_MLF_X22-02970.ISO" %}
+{% set win_version = 2019 %}
+{% elif image_filename == "SW_DVD9_Win_Svr_STD_Core_and_DataCtr_Core_2016_64Bit_English_-3_MLF_X21-30350.ISO" %}
+{% set win_version = 2016 %}
+{% elif image_filename == "SW_DVD9_Windows_Svr_Std_and_DataCtr_2012_R2_64Bit_English_-4_MLF_X19-82891.ISO" %}
+{% set win_version = 2012 %}
+{% else %}
+Write-Error "Invalid image name"
+{% endif %}
+try{[ValidateScript({Test-Path $_ })][string]$VHDXPath = "$drive_letter\HyperV\VHDXs\WIN_SRV_{{ win_version }}_GEN_{{ gen }}.vhdx"}catch{Write-Error "$VHDXPath not found"}
+{# Unattend XML file path #}
+try{[ValidateScript({Test-Path $_ })][string]$unattend = "$drive_letter\HyperV\unattend_xmls\{{ vm_identifier }}.xml"}catch{Write-Error "Unattend xml: {{ vm_identifier }}.xml file Not found, exiting the VM Build. Details: $_"}
+{#                                                 #}
+{# Copying VHDX to the folder #}
+try{ Copy-Item $VHDXPath -Destination {{ vhd_path }} }catch{Write-Error "Failed to copy VHDx file from Network drive"}
+{# Resizing the drive  #}
+try{ Resize-VHD -Path {{ vhd_path }} -SizeBytes $drive_size }catch{Write-Error "Failed to Resize VHDx drive..."}
+{# Mounting the drive #}
+try{$DriveLetter = (Mount-VHD -Path {{ vhd_path }} -Passthru | Get-Partition).DriveLetter}catch{Write-Error "Failed to mount VHDx drive...: $_"}
+{# Copying unattend xml file into mounded drive #}
+try{$drive = $DriveLetter+':\unattend.xml';Copy-Item $unattend $drive}catch{Write-Error "Failed to copy unattend xml file into mounted drive: $_"}
+{# Expanding the VHDx drive to its requested size #}
+try{$size = Get-PartitionSupportedSize -DriveLetter $DriveLetter;Resize-Partition -DriveLetter $DriveLetter -Size $size.SizeMax}catch{Write-Error "Failed to expand the VHDx drive: $_"}
+Dismount-VHD -Path {{ vhd_path }}
+{#                                                  #}
+{# VM Creation and Configuration #}
+{# Virtual Switch is the standard name on all hosts #}
+{% set switch_name = "Virtual Switch" %}
+{# Creation of VM #}
+try{ New-VM -Name {{ vm_identifier }} -Path {{ vm_path }} -VHDPath {{ vhd_path }} -Generation {{ gen }} -SwitchName {{ switch_name }} }catch{Write-Error "Could not create VM, error details: $_"}
+{# Changing the number of processor and the memory #}
+try{ Set-VMProcessor {{ vm_identifier }} -Count {{ cpu }} }catch{Write-Error "Failed to set processor count for VM, error details: $_"}
+{# Setting the RAM #}
+try{Set-VMMemory {{ vm_identifier }} -DynamicMemoryEnabled $false -StartupBytes $ram}catch{Write-Error "Failed to set Ram for the VM, error details: $_ "}
+{# Setting Network Adapter #}
+try { Set-VMNetworkAdapterVlan -VMName {{ vm_identifier }} -Access -VlanId {{ vlan }} }catch{Write-Error "Failed to set network adapter for VM, error details: $_ "}
+{# Adding Additional Drives #}
+{% if drives %}
+{% for drive in drives %}
+$driveSize = [int64]{{ drive['drive_size'] }}*1GB
+{% set drive_path = "{{ vm_path }}{{ vm_identifier }}\{{ vm_identifier }}_{{ drive_format }}_{{ drive['drive_id'] }}.vhdx" %}
+{# Create new drive #}
+try{New-VHD -Path {{ drive_path }} -SizeBytes $driveSize -Dynamic}catch{Write-Error "Failed to create new drive {{ drive_path }}, error details: $_"}
+{# Attach the VHD(x) to the Vm #}
+try{ Add-VMHardDiskDrive -VMName {{ vm_identifier }} -Path {{ drive_path }} }catch{Write-Error "Failed to add drive {{ drive_path }} for VM {{ vm_identifier }}, error details: $_"}
+{% endfor %}
+{% endif %}
+{# Start the VM #}
+try{Start-VM -Name {{ vm_identifier }};Wait-VM -Name {{ vm_identifier }};Write-Host "VM Successfully Created and Hosted"}catch{Write-Error "VM {{ vm_identifier }} failed to start, error details: $_"}
+}else{Write-Error "Failed to mount the NFS drive, exiting build"}
+}catch{if($(Test-Path -Path D:\HyperV\{{ vm_identifier }}) -eq $True){Remove-Item -Path D:\HyperV\{{ vm_identifier }} -Recurse};Write-Error "VM Build Failed. Error Message: $_.Exception.Message"}
+finally{cmd.exe /c "umount $drive_letter"}

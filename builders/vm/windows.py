@@ -187,17 +187,20 @@ class Windows(WindowsMixin):
         vm_data['admin_password'] = data['admin_password']
 
         # Fetch the drives for the VM and add them to the data
-        drives: Deque[str] = deque()
+        drives: Deque[Dict[str, Any]] = deque()
         for storage in utils.api_list(IAAS.storage, {}, vm_id=vm_id, span=span):
             # Check if the storage is primary
             if storage['primary']:
+                data['drive_id'] = storage['idStorage']
                 # Determine which field (hdd or ssd) to populate with this storage information
                 if storage['storage_type'] == 'HDD':
-                    data['hdd'] = f'{storage["idStorage"]}:{storage["gb"]}'
+                    data['drive_format'] = 'HDD'
+                    data['hdd'] = storage['gb']
                     data['ssd'] = 0
                 elif storage['storage_type'] == 'SSD':
+                    data['drive_format'] = 'SSD'
                     data['hdd'] = 0
-                    data['ssd'] = f'{storage["idStorage"]}:{storage["gb"]}'
+                    data['ssd'] = storage['gb']
                 else:
                     Windows.logger.error(
                         f'Invalid primary drive storage type {storage["storage_type"]}. Expected either "HDD" or "SSD"',
@@ -205,9 +208,14 @@ class Windows(WindowsMixin):
                     return None
             else:
                 # Just append to the drives deque
-                drives.append(f'{storage["idStorage"]}:{storage["gb"]}')
+                drives.append(
+                    {
+                        'drive_id': storage['idStorage'],
+                        'drive_size': storage['gb'],
+                    },
+                )
         if len(drives) > 0:
-            data['drives'] = ','.join(drives)
+            data['drives'] = drives
         else:
             data['drives'] = 0
 
