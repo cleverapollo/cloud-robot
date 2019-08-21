@@ -18,58 +18,41 @@ try {
 
   {# 1. Shutdown the VM first #}
   Stop-VM -Name $VMName
-
   {# 2. Updates the processor/cpu count and Ram sizes even if changed or not #}
   Set-VMProcessor $VMName -Count {{ cpu }}
   Set-VMMemory $VMName -DynamicMemoryEnabled $false -StartupBytes {{ ram }}MB
-
   {# 3. Set the vLan #}
   Set-VMNetworkAdapterVlan -VMName {{ vm_identifier }} -Access -VlanId {{ vlan }}
-
   {# 4. Update Drive Sizes #}
   {# 4a. Primary Drive #}
   {# considering new_size > old_size always #}
   {% if hdd and int(hdd.split(':')[1]) > int(hdd.split(':')[2]) %}
-    $vhdPath = D:\HyperV\$VMName\{$VMName}_HDD_{{ ssd.split(':')[0] }}.vhdx
+    {% set drive_path = "D:\HyperV\{{ vm_identifier }}\{{ vm_identifier }}_HDD_{{ hdd.split(':')[0] }}.vhdx" %}
+    Resize-VHD -Path {{ drive_path }} -SizeBytes {{ int(hdd.split(':')[1]) }}GB
+    $DriveLetter = (Mount-VHD -Path {{ drive_path }} -Passthru | Get-Partition).DriveLetter
+    try{$size = Get-PartitionSupportedSize -DriveLetter $DriveLetter;Resize-Partition -DriveLetter $DriveLetter -Size $size.SizeMax}catch{Write-Error "Failed to expand the VHDx drive: $_"}
+    Dismount-VHD -Path {{ drive_path }}
   {% elif ssd and int(ssd.split(':')[1]) > int(ssd.split(':')[2]) %}
-    $vhdPath = D:\HyperV\$VMName\{$VMName}_SSD_{{ ssd.split(':')[0] }}.vhdx
+    {% set drive_path = "D:\HyperV\{{ vm_identifier }}\{{ vm_identifier }}_SSD_{{ ssd.split(':')[0] }}.vhdx" %}
+    Resize-VHD -Path {{ drive_path }} -SizeBytes {{ int(ssd.split(':')[1]) }}GB
+    $DriveLetter = (Mount-VHD -Path {{ drive_path }} -Passthru | Get-Partition).DriveLetter
+    try{$size = Get-PartitionSupportedSize -DriveLetter $DriveLetter;Resize-Partition -DriveLetter $DriveLetter -Size $size.SizeMax}catch{Write-Error "Failed to expand the VHDx drive: $_"}
+    Dismount-VHD -Path {{ drive_path }}
   {% endif %}
-  Resize-VHD -Path $vhdPath -SizeBytes {{ ssd.split(':')[1] }}GB
-  $drive_letter = (Mount-VHD -Path $vhdPath -Passthru | Get-Partition).DriveLetter
-  try{
-    Write-Host "Changing the VHDx drive to its requested size..."
-    $size = Get-PartitionSupportedSize -DriveLetter $drive_letter
-    Resize-Partition -DriveLetter $drive_letter -Size $size.SizeMax
-  }
-  catch{
-    Write-Error "Failed to expand the VHDx drive: $_"
-  }
-  Dismount-VHD -Path $vhdPath
-
   {# 4b. Extra Drives #}
   {% for drive in drives %}
     {% if int(drive['new_size']) > int(drive['old_size']) %}
-      $vhdxPath = D:\HyperV\$VMName\{$VMName}_{{ drive['type'] }}_{{ drive['id'] }}.vhdx
+      $vhdxPath = D:\HyperV\$VMName\$VMName_{{ drive['type'] }}_{{ drive['id'] }}.vhdx
       Resize-VHD -Path $vhdxPath -SizeBytes {{ drive['new_size'] }}GB
-      $drive_letter = (Mount-VHD -Path $vhdxPath -Passthru | Get-Partition).DriveLetter
-      try{
-        Write-Host "Changing the VHDx drive to its requested size..."
-        $size = Get-PartitionSupportedSize -DriveLetter $drive_letter
-        Resize-Partition -DriveLetter $drive_letter -Size $size.SizeMax
-      }
-      catch{
-        Write-Error "Failed to expand the VHDx drive: $_"
-      }
-  Dismount-VHD -Path $vhdPath
+      $DriveLetter = (Mount-VHD -Path $vhdxPath -Passthru | Get-Partition).DriveLetter
+      try{$size = Get-PartitionSupportedSize -DriveLetter $DriveLetter;Resize-Partition -DriveLetter $DriveLetter -Size $size.SizeMax}catch{Write-Error "Failed to expand the VHDx drive: $_"}
+      Dismount-VHD -Path $vhdxPath
     {% elif int(drive['new_size']) == 0 %}
-      Remove-Item -Recurse D:\HyperV\$VMName\{$VMName}_{{ drive['type'] }}_{{ drive['id'] }}.vhdx
+      Remove-Item -Recurse D:\HyperV\$VMName\$VMName_{{ drive['type'] }}_{{ drive['id'] }}.vhdx
     {% elif drive['old_size'] is in [0, None, ''] %}
-      New-VHD -Path D:\HyperV\$VMName\{$VMName}_{{ drive['type'] }}_{{ drive['id'] }}.vhdx -SizeBytes {{ drive['new_size'] }}GB -Dynamic
-      Add-VMHardDiskDrive -VMName $VMName -Path D:\HyperV\$VMName\{$VMName}_{{ drive['type'] }}_{{ drive['id'] }}.vhdx
+      New-VHD -Path D:\HyperV\$VMName\$VMName_{{ drive['type'] }}_{{ drive['id'] }}.vhdx -SizeBytes {{ drive['new_size'] }}GB -Dynamic
+      Add-VMHardDiskDrive -VMName $VMName -Path D:\HyperV\$VMName\$VMName_{{ drive['type'] }}_{{ drive['id'] }}.vhdx
     {% endif %}
   {% endfor %}
-
   Write-Host "VM Successfully Updated."
-} catch {
-  Write-Error "VM failed to update. Error Message: $_.Exception.Message"
-}
+}catch {Write-Error "VM failed to update. Error Message: $_.Exception.Message"}
