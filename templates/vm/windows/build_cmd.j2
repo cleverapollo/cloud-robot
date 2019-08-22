@@ -15,10 +15,10 @@ $drive_size = [int64]{{ ssd }}*1GB
 {% endif %}
 {# Path Configuration #}
 {# VM Path #}
-{% set vm_path  = 'D:\HyperV\' %}
+{% set vm_path = 'D:\HyperV\\' %}
 New-Item -ItemType directory -Path {{ vm_path }}{{ vm_identifier }}
 {# VHDX Path #}
-{% set vhd_path = f'{ vm_path }{ vm_identifier }\{ vm_identifier }_{ drive_format }_{ drive_id }.vhdx' %}
+{% set vhd_path = [[[[vm_path, vm_identifier]|join(), vm_identifier]|join('\\'), drive_format, drive_id]|join('_'), '.vhdx']|join() %}
 {# IMAGE VHDX Path #}
 {% set gen = 1 %}
 {% if image_filename == 'SW_DVD9_Win_Server_STD_CORE_2019_1809.1_64Bit_English_DC_STD_MLF_X22-02970.ISO' %}
@@ -61,7 +61,7 @@ try { Set-VMNetworkAdapterVlan -VMName {{ vm_identifier }} -Access -VlanId {{ vl
 {% if drives %}
 {% for drive in drives %}
 $driveSize = [int64]{{ drive['drive_size'] }}*1GB
-{% set drive_path = f'{ vm_path }{ vm_identifier }\{ vm_identifier }_{ drive_format }_{ drive['drive_id'] }.vhdx' %}
+{% set drive_path = [[[[vm_path, vm_identifier]|join(), vm_identifier]|join('\\'), drive_format, drive['drive_id']]|join('_'), '.vhdx']|join() %}
 {# Create new drive #}
 try{New-VHD -Path {{ drive_path }} -SizeBytes $driveSize -Dynamic}catch{Write-Error 'Failed to create new drive {{ drive_path }}, error details: $_'}
 {# Attach the VHD(x) to the Vm #}
