@@ -27,13 +27,13 @@ try {
   {# 4a. Primary Drive #}
   {# considering new_size > old_size always #}
   {% if hdd and int(hdd.split(':')[1]) > int(hdd.split(':')[2]) %}
-    {% set drive_path = 'D:\HyperV\{{ vm_identifier }}\{{ vm_identifier }}_HDD_{{ hdd.split(':')[0] }}.vhdx' %}
+    {% set drive_path = [[[['D:\HyperV\\', vm_identifier]|join(), vm_identifier]|join('\\'), 'HDD', hdd.split(':')[0]]|join('_'), '.vhdx']|join() %}
     Resize-VHD -Path {{ drive_path }} -SizeBytes {{ int(hdd.split(':')[1]) }}GB
     $DriveLetter = (Mount-VHD -Path {{ drive_path }} -Passthru | Get-Partition).DriveLetter
     try{$size = Get-PartitionSupportedSize -DriveLetter $DriveLetter;Resize-Partition -DriveLetter $DriveLetter -Size $size.SizeMax}catch{Write-Error 'Failed to expand the VHDx drive: $_'}
     Dismount-VHD -Path {{ drive_path }}
   {% elif ssd and int(ssd.split(':')[1]) > int(ssd.split(':')[2]) %}
-    {% set drive_path = 'D:\HyperV\{{ vm_identifier }}\{{ vm_identifier }}_SSD_{{ ssd.split(':')[0] }}.vhdx' %}
+    {% set drive_path = [[[['D:\HyperV\\', vm_identifier]|join(), vm_identifier]|join('\\'), 'SSD', ssd.split(':')[0]]|join('_'), '.vhdx']|join() %}
     Resize-VHD -Path {{ drive_path }} -SizeBytes {{ int(ssd.split(':')[1]) }}GB
     $DriveLetter = (Mount-VHD -Path {{ drive_path }} -Passthru | Get-Partition).DriveLetter
     try{$size = Get-PartitionSupportedSize -DriveLetter $DriveLetter;Resize-Partition -DriveLetter $DriveLetter -Size $size.SizeMax}catch{Write-Error 'Failed to expand the VHDx drive: $_'}
