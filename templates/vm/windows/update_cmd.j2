@@ -1,19 +1,19 @@
 try {
   # Set the script to stop at the first error
-  $ErrorActionPreference = "Stop"
+  $ErrorActionPreference = 'Stop'
   $VMName = '{{ vm_identifier }}'
 
   {# 0. Update the IPAddress if any #}
   $Msvm_VirtualSystemManagementService = Get-WmiObject -Namespace root\virtualization\v2 -Class Msvm_VirtualSystemManagementService
-  $Msvm_ComputerSystem = Get-WmiObject -Namespace root\virtualization\v2 -Class Msvm_ComputerSystem -Filter "ElementName='$VMName'"
-  $Msvm_VirtualSystemSettingData = ($Msvm_ComputerSystem.GetRelated("Msvm_VirtualSystemSettingData", "Msvm_SettingsDefineState", $null, $null, "SettingData", "ManagedElement", $false, $null) | % {$_})
-  $Msvm_SyntheticEthernetPortSettingData = $Msvm_VirtualSystemSettingData.GetRelated("Msvm_SyntheticEthernetPortSettingData")
-  $Msvm_GuestNetworkAdapterConfiguration = ($Msvm_SyntheticEthernetPortSettingData.GetRelated("Msvm_GuestNetworkAdapterConfiguration", "Msvm_SettingDataComponent", $null, $null, "PartComponent", "GroupComponent", $false, $null) | % {$_})
+  $Msvm_ComputerSystem = Get-WmiObject -Namespace root\virtualization\v2 -Class Msvm_ComputerSystem -Filter 'ElementName=$VMName'
+  $Msvm_VirtualSystemSettingData = ($Msvm_ComputerSystem.GetRelated('Msvm_VirtualSystemSettingData', 'Msvm_SettingsDefineState', $null, $null, 'SettingData', 'ManagedElement', $false, $null) | % {$_})
+  $Msvm_SyntheticEthernetPortSettingData = $Msvm_VirtualSystemSettingData.GetRelated('Msvm_SyntheticEthernetPortSettingData')
+  $Msvm_GuestNetworkAdapterConfiguration = ($Msvm_SyntheticEthernetPortSettingData.GetRelated('Msvm_GuestNetworkAdapterConfiguration', 'Msvm_SettingDataComponent', $null, $null, 'PartComponent', 'GroupComponent', $false, $null) | % {$_})
   $Msvm_GuestNetworkAdapterConfiguration.DHCPEnabled = $false
-  $Msvm_GuestNetworkAdapterConfiguration.IPAddresses = @("{{ ip_address }}")
-  $Msvm_GuestNetworkAdapterConfiguration.Subnets = @("{{ netmask }}")
-  $Msvm_GuestNetworkAdapterConfiguration.DefaultGateways = @("{{ gateway }}")
-  $Msvm_GuestNetworkAdapterConfiguration.DNSServers = @("{{ dns }}")
+  $Msvm_GuestNetworkAdapterConfiguration.IPAddresses = @('{{ ip_address }}')
+  $Msvm_GuestNetworkAdapterConfiguration.Subnets = @('{{ netmask }}')
+  $Msvm_GuestNetworkAdapterConfiguration.DefaultGateways = @('{{ gateway }}')
+  $Msvm_GuestNetworkAdapterConfiguration.DNSServers = @('{{ dns }}')
   $Msvm_VirtualSystemManagementService.SetGuestNetworkAdapterConfiguration($Msvm_ComputerSystem.Path, $Msvm_GuestNetworkAdapterConfiguration.GetText(1))
 
   {# 1. Shutdown the VM first #}
@@ -27,16 +27,16 @@ try {
   {# 4a. Primary Drive #}
   {# considering new_size > old_size always #}
   {% if hdd and int(hdd.split(':')[1]) > int(hdd.split(':')[2]) %}
-    {% set drive_path = "D:\HyperV\{{ vm_identifier }}\{{ vm_identifier }}_HDD_{{ hdd.split(':')[0] }}.vhdx" %}
+    {% set drive_path = 'D:\HyperV\{{ vm_identifier }}\{{ vm_identifier }}_HDD_{{ hdd.split(':')[0] }}.vhdx' %}
     Resize-VHD -Path {{ drive_path }} -SizeBytes {{ int(hdd.split(':')[1]) }}GB
     $DriveLetter = (Mount-VHD -Path {{ drive_path }} -Passthru | Get-Partition).DriveLetter
-    try{$size = Get-PartitionSupportedSize -DriveLetter $DriveLetter;Resize-Partition -DriveLetter $DriveLetter -Size $size.SizeMax}catch{Write-Error "Failed to expand the VHDx drive: $_"}
+    try{$size = Get-PartitionSupportedSize -DriveLetter $DriveLetter;Resize-Partition -DriveLetter $DriveLetter -Size $size.SizeMax}catch{Write-Error 'Failed to expand the VHDx drive: $_'}
     Dismount-VHD -Path {{ drive_path }}
   {% elif ssd and int(ssd.split(':')[1]) > int(ssd.split(':')[2]) %}
-    {% set drive_path = "D:\HyperV\{{ vm_identifier }}\{{ vm_identifier }}_SSD_{{ ssd.split(':')[0] }}.vhdx" %}
+    {% set drive_path = 'D:\HyperV\{{ vm_identifier }}\{{ vm_identifier }}_SSD_{{ ssd.split(':')[0] }}.vhdx' %}
     Resize-VHD -Path {{ drive_path }} -SizeBytes {{ int(ssd.split(':')[1]) }}GB
     $DriveLetter = (Mount-VHD -Path {{ drive_path }} -Passthru | Get-Partition).DriveLetter
-    try{$size = Get-PartitionSupportedSize -DriveLetter $DriveLetter;Resize-Partition -DriveLetter $DriveLetter -Size $size.SizeMax}catch{Write-Error "Failed to expand the VHDx drive: $_"}
+    try{$size = Get-PartitionSupportedSize -DriveLetter $DriveLetter;Resize-Partition -DriveLetter $DriveLetter -Size $size.SizeMax}catch{Write-Error 'Failed to expand the VHDx drive: $_'}
     Dismount-VHD -Path {{ drive_path }}
   {% endif %}
   {# 4b. Extra Drives #}
@@ -45,7 +45,7 @@ try {
       $vhdxPath = D:\HyperV\$VMName\$VMName_{{ drive['type'] }}_{{ drive['id'] }}.vhdx
       Resize-VHD -Path $vhdxPath -SizeBytes {{ drive['new_size'] }}GB
       $DriveLetter = (Mount-VHD -Path $vhdxPath -Passthru | Get-Partition).DriveLetter
-      try{$size = Get-PartitionSupportedSize -DriveLetter $DriveLetter;Resize-Partition -DriveLetter $DriveLetter -Size $size.SizeMax}catch{Write-Error "Failed to expand the VHDx drive: $_"}
+      try{$size = Get-PartitionSupportedSize -DriveLetter $DriveLetter;Resize-Partition -DriveLetter $DriveLetter -Size $size.SizeMax}catch{Write-Error 'Failed to expand the VHDx drive: $_'}
       Dismount-VHD -Path $vhdxPath
     {% elif int(drive['new_size']) == 0 %}
       Remove-Item -Recurse D:\HyperV\$VMName\$VMName_{{ drive['type'] }}_{{ drive['id'] }}.vhdx
@@ -54,5 +54,5 @@ try {
       Add-VMHardDiskDrive -VMName $VMName -Path D:\HyperV\$VMName\$VMName_{{ drive['type'] }}_{{ drive['id'] }}.vhdx
     {% endif %}
   {% endfor %}
-  Write-Host "VM Successfully Updated."
-}catch {Write-Error "VM failed to update. Error Message: $_.Exception.Message"}
+  Write-Host 'VM Successfully Updated.'
+}catch {Write-Error 'VM failed to update. Error Message: $_.Exception.Message'}
