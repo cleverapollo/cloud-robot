@@ -21,23 +21,14 @@ New-Item -ItemType directory -Path {{ vm_path }}{{ vm_identifier }}
 {% set vhd_path = [[[[vm_path, vm_identifier]|join(), vm_identifier]|join("\\"), drive_format, drive_id]|join("_"), ".vhdx"]|join() %}
 {# IMAGE VHDX Path #}
 {% set gen = 1 %}
-{% if image_filename == "SW_DVD9_Win_Server_STD_CORE_2019_1809.1_64Bit_English_DC_STD_MLF_X22-02970.ISO" %}
-{% set win_version = 2019 %}
-{% elif image_filename == "SW_DVD9_Win_Svr_STD_Core_and_DataCtr_Core_2016_64Bit_English_-3_MLF_X21-30350.ISO" %}
-{% set win_version = 2016 %}
-{% elif image_filename == "SW_DVD9_Windows_Svr_Std_and_DataCtr_2012_R2_64Bit_English_-4_MLF_X19-82891.ISO" %}
-{% set win_version = 2012 %}
-{% else %}
-Write-Error "Invalid image name"
-{% endif %}
 try{
 [ValidateScript({Test-Path $_ })]
-[string]$VHDXPath = "$drive_letter\HyperV\VHDXs\WIN_SRV_{{ win_version }}_GEN_{{ gen }}.vhdx"
+[string]$VHDXPath = "$drive_letter\HyperV\VHDXs\{{ image_name }} Gen {{ gen }}.vhdx"
 }catch{Write-Error "$VHDXPath not found"}
 {# Unattend XML file path #}
 try{
 [ValidateScript({Test-Path $_ })]
-[string]$unattend = "$drive_letter\HyperV\unattend_xmls\{{ vm_identifier }}.xml"
+$unattend = "$drive_letter\HyperV\unattend_xmls\{{ vm_identifier }}.xml"
 }catch{Write-Error "Unattend xml: {{ vm_identifier }}.xml file Not found, exiting the VM Build. Details: $_ "}
 {#                                                 #}
 {# Copying VHDX to the folder #}
@@ -68,7 +59,10 @@ Dismount-VHD -Path {{ vhd_path }}
 {# VM Creation and Configuration #}
 {# Creation of VM #}
 try{
-New-VM -Name {{ vm_identifier }} -Path {{ vm_path }} -VHDPath {{ vhd_path }} -Generation {{ gen }} -SwitchName "Virtual Switch"
+New-VM -Name {{ vm_identifier }} -Path {{ vm_path }} `
+-Generation {{ gen }} `
+-SwitchName "Virtual Switch" `
+-VHDPath {{ vhd_path }}
 }catch{Write-Error "Could not create VM, error details: $_"}
 {# Changing the number of processor and the memory #}
 try{
@@ -104,4 +98,12 @@ Wait-VM -Name {{ vm_identifier }}
 Write-Host "VM Successfully Created and Hosted"
 }catch{Write-Error "VM {{ vm_identifier }} failed to start, error details: $_ "}
 }else{Write-Error "Failed to mount the NFS drive, exiting build"}
-}catch{if($(Test-Path -Path D:\HyperV\{{ vm_identifier }}) -eq $True){Remove-Item -Path D:\HyperV\{{ vm_identifier }} -Recurse};Write-Error "VM Build Failed. Error Message: $_.Exception.Message "}
+}catch{
+if($(Test-Path -Path D:\HyperV\{{ vm_identifier }}) -eq $True){
+Remove-Item -Path D:\HyperV\{{ vm_identifier }} -Recurse
+}
+if($(Test-Path -Path $drive_letter) -eq $True){
+cmd.exe /c "umount $drive_letter"
+}
+Write-Error "VM Build Failed. Error Message: $_.Exception.Message "
+}
