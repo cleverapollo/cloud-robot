@@ -1,9 +1,9 @@
 try {
   # Set the script to stop at the first error
-  $ErrorActionPreference = 'Stop'
-  $VMName = '{{ vm_identifier }}'
+  $ErrorActionPreference = "Stop"
+  $VMName = "{{ vm_identifier }}"
   Start-VM -Name $VMName
-  Write-Host '$VMName Successfully Rebooted.'
+  Write-Host "$VMName Successfully Rebooted."
 } catch {
-  Write-Error 'VM failed to restart. Error Message: $_.Exception.Message'
+  Write-Error "VM failed to restart. Error Message: $_.Exception.Message"
 }
