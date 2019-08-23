@@ -56,8 +56,8 @@ class Windows(WindowsMixin):
         'hdd',
         # the DNS hostname for the host machine, as WinRM cannot use IPv6
         'host_name',
-        # the filename of the image used to build the vm
-        'image_filename',
+        # the name of the image used to build the vm
+        'image_name',
         # the id of the image used to build the VM
         'image_id',
         # the ip address of the vm in its subnet
@@ -174,7 +174,7 @@ class Windows(WindowsMixin):
         data: Dict[str, Any] = {key: None for key in Windows.template_keys}
 
         data['vm_identifier'] = f'{vm_data["idProject"]}_{vm_data["idVM"]}'
-        data['image_filename'] = image_data['filename']
+        data['image_name'] = image_data['name']
         data['image_id'] = image_data['idImage']
         # RAM is needed in MB for the builder but we take it in in GB (1024, not 1000)
         data['ram'] = vm_data['ram'] * 1024
