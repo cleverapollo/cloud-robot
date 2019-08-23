@@ -13,6 +13,9 @@ all:
       hosts:
         cork01-worker0:
           ansible_host: "2a02:2078:4::3"
-      vars:
-        env: cork01
-        ansible_become_pass: C1xacc355
+          env: cork01
+          ansible_become_pass: C1xacc355
+        nti-cork01-worker0:
+          ansible_host: "2a02:2078:8::3"
+          env: nti-cork01
+          ansible_become_pass: C1xacc355
