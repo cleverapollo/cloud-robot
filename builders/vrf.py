@@ -221,8 +221,8 @@ class Vrf(VrfMixin):
                 {
                     'vlan': vpn['vpnLocalSubnetDict']['vLAN'],
                     'local_subnet': IPNetwork(vpn['vpnLocalSubnetDict']['addressRange']).cidr,
-                    'ike': vpn['ike_data'],
-                    'ipsec': vpn['ipsec_data'],
+                    'ike': vpn['ike'],
+                    'ipsec': vpn['ipsec'],
                     'remote_subnet': IPNetwork(f'{vpn["vpnRemoteSubnetIP"]}/{vpn["vpnRemoteSubnetMask"]}').cidr,
                 },
             )
