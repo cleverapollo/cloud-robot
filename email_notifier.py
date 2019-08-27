@@ -44,6 +44,21 @@ class EmailNotifier:
         subject = f'[CloudCIX] VM Failure Occurred!'
         EmailNotifier._compose_email('developers@cloudcix.com', subject, body)
 
+    @staticmethod
+    def vrf_failure(vrf_data: Dict[str, Any], task: str):
+        """
+        Report any kind of failure to the NOC and developers emails
+        """
+        logger = logging.getLogger('robot.email_notifier.vrf_failure')
+        logger.debug(f'Sending failure email for VRF #{vrf_data["idVRF"]}')
+        # Add the pretty printed data blob to the VRF
+        vrf_data['data'] = dumps(vrf_data, indent=2)
+        # Render the email body
+        body = utils.JINJA_ENV.get_template('emails/vrf_failure.j2').render(stage=STAGE, task=task, **vrf_data)
+        # Format the subject
+        subject = f'[CloudCIX] VRF Failure Occurred!'
+        EmailNotifier._compose_email('developers@cloudcix.com', subject, body)
+
     # ############################################################## #
     #                              BUILD                             #
     # ############################################################## #
@@ -65,6 +80,24 @@ class EmailNotifier:
         body = utils.JINJA_ENV.get_template('emails/build_success.j2').render(stage=STAGE, **vm_data)
         # Format the subject
         subject = f'[CloudCIX] Your VM "{name}" has been built successfully!'
+        EmailNotifier._compose_email(email, subject, body)
+
+    @staticmethod
+    def vrf_build_success(vrf_data: Dict[str, Any]):
+        """
+        Given a VRF's details, render and send a build success email
+        """
+        logger = logging.getLogger('robot.email_notifier.vrf_build_success')
+        logger.debug(f'Sending build success email for VRF #{vrf_data["idVRF"]}')
+        # Check that the data contains an email
+        email = vrf_data.get('email', None)
+        if email is None:
+            logger.error(f'No email found for VRF #{vrf_data["idVRF"]}. Sending to developers@cloudcix.com instead.')
+            email = 'developers@cloudcix.com'
+        # Render the email body
+        body = utils.JINJA_ENV.get_template('emails/vrf_build_success.j2').render(stage=STAGE, **vrf_data)
+        # Format the subject
+        subject = '[CloudCIX] Your VPN Tunnel has been built successfully!'
         EmailNotifier._compose_email(email, subject, body)
 
     @staticmethod

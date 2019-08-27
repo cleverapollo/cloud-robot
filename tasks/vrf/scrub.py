@@ -8,9 +8,10 @@ from jaeger_client import Span
 import metrics
 import state
 import utils
-from scrubbers import Vrf as VrfScrubber
 from celery_app import app
 from cloudcix_token import Token
+from email_notifier import EmailNotifier
+from scrubbers import Vrf as VrfScrubber
 
 __all__ = [
     'scrub_vrf',
@@ -112,3 +113,13 @@ def _scrub_vrf(vrf_id: int, span: Span):
     else:
         logger.error(f'Failed to scrub VRF #{vrf_id}')
         metrics.vrf_scrub_failure()
+
+        child_span = opentracing.tracer.start_span('send_email', child_of=span)
+        try:
+            EmailNotifier.vrf_failure(vrf, 'scrub')
+        except Exception:
+            logger.error(
+                f'Failed to send build failure email for VRF #{vrf["idVRF"]}',
+                exc_info=True,
+            )
+        child_span.finish()
