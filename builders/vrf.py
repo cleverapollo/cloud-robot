@@ -228,4 +228,9 @@ class Vrf(VrfMixin):
             )
         data['vpns'] = vpns
 
+        # Store necessary data back in vrf data for the email
+        vrf_data['vrf_ip'] = data['vrf_ip']
+        vrf_data['vlans'] = data['vlans']
+        vrf_data['vpns'] = data['vpns']
+
         return data
