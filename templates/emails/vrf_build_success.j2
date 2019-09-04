@@ -1,0 +1,52 @@
+{% extends "emails/base.j2" %}
+
+{% block title %}Your VPN Tunnel has been built successfully!{% endblock %}
+
+{% block content %}
+<p>You are receiving this email because you requested for a VPN to be built.</p>
+<p>You must now configure the VPN on your hardware following the instructions below, in order to connect.</p>
+<hr />
+<h3>Step 1</h3>
+<p>Before connecting to a VPN Tunnel, ensure that your Project is reachable.</p>
+<p>You can check this by pinging the Virtual Router of the Project at <b>{{ vrf_ip }}</b>.</p>
+<hr />
+<h3>Step 2</h3>
+<p>After ensuring the Project is accessible, configure the VPN settings on your local router with the settings in the table below.</p>
+<hr />
+<h3>Step 3</h3>
+<p>After configuring the VPN on your local hardware, test that it works by pinging the gateway of a Project Subnet;<p>
+<ul>
+  {% for vlan in vlans %}
+  <li><b>{{ vlan['address_range'].split('/')[0] }}</b></li>
+  {% endfor %}
+</ul>
+<hr />
+<h2>VPN Configuration</h2>
+{% set vpn = vpns[0] %}
+<table class="align-left">
+  {# Addresses #}
+  <tr><th colspan="2" class="align-center" style="font-size:1.5em;">Address Details</th></tr>
+  <tr><th>Local Router Address</th><td>{{ vpn['ike']['remote_fip'] }}</td></tr>
+  <tr><th>Remote Router Address</th><td>{{ vrf_ip }}</td></tr>
+  <tr><th>Local Subnet</th><td>{{ vpn['remote_subnet'] }}</td></tr>
+  <tr><th>Remote Subnet</th><td>{{ vpn['local_subnet'] }}</td></tr>
+  {# IKE Settings #}
+  <tr><th colspan="2" class="align-center" style="padding-top:1em;font-size:1.5em;">IKE (Phase 1) Settings</th></tr>
+  <tr><th>Authentication</th><td>{{ vpn['ike']['authentication'] }}</td></tr>
+  <tr><th>Diffie-Hellman (DH) Group</th><td>{{ vpn['ike']['dh_group'] }}</td></tr>
+  <tr><th>Encryption</th><td>{{ vpn['ike']['encryption'] }}</td></tr>
+  <tr><th>IKE Version</th><td>{{ vpn['ike']['version'] }}</td></tr>
+  <tr><th>Lifetime (in seconds)</th><td>{{ vpn['ike']['life_seconds'] }}</td></tr>
+  <tr><th>Mode</th><td>{{ vpn['ike']['mode'] }}</td></tr>
+  <tr><th>Pre Shared Key</th><td>{{ vpn['ike']['pre_shared_key'] }}</td></tr>
+  {# IPSec Settings #}
+  <tr><th colspan="2" class="align-center" style="padding-top:1em;font-size:1.5em;">IPSec (Phase 2) Settings</th></tr>
+  <tr><th>Authentication</th><td>{{ vpn['ipsec']['authentication'] }}</td></tr>
+  <tr><th>Encapsulation Mode</th><td>Tunnel</td></tr>
+  <tr><th>Establish Tunnel</th><td>{{ vpn['ipsec']['establish_tunnel'] }}</td></tr>
+  <tr><th>Encryption</th><td>{{ vpn['ipsec']['encryption'] }}</td></tr>
+  <tr><th>Lifetime (in seconds)</th><td>{{ vpn['ipsec']['life_seconds'] }}</td></tr>
+  <tr><th>PFS Group</th><td>{{ vpn['ipsec']['pfs'] }}</td></tr>
+  <tr><th>Protocol</th><td>esp</td></tr>
+</table>
+{% endblock %}

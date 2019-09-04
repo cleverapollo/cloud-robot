@@ -40,11 +40,11 @@
       echo {{ host_sudo_passwd }} | sudo -S qemu-img resize /var/lib/libvirt/images/{{ vm_identifier }}_{{ drive['type'] }}_{{ drive['id'] }}.img +{{ diff }}G
     {% elif int(drive['new_size']) == 0 %}
       {# Delete the Drive #}
-      echo {{ host_sudo_passwd }} | sudo -S rm -rf /var/lib/libvirt/images/{{ vm_identifier }}_{{ drive["type"] }}_{{ drive["id"] }}.img
+      echo {{ host_sudo_passwd }} | sudo -S rm -rf /var/lib/libvirt/images/{{ vm_identifier }}_{{ drive['type'] }}_{{ drive['id'] }}.img
       {% elif drive['old_size'] is in [0, None, ''] %}
       {# Create a new Drive #}
       {% set number = number + 1 %}
-      echo {{ host_sudo_passwd }} | sudo -S qemu-img create -f qcow2 /var/lib/libvirt/images/{{ vm_identifier }}_{{ drive["type"] }}_{{ drive["id"] }}.img {{ drive["size"] }}G
+      echo {{ host_sudo_passwd }} | sudo -S qemu-img create -f qcow2 /var/lib/libvirt/images/{{ vm_identifier }}_{{ drive['type'] }}_{{ drive['id'] }}.img {{ drive['size'] }}G
     {% endif %}
   {% endfor %}
 
@@ -52,7 +52,7 @@
   {% for drive in drives if drive['old_size'] is in [0, None, ''] %}
     {% set alphabet = chr(96 + (len(drives) - number) + (loop.index0 + 1)) %}
     echo {{ host_sudo_passwd }} | sudo -S virsh attach-disk {{ vm_identifier }} \
-    --source /var/lib/libvirt/images/{{ vm_identifier }}_{{ drive["type"] }}_{{ drive["id"] }}.img \
+    --source /var/lib/libvirt/images/{{ vm_identifier }}_{{ drive['type'] }}_{{ drive['id'] }}.img \
     --target vd{{ alphabet }}
   {% endfor %}
 }

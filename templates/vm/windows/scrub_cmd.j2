@@ -1,7 +1,7 @@
 try {
   # Set the script to stop at the first error
   $ErrorActionPreference = "Stop"
-  $VMName = '{{ vm_identifier }}'
+  $VMName = "{{ vm_identifier }}"
   Get-VMHardDiskDrive -VMName $VMName | foreach {
     Remove-Item -Path $_.Path -Recurse -Force -Confirm:$false
   }

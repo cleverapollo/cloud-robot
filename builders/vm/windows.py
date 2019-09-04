@@ -56,8 +56,8 @@ class Windows(WindowsMixin):
         'hdd',
         # the DNS hostname for the host machine, as WinRM cannot use IPv6
         'host_name',
-        # the filename of the image used to build the vm
-        'image_filename',
+        # the name of the image used to build the vm
+        'image_name',
         # the id of the image used to build the VM
         'image_id',
         # the ip address of the vm in its subnet
@@ -174,7 +174,7 @@ class Windows(WindowsMixin):
         data: Dict[str, Any] = {key: None for key in Windows.template_keys}
 
         data['vm_identifier'] = f'{vm_data["idProject"]}_{vm_data["idVM"]}'
-        data['image_filename'] = image_data['filename']
+        data['image_name'] = image_data['name']
         data['image_id'] = image_data['idImage']
         # RAM is needed in MB for the builder but we take it in in GB (1024, not 1000)
         data['ram'] = vm_data['ram'] * 1024
@@ -187,17 +187,20 @@ class Windows(WindowsMixin):
         vm_data['admin_password'] = data['admin_password']
 
         # Fetch the drives for the VM and add them to the data
-        drives: Deque[str] = deque()
+        drives: Deque[Dict[str, Any]] = deque()
         for storage in utils.api_list(IAAS.storage, {}, vm_id=vm_id, span=span):
             # Check if the storage is primary
             if storage['primary']:
+                data['drive_id'] = storage['idStorage']
                 # Determine which field (hdd or ssd) to populate with this storage information
                 if storage['storage_type'] == 'HDD':
-                    data['hdd'] = f'{storage["idStorage"]}:{storage["gb"]}'
+                    data['drive_format'] = 'HDD'
+                    data['hdd'] = storage['gb']
                     data['ssd'] = 0
                 elif storage['storage_type'] == 'SSD':
+                    data['drive_format'] = 'SSD'
                     data['hdd'] = 0
-                    data['ssd'] = f'{storage["idStorage"]}:{storage["gb"]}'
+                    data['ssd'] = storage['gb']
                 else:
                     Windows.logger.error(
                         f'Invalid primary drive storage type {storage["storage_type"]}. Expected either "HDD" or "SSD"',
@@ -205,9 +208,14 @@ class Windows(WindowsMixin):
                     return None
             else:
                 # Just append to the drives deque
-                drives.append(f'{storage["idStorage"]}:{storage["gb"]}')
+                drives.append(
+                    {
+                        'drive_id': storage['idStorage'],
+                        'drive_size': storage['gb'],
+                    },
+                )
         if len(drives) > 0:
-            data['drives'] = ','.join(drives)
+            data['drives'] = drives
         else:
             data['drives'] = 0
 
@@ -273,21 +281,6 @@ class Windows(WindowsMixin):
             Windows.logger.error(
                 f'Failed to write unattend file for VM #{vm_id} to {unattend_filename}',
                 exc_info=True,
-            )
-            return False
-
-        # Write out the build script files that are used by Robot
-        Windows.logger.debug('Writing VMCreator.ps1 script to the network drive.')
-        template_name = 'vm/windows/scripts/vm_creator.j2'
-        output_path = f'{network_drive_path}/scripts/VMCreator.ps1'
-        try:
-            rendered_template = utils.JINJA_ENV.get_template(template_name).render(**template_data)
-            with open(output_path, 'w') as f:
-                f.write(rendered_template)
-            Windows.logger.debug(f'Wrote {template_name} to the network drive.')
-        except IOError:
-            Windows.logger.error(
-                f'Failed to write {template_name} to {output_path}',
             )
             return False
 

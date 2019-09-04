@@ -2,22 +2,26 @@ all:
   vars:
     ansible_python_interpreter: /usr/bin/python3
   children:
-    alpha:
-      hosts:
-        alpha-worker0:
-          ansible_host: "2a02:2078:3::3"
-      vars:
-        env: alpha
-        ansible_become_pass: J1t3nd3r1sKw3l
-    cork01:
-      hosts:
-        cork01-worker0:
-          ansible_host: "2a02:2078:4::3"
-          env: cork01
-          ansible_become_pass: C1xacc355
-    nti-cork01:
-      hosts:
-        nti-cork01-worker0:
-          ansible_host: "2a02:2078:8::3"
-          env: nti-cork01
-          ansible_become_pass: C1xacc355
+    staging:
+      children:
+        alpha:
+          hosts:
+            alpha-worker0:
+              ansible_host: "2a02:2078:3::3"
+          vars:
+            env: alpha
+            ansible_become_pass: J1t3nd3r1sKw3l
+    production:
+      children:
+        cork01:
+          hosts:
+            cork01-worker0:
+              ansible_host: "2a02:2078:4::3"
+              env: cork01
+              ansible_become_pass: C1xacc355
+        nti-cork01:
+          hosts:
+            nti-cork01-worker0:
+              ansible_host: "2a02:2078:8::3"
+              env: nti-cork01
+              ansible_become_pass: C1xacc355

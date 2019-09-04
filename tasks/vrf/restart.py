@@ -8,9 +8,10 @@ from jaeger_client import Span
 import metrics
 import state
 import utils
-from restarters import Vrf as VrfRestarter
 from celery_app import app
 from cloudcix_token import Token
+from email_notifier import EmailNotifier
+from restarters import Vrf as VrfRestarter
 
 __all__ = [
     'restart_vrf',
@@ -129,3 +130,13 @@ def _restart_vrf(vrf_id: int, span: Span):
             logger.error(
                 f'Could not update VRF #{vrf_id} to state UNRESOURCED. Response: {response.content.decode()}.',
             )
+
+        child_span = opentracing.tracer.start_span('send_email', child_of=span)
+        try:
+            EmailNotifier.vrf_failure(vrf, 'restart')
+        except Exception:
+            logger.error(
+                f'Failed to send build failure email for VRF #{vrf["idVRF"]}',
+                exc_info=True,
+            )
+        child_span.finish()

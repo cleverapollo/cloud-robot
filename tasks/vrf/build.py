@@ -11,6 +11,7 @@ import utils
 from builders import Vrf as VrfBuilder
 from celery_app import app
 from cloudcix_token import Token
+from email_notifier import EmailNotifier
 
 __all__ = [
     'build_vrf',
@@ -105,6 +106,18 @@ def _build_vrf(vrf_id: int, span: Span):
             logger.error(
                 f'Could not update VRF #{vrf_id} to state RUNNING. Response: {response.content.decode()}.',
             )
+
+        # Check if they built a VPN and if so, send an email
+        if len(vrf.get('vpns', [])) > 0:
+            child_span = opentracing.tracer.start_span('send_email', child_of=span)
+            try:
+                EmailNotifier.vrf_build_success(vrf)
+            except Exception:
+                logger.error(
+                    f'Failed to send build success email for VRF #{vrf["idVRF"]}',
+                    exc_info=True,
+                )
+            child_span.finish()
     else:
         logger.error(f'Failed to build VRF #{vrf_id}')
         metrics.vrf_build_failure()
@@ -123,3 +136,13 @@ def _build_vrf(vrf_id: int, span: Span):
             logger.error(
                 f'Could not update VRF #{vrf_id} to state UNRESOURCED. Response: {response.content.decode()}.',
             )
+
+        child_span = opentracing.tracer.start_span('send_email', child_of=span)
+        try:
+            EmailNotifier.vrf_failure(vrf, 'build')
+        except Exception:
+            logger.error(
+                f'Failed to send build failure email for VRF #{vrf["idVRF"]}',
+                exc_info=True,
+            )
+        child_span.finish()
