@@ -77,10 +77,10 @@ try {
     Write-Host "VM Successfully Created and Hosted"
   }else{Write-Error "$_.Exception.Message"}
 }catch{
-  Write-Error "$_.Exception.Message "
   if($(Test-Path -Path D:\HyperV\{{ vm_identifier }}\mount\Windows)){
   Dismount-VHD -Path {{ vhd_path }}}
   if($(Test-Path -Path D:\HyperV\{{ vm_identifier }}) -eq $True){
   Remove-Item -Path D:\HyperV\{{ vm_identifier }} -Recurse}
   if($(Test-Path -Path $drive_letter) -eq $True){Remove-PSDrive $mount_point}
+  Write-Error "$_.Exception.Message "
 }
