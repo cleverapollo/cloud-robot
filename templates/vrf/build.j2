@@ -15,6 +15,7 @@ set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} interface
 set groups vrf-{{ project_id }} interfaces {{ private_port }} unit {{ vlan['vlan'] }} description vrf-{{ project_id }}-vlan-{{ vlan['vlan'] }} vlan-id {{ vlan['vlan'] }} family {{ vlan['address_family'] }} address {{ vlan['address_range'] }}
 {# Create private zones #}
 set groups vrf-{{ project_id }} security zones security-zone vrf-{{ project_id }} host-inbound-traffic system-services all
+set groups vrf-{{ project_id }} security zones security-zone vrf-{{ project_id }} interfaces {{ private_port }}.{{ vlan['vlan'] }}
 {% endfor %}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Source (outbound) NAT #}
