@@ -3,11 +3,7 @@ set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} instance-
 set groups vrf-{{ project_id }} security zones security-zone vrf-{{ project_id }}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Create a northbound route #}
-{% if has_firewall %}
-set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} routing-options static route 0.0.0.0/0 next-table PUBLIC_FW.inet.0
-{% else %}
 set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} routing-options static route 0.0.0.0/0 next-table PUBLIC.inet.0
-{% endif %}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Define VRF public IP on ge-0/0/0.0 interface #}
 set groups vrf-{{ project_id }} interfaces {{ public_port }} unit 0 family {{ port_address_family }} address {{ vrf_ip }}/{{ vrf_subnet_mask }}
@@ -18,23 +14,15 @@ set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} interface
 {# Configure sub-interfaces #}
 set groups vrf-{{ project_id }} interfaces {{ private_port }} unit {{ vlan['vlan'] }} description vrf-{{ project_id }}-vlan-{{ vlan['vlan'] }} vlan-id {{ vlan['vlan'] }} family {{ vlan['address_family'] }} address {{ vlan['address_range'] }}
 {# Create private zones #}
-set groups vrf-{{ project_id }} security zones security-zone vrf-{{ project_id }} interfaces {{ private_port }}.{{ vlan['vlan'] }} host-inbound-traffic system-services ping
+set groups vrf-{{ project_id }} security zones security-zone vrf-{{ project_id }} host-inbound-traffic system-services all
 {% endfor %}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Source (outbound) NAT #}
 set groups vrf-{{ project_id }} security nat source rule-set vrf-{{ project_id }}-outbound description vrf-{{ project_id }}-outbound-nat
-{% if has_firewall %}
-set groups vrf-{{ project_id }} security nat source pool vrf-{{ project_id }}-public routing-instance PUBLIC_FW
-{% else %}
 set groups vrf-{{ project_id }} security nat source pool vrf-{{ project_id }}-public routing-instance PUBLIC
-{% endif %}
 set groups vrf-{{ project_id }} security nat source pool vrf-{{ project_id }}-public address {{ vrf_ip }}
 set groups vrf-{{ project_id }} security nat source rule-set vrf-{{ project_id }}-outbound from zone vrf-{{ project_id }}
-{% if has_firewall %}
-set groups vrf-{{ project_id }} security nat source rule-set vrf-{{ project_id }}-outbound to zone PUBLIC_FW
-{% else %}
 set groups vrf-{{ project_id }} security nat source rule-set vrf-{{ project_id }}-outbound to zone PUBLIC
-{% endif %}
 {% for vlan in vlans %}
 set groups vrf-{{ project_id }} security nat source rule-set vrf-{{ project_id }}-outbound rule {{ vlan['vlan'] }}-outbound match source-address {{ vlan['address_range'] }}
 set groups vrf-{{ project_id }} security nat source rule-set vrf-{{ project_id }}-outbound rule {{ vlan['vlan'] }}-outbound then source-nat pool vrf-{{ project_id }}-public

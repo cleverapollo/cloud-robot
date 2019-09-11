@@ -100,7 +100,7 @@ class Vrf(VrfMixin):
         management_ip = template_data.pop('management_ip')
         try:
             child_span = opentracing.tracer.start_span('generate_setconf', child_of=span)
-            template_name = f'vrf/build_{router_model}.j2'
+            template_name = f'vrf/build.j2'
             child_span.set_tag('template_name', template_name)
             conf = utils.JINJA_ENV.get_template(template_name).render(**template_data)
             child_span.finish()
