@@ -121,6 +121,7 @@ set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_
 {% endfor %}
 {# ------------------------------------------------------------------ #}
 {# inter-zone outbound for now allow all, will remove this eventually #}
+{% set outbound_firewall_exists = True %}
 set groups vrf-{{ project_id }}-sp-outbound security policies from-zone vrf-{{ project_id }} to-zone PUBLIC policy vrf-{{ project_id }}-policy-outbound-permit-all match source-address any
 set groups vrf-{{ project_id }}-sp-outbound security policies from-zone vrf-{{ project_id }} to-zone PUBLIC policy vrf-{{ project_id }}-policy-outbound-permit-all match destination-address any
 set groups vrf-{{ project_id }}-sp-outbound security policies from-zone vrf-{{ project_id }} to-zone PUBLIC policy vrf-{{ project_id }}-policy-outbound-permit-all match application any
