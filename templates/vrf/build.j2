@@ -57,6 +57,7 @@ set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-vpn-{{
 set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-vpn-{{ vpn['vlan'] }}-gateway external-interface {{ public_port }}.0
 set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-vpn-{{ vpn['vlan'] }}-gateway local-address {{ vrf_ip }}
 set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-vpn-{{ vpn['vlan'] }}-gateway version {{ vpn['ike']['version'] }}
+{# --------------------------------------#}
 {# Phase 2 authentication and encryption #}
 set groups vrf-{{ project_id }} security ipsec proposal vrf-{{ project_id }}-vpn-{{ vpn['vlan'] }}-ipsec-proposal protocol esp
 set groups vrf-{{ project_id }} security ipsec proposal vrf-{{ project_id }}-vpn-{{ vpn['vlan'] }}-ipsec-proposal authentication-algorithm {{ vpn['ipsec']['authentication'] }}
@@ -76,5 +77,63 @@ set groups vrf-{{ project_id }} security zones security-zone vrf-{{ project_id }
 {# add a route to the other end of the IPSec tunnel with the tunnel if as the next hop #}
 set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} routing-options static route {{ vpn['remote_subnet'] }} next-hop st0.{{ vpn['vlan'] }}
 {% endfor %}
+{# --------------------------------------------------------------------------------------------------------------------------------- #}
+{# Firewall rules #}
+{# intra-zone #}
+set groups vrf-{{ project_id }} security policies from-zone vrf-{{ project_id }} to-zone vrf-{{ project_id }} policy vrf-{{ project_id }}-policy-intra-zone match source-address any
+set groups vrf-{{ project_id }} security policies from-zone vrf-{{ project_id }} to-zone vrf-{{ project_id }} policy vrf-{{ project_id }}-policy-intra-zone match destination-address any
+set groups vrf-{{ project_id }} security policies from-zone vrf-{{ project_id }} to-zone vrf-{{ project_id }} policy vrf-{{ project_id }}-policy-intra-zone match application any
+set groups vrf-{{ project_id }} security policies from-zone vrf-{{ project_id }} to-zone vrf-{{ project_id }} policy vrf-{{ project_id }}-policy-intra-zone then permit
+{# ---------- #}
+{# inter-zone #}
+{% for firewall in firewall_rules %}
+{% if firewall['inbound'] %}
+{% set inbound_firewall_exists = True %}
+{% else %}
+{% set outbound_firewall_exists = True %}
+{% endif %}
+{# check to create an address object or not and then write policy #}
+{% if firewall['source_address_book'] != None %}
+{# address-book goes into vrf-xx group but policy goes into vrf-xx-sp-inbound group #}
+set groups vrf-{{ project_id }} security address-book {{ firewall['source_address_book'] }} address vrf-{{ project_id }}-{{ firewall['source_address_name'] }} {{ firewall['source'] }}
+set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewal['scope'] }}-{{ firewall['order'] }} match source-address vrf-{{ project_id }}-{{ firewall['source_address_name'] }}
+{% else %}
+set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewal['scope'] }}-{{ firewall['order'] }} match source-address any
+{% endif %}
+{% if firewall['destination_address_book'] != None %}
+set groups vrf-{{ project_id }} security address-book {{ firewall['destination_address_book'] }} address vrf-{{ project_id }}-{{ firewall['destination_address_name'] }} {{ firewall['destination'] }}
+set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewal['scope'] }}-{{ firewall['order'] }} match destination-address vrf-{{ project_id }}-{{ firewall['destination_address_name'] }}
+{% else %}
+set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewal['scope'] }}-{{ firewall['order'] }} match destination-address any
+{% endif %}
+{# application creation if any #}
+{%  if firewall['application'] != 'any' %}
+set applications application cloudcix-{{ firewall['protocol'] }}-{{ firewall['port'] }} protocol {{ firewall['protocol'] }} destination-port {{ firewall['port'] }}
+set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewal['scope'] }}-{{ firewall['order'] }} match application cloudcix-{{ firewall['protocol'] }}-{{ firewall['port'] }}
+{% else %}
+set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewal['scope'] }}-{{ firewall['order'] }} match application any
+{% endif %}
+{# permissions #}
+set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewal['scope'] }}-{{ firewall['order'] }} then {{ firewall['permission'] }}
+{# logging sessions #}
+set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewal['scope'] }}-{{ firewall['order'] }} then log session-init
+set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewal['scope'] }}-{{ firewall['order'] }} then log session-close
+{% endfor %}
+{# ------------------------------------------------------------------ #}
+{# inter-zone outbound for now allow all, will remove this eventually #}
+set groups vrf-{{ project_id }}-sp-outbound security policies from-zone vrf-{{ project_id }} to-zone PUBLIC policy vrf-{{ project_id }}-policy-outbound-permit-all match source-address any
+set groups vrf-{{ project_id }}-sp-outbound security policies from-zone vrf-{{ project_id }} to-zone PUBLIC policy vrf-{{ project_id }}-policy-outbound-permit-all match destination-address any
+set groups vrf-{{ project_id }}-sp-outbound security policies from-zone vrf-{{ project_id }} to-zone PUBLIC policy vrf-{{ project_id }}-policy-outbound-permit-all match application any
+set groups vrf-{{ project_id }}-sp-outbound security policies from-zone vrf-{{ project_id }} to-zone PUBLIC policy vrf-{{ project_id }}-policy-outbound-permit-all then permit
+{# ----------------------------------------------------------------------------------------------------------------- #}
+{# importing robosoc  and vrf-{project_id}-sp-{scope} security policies into actual vrf-{project_id} security policy #}
+set groups vrf-{{ project_id }} security policies from-zone PUBLIC to-zone vrf-{{ project_id }} apply-groups PUBLIC-VRF
+set groups vrf-{{ project_id }} security policies from-zone vrf-{{ project_id }} to-zone PUBLIC apply-groups VRF-PUBLIC
+{% if inbound_firewall_exists == True %}
+set groups vrf-{{ project_id }} security policies from-zone PUBLIC to-zone vrf-{{ project_id }} apply-groups vrf-{{ project_id }}-sp-inbound
+{% endif %}
+{% if outbound_firewall_exists == True %}
+set groups vrf-{{ project_id }} security policies from-zone vrf-{{ project_id }} to-zone PUBLIC apply-groups vrf-{{ project_id }}-sp-outbound
+{% endif %}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 set apply-groups vrf-{{ project_id }}
