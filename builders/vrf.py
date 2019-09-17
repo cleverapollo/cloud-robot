@@ -54,9 +54,9 @@ class Vrf(VrfMixin):
         # A list of firewall rules to be built in the VRF
         'firewall_rules',
         # if inbound firewall exists or not
-        'inbound_firewall'
+        'inbound_firewall',
         # if outbound firewall exists or not
-        'outbound_firewall'
+        'outbound_firewall',
         # The IP Address of the VRF
         'vrf_ip',
         # The VRF IP Subnet Mask, which is needed when making the VRF
@@ -204,6 +204,8 @@ class Vrf(VrfMixin):
         data['public_port'] = router_data['public_port']
 
         # Firewall rules
+        data['inbound_firewall'] = False
+        data['outbound_firewall'] = False
         firewalls: Deque[Dict[str, Any]] = deque()
         vrf_address_book_name = f'vrf-{project_id}-address-book'
         vrf_zone_name = f'vrf-{project_id}'
