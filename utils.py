@@ -43,12 +43,14 @@ class DequeEncoder(JSONEncoder):
 
     def default(self, obj: Iterable) -> Iterable:
         try:
-            iterable = iter(obj)
+            return super(DequeEncoder, self).default(obj)
         except TypeError:
-            pass
-        else:
-            return list(iterable)
-        return super(DequeEncoder, self).default(obj)
+            try:
+                iterable = iter(obj)
+            except TypeError:
+                return str(obj)
+            else:
+                return list(iterable)
 
 
 def _redact_logs(record: logging.LogRecord) -> bool:
