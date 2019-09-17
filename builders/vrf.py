@@ -53,6 +53,10 @@ class Vrf(VrfMixin):
         'vpns',
         # A list of firewall rules to be built in the VRF
         'firewall_rules',
+        # if inbound firewall exists or not
+        'inbound_firewall'
+        # if outbound firewall exists or not
+        'outbound_firewall'
         # The IP Address of the VRF
         'vrf_ip',
         # The VRF IP Subnet Mask, which is needed when making the VRF
@@ -203,7 +207,7 @@ class Vrf(VrfMixin):
         firewalls: Deque[Dict[str, Any]] = deque()
         vrf_address_book_name = f'vrf-{project_id}-address-book'
         vrf_zone_name = f'vrf-{project_id}'
-        for firewall in vrf_data['firewall_rules']:
+        for firewall in sorted(vrf_data['firewall_rules'], key=lambda fw: fw['order']):
             # Add the names of the source and destination addresses by replacing IP characters with hyphens
             firewall['source_address_name'] = ADDRESS_NAME_SUB_PATTERN.sub('-', firewall['source'])
             firewall['destination_address_name'] = ADDRESS_NAME_SUB_PATTERN.sub('-', firewall['destination'])
@@ -216,6 +220,7 @@ class Vrf(VrfMixin):
                 firewall['scope'] = 'inbound'
                 firewall['from_zone'] = 'PUBLIC'
                 firewall['to_zone'] = vrf_zone_name
+                data['inbound_firewall'] = True
             else:
                 # Source is private, destination is public
                 firewall['source_address_book'] = vrf_address_book_name
@@ -223,6 +228,7 @@ class Vrf(VrfMixin):
                 firewall['scope'] = 'outbound'
                 firewall['from_zone'] = vrf_zone_name
                 firewall['to_zone'] = 'PUBLIC'
+                data['outbound_firewall'] = True
 
             # Determine what permission string to include in the firewall rule
             firewall['permission'] = 'permit' if firewall['allow'] else 'deny'
