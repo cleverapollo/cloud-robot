@@ -96,28 +96,28 @@ set groups vrf-{{ project_id }} security policies from-zone vrf-{{ project_id }}
 {% if firewall['source_address_book'] != None %}
 {# address-book goes into vrf-xx group but policy goes into vrf-xx-sp-inbound group #}
 set groups vrf-{{ project_id }} security address-book {{ firewall['source_address_book'] }} address vrf-{{ project_id }}-{{ firewall['source_address_name'] }} {{ firewall['source'] }}
-set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewal['scope'] }}-{{ firewall['order'] }} match source-address vrf-{{ project_id }}-{{ firewall['source_address_name'] }}
+set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewall['scope'] }}-{{ firewall['order'] }} match source-address vrf-{{ project_id }}-{{ firewall['source_address_name'] }}
 {% else %}
-set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewal['scope'] }}-{{ firewall['order'] }} match source-address any
+set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewall['scope'] }}-{{ firewall['order'] }} match source-address any
 {% endif %}
 {% if firewall['destination_address_book'] != None %}
 set groups vrf-{{ project_id }} security address-book {{ firewall['destination_address_book'] }} address vrf-{{ project_id }}-{{ firewall['destination_address_name'] }} {{ firewall['destination'] }}
-set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewal['scope'] }}-{{ firewall['order'] }} match destination-address vrf-{{ project_id }}-{{ firewall['destination_address_name'] }}
+set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewall['scope'] }}-{{ firewall['order'] }} match destination-address vrf-{{ project_id }}-{{ firewall['destination_address_name'] }}
 {% else %}
-set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewal['scope'] }}-{{ firewall['order'] }} match destination-address any
+set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewall['scope'] }}-{{ firewall['order'] }} match destination-address any
 {% endif %}
 {# application creation if any #}
 {%  if firewall['application'] != 'any' %}
 set applications application cloudcix-{{ firewall['protocol'] }}-{{ firewall['port'] }} protocol {{ firewall['protocol'] }} destination-port {{ firewall['port'] }}
-set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewal['scope'] }}-{{ firewall['order'] }} match application cloudcix-{{ firewall['protocol'] }}-{{ firewall['port'] }}
+set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewall['scope'] }}-{{ firewall['order'] }} match application cloudcix-{{ firewall['protocol'] }}-{{ firewall['port'] }}
 {% else %}
-set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewal['scope'] }}-{{ firewall['order'] }} match application any
+set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewall['scope'] }}-{{ firewall['order'] }} match application any
 {% endif %}
 {# permissions #}
-set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewal['scope'] }}-{{ firewall['order'] }} then {{ firewall['permission'] }}
+set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewall['scope'] }}-{{ firewall['order'] }} then {{ firewall['permission'] }}
 {# logging sessions #}
-set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewal['scope'] }}-{{ firewall['order'] }} then log session-init
-set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewal['scope'] }}-{{ firewall['order'] }} then log session-close
+set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewall['scope'] }}-{{ firewall['order'] }} then log session-init
+set groups vrf-{{ project_id }}-sp-{{ scope }} security policies from-zone from_zone to-zone to_zone policy vrf-{{ project_id }}-policy-{{ firewall['scope'] }}-{{ firewall['order'] }} then log session-close
 {% endfor %}
 {# ------------------------------------------------------------------ #}
 {# inter-zone outbound for now allow all, will remove this eventually #}
