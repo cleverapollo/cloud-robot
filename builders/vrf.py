@@ -8,6 +8,7 @@ builder class for vrfs
 
 # stdlib
 import logging
+import re
 from collections import deque
 from typing import Any, Deque, Dict, Optional
 # lib
@@ -22,6 +23,8 @@ from mixins import VrfMixin
 __all__ = [
     'Vrf',
 ]
+
+ADDRESS_NAME_SUB_PATTERN = re.compile(r'[\.\/:]')
 
 
 class Vrf(VrfMixin):
@@ -198,32 +201,30 @@ class Vrf(VrfMixin):
 
         # Firewall rules
         firewalls: Deque[Dict[str, Any]] = deque()
+        vrf_address_book_name = f'vrf-{project_id}-address-book'
+        vrf_zone_name = f'vrf-{project_id}'
         for firewall in vrf_data['firewall_rules']:
-            firewall['source_address_book'] = None
-            if firewall['source'] != 'any':
-                firewall['source_address_name'] = str(firewall['source']).replace(
-                    '.',
-                    '-',
-                ).replace('/', '-').replace(':', '-')
-                if not IPNetwork(firewall['source']).is_private():
-                    firewall['source_address_book'] = 'global'
-                else:
-                    firewall['source_address_book'] = f'vrf-{project_id}-address-book'
+            # Add the names of the source and destination addresses by replacing IP characters with hyphens
+            firewall['source_address_name'] = ADDRESS_NAME_SUB_PATTERN.sub('-', firewall['source'])
+            firewall['destination_address_name'] = ADDRESS_NAME_SUB_PATTERN.sub('-', firewall['destination'])
 
-            firewall['destination_address_book'] = None
-            if firewall['destination'] != 'any':
-                firewall['destination_address_name'] = str(firewall['destination']).replace(
-                    '.',
-                    '-',
-                ).replace('/', '-').replace(':', '-')
-                if not IPNetwork(firewall['destination']).is_private():
-                    firewall['destination_address_book'] = 'global'
-                else:
-                    firewall['destination_address_book'] = f'vrf-{project_id}-address-book'
+            # Handle the inbound / outbound case stuff
+            if firewall['inbound']:
+                # Source is public, destination is private
+                firewall['source_address_book'] = 'global'
+                firewall['destination_address_book'] = vrf_address_book_name
+                firewall['scope'] = 'inbound'
+                firewall['from_zone'] = 'PUBLIC'
+                firewall['to_zone'] = vrf_zone_name
+            else:
+                # Source is private, destination is public
+                firewall['source_address_book'] = vrf_address_book_name
+                firewall['destination_address_book'] = 'global'
+                firewall['scope'] = 'outbound'
+                firewall['from_zone'] = vrf_zone_name
+                firewall['to_zone'] = 'PUBLIC'
 
-            firewall['scope'] = 'inbound' if firewall['inbound'] else 'outbound'
-            firewall['from_zone'] = 'PUBLIC' if firewall['inbound'] else f'vrf-{project_id}'
-            firewall['to_zone'] = f'vrf-{project_id}' if firewall['inbound'] else 'PUBLIC'
+            # Determine what permission string to include in the firewall rule
             firewall['permission'] = 'permit' if firewall['allow'] else 'deny'
 
             firewalls.append(firewall)

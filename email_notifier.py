@@ -37,7 +37,7 @@ class EmailNotifier:
         logger = logging.getLogger('robot.email_notifier.failure')
         logger.debug(f'Sending failure email for VM #{vm_data["idVM"]}')
         # Add the pretty printed data blob to the VM
-        vm_data['data'] = dumps(vm_data, indent=2)
+        vm_data['data'] = dumps(vm_data, indent=2, cls=utils.DequeEncoder)
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/failure.j2').render(stage=STAGE, task=task, **vm_data)
         # Format the subject
@@ -52,7 +52,7 @@ class EmailNotifier:
         logger = logging.getLogger('robot.email_notifier.vrf_failure')
         logger.debug(f'Sending failure email for VRF #{vrf_data["idVRF"]}')
         # Add the pretty printed data blob to the VRF
-        vrf_data['data'] = dumps(vrf_data, indent=2)
+        vrf_data['data'] = dumps(vrf_data, indent=2, cls=utils.DequeEncoder)
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/vrf_failure.j2').render(stage=STAGE, task=task, **vrf_data)
         # Format the subject
