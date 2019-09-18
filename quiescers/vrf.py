@@ -71,8 +71,6 @@ class Vrf(VrfMixin):
             return False
 
         # If everything is okay, commence quiescing the VRF
-        management_ip = template_data.pop('management_ip')
-
         child_span = opentracing.tracer.start_span('generate_setconf', child_of=span)
         conf = utils.JINJA_ENV.get_template('vrf/quiesce.j2').render(**template_data)
         child_span.finish()
@@ -80,6 +78,7 @@ class Vrf(VrfMixin):
         Vrf.logger.debug(f'Generated setconf for VRF #{vrf_id}\n{conf}')
 
         # Deploy the generated setconf to the router
+        management_ip = template_data.pop('management_ip')
         child_span = opentracing.tracer.start_span('deploy_setconf', child_of=span)
         success = Vrf.deploy(conf, management_ip, True)
         child_span.finish()

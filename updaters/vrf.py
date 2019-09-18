@@ -74,24 +74,14 @@ class Vrf(VrfBuilder):
 
         # If everything is okay, commence updating the VRF
         child_span = opentracing.tracer.start_span('generate_setconf', child_of=span)
-        delete_conf = utils.JINJA_ENV.get_template('vrf/scrub.j2').render(**template_data)
-        build_conf = utils.JINJA_ENV.get_template('vrf/build.j2').render(**template_data)
+        update_conf = utils.JINJA_ENV.get_template('vrf/update.j2').render(**template_data)
         child_span.finish()
 
-        Vrf.logger.debug(f'Generated delete setconf for VRF #{vrf_id}\n{delete_conf}')
-        Vrf.logger.debug(f'Generated build setconf for VRF #{vrf_id}\n{build_conf}')
+        Vrf.logger.debug(f'Generated update setconf for VRF #{vrf_id}\n{update_conf}')
 
         # Deploy the generated setconf to the router
-        build_success = False
         management_ip = template_data.pop('management_ip')
-        child_span = opentracing.tracer.start_span('deploy_delete_setconf', child_of=span)
-        delete_success = Vrf.deploy(delete_conf, management_ip, True)
+        child_span = opentracing.tracer.start_span('deploy_update_setconf', child_of=span)
+        success = Vrf.deploy(update_conf, management_ip, True)
         child_span.finish()
-        if delete_success:
-            child_span = opentracing.tracer.start_span('deploy_build_setconf', child_of=span)
-            build_success = Vrf.deploy(build_conf, management_ip)
-            child_span.finish()
-            return build_success
-        else:
-            Vrf.logger.error(f'Failed to deploy delete conf for VRF #{vrf_id}')
-            return delete_success
+        return success
