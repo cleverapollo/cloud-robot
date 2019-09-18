@@ -235,6 +235,10 @@ class Vrf(VrfMixin):
             # Determine what permission string to include in the firewall rule
             firewall['permission'] = 'permit' if firewall['allow'] else 'deny'
 
+            # Check port and protocol to allow any port for a specific protocol
+            if firewall['port'] == -1 and firewall['protocol'] != 'any':
+                firewall['port'] = '0-65535'
+
             firewalls.append(firewall)
 
         data['firewall_rules'] = firewalls

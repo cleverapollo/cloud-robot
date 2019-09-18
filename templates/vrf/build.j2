@@ -106,7 +106,6 @@ set groups vrf-{{ project_id }}-sp-{{ firewall['scope'] }} security policies fro
 {% if firewall['port'] == -1 and firewall['protocol'] == 'any' %}
 set groups vrf-{{ project_id }}-sp-{{ firewall['scope'] }} security policies from-zone {{ firewall['from_zone'] }} to-zone {{ firewall['to_zone'] }} policy vrf-{{ project_id }}-policy-{{ firewall['scope'] }}-{{ firewall['order'] }} match application any
 {% else %}
-{% set firewall['port'] = '0-65535' if firewall['port'] == -1 %}
 set applications application cloudcix-{{ firewall['protocol'] }}-{{ firewall['port'] }} protocol {{ firewall['protocol'] }} destination-port {{ firewall['port'] }}
 set groups vrf-{{ project_id }}-sp-{{ firewall['scope'] }} security policies from-zone {{ firewall['from_zone'] }} to-zone {{ firewall['to_zone'] }} policy vrf-{{ project_id }}-policy-{{ firewall['scope'] }}-{{ firewall['order'] }} match application cloudcix-{{ firewall['protocol'] }}-{{ firewall['port'] }}
 {% endif %}
