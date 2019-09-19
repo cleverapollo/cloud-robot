@@ -125,7 +125,6 @@ set groups vrf-{{ project_id }}-sp-outbound security policies from-zone vrf-{{ p
 {# ----------------------------------------------------------------------------------------------------------------- #}
 {# importing robosoc  and vrf-{project_id}-sp-{firewall['scope']} security policies into actual vrf-{project_id} security policy #}
 set groups vrf-{{ project_id }} security policies from-zone PUBLIC to-zone vrf-{{ project_id }} apply-groups PUBLIC-VRF
-set groups vrf-{{ project_id }} security policies from-zone vrf-{{ project_id }} to-zone PUBLIC apply-groups VRF-PUBLIC
 {% if inbound_firewall %}
 set groups vrf-{{ project_id }} security policies from-zone PUBLIC to-zone vrf-{{ project_id }} apply-groups vrf-{{ project_id }}-sp-inbound
 {% endif %}
