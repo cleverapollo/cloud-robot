@@ -71,8 +71,6 @@ class Vrf(VrfMixin):
             return False
 
         # If everything is okay, commence restarting the VRF
-        management_ip = template_data.pop('management_ip')
-
         child_span = opentracing.tracer.start_span('generate_setconf', child_of=span)
         conf = utils.JINJA_ENV.get_template('vrf/restart.j2').render(**template_data)
         child_span.finish()
@@ -80,6 +78,7 @@ class Vrf(VrfMixin):
         Vrf.logger.debug(f'Generated setconf for VRF #{vrf_id}\n{conf}')
 
         # Deploy the generated setconf to the router
+        management_ip = template_data.pop('management_ip')
         child_span = opentracing.tracer.start_span('deploy_setconf', child_of=span)
         success = Vrf.deploy(conf, management_ip)
         child_span.finish()
@@ -102,10 +101,10 @@ class Vrf(VrfMixin):
         data['project_id'] = vrf_data['idProject']
 
         # Get the management ip address
-        router_data = Vrf._get_router_data(vrf_data['idRouter'], span)
-        if router_data is None:
+        management_ip = Vrf._get_router_ip(vrf_data['idRouter'], span)
+        if management_ip is None:
             # We can't unresource this, so just return
             return None
-        data['management_ip'] = router_data['management_ip']
+        data['management_ip'] = management_ip
 
         return data

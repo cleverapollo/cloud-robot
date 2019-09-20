@@ -6,7 +6,8 @@ import atexit
 import logging
 import subprocess
 from collections import deque
-from typing import Any, Deque, Dict, Optional
+from json import JSONEncoder
+from typing import Any, Deque, Dict, Iterable, Optional
 # lib
 import jinja2
 from cloudcix.api import IAAS
@@ -33,6 +34,23 @@ JINJA_ENV = jinja2.Environment(
     loader=jinja2.FileSystemLoader('templates'),
     trim_blocks=True,
 )
+
+
+class DequeEncoder(JSONEncoder):
+    """
+    JSON Encoder that will allow us to encode deques without changing too much in the code
+    """
+
+    def default(self, obj: Iterable) -> Iterable:
+        try:
+            return super(DequeEncoder, self).default(obj)
+        except TypeError:
+            try:
+                iterable = iter(obj)
+            except TypeError:
+                return str(obj)
+            else:
+                return list(iterable)
 
 
 def _redact_logs(record: logging.LogRecord) -> bool:

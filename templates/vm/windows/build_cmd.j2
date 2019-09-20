@@ -73,7 +73,7 @@ try {
 {% endif %}
 {# Start the VM #}
     Start-VM -Name {{ vm_identifier }}
-    Wait-VM -Name {{ vm_identifier }}
+    Wait-VM -Name {{ vm_identifier }} -For IPAddress
     Write-Host "VM Successfully Created and Hosted"
   }else{Write-Error "$_.Exception.Message"}
 }catch{

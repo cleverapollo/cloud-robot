@@ -8,6 +8,7 @@ builder class for vrfs
 
 # stdlib
 import logging
+import re
 from collections import deque
 from typing import Any, Deque, Dict, Optional
 # lib
@@ -23,6 +24,8 @@ __all__ = [
     'Vrf',
 ]
 
+ADDRESS_NAME_SUB_PATTERN = re.compile(r'[\.\/:]')
+
 
 class Vrf(VrfMixin):
     """
@@ -32,8 +35,6 @@ class Vrf(VrfMixin):
     logger = logging.getLogger('robot.builders.vrf')
     # Keep track of the keys necessary for the template, so we can check all keys are present before building
     template_keys = {
-        # A flag stating whether or not there is a firewall for the project
-        'has_firewall',
         # The IP Address of the Management port of the physical Router
         'management_ip',
         # A list of NAT rules to be built in the VRF
@@ -46,12 +47,16 @@ class Vrf(VrfMixin):
         'project_id',
         # The public port of the Router
         'public_port',
-        # The model name of the physical router. Needed to specify the template to build with.
-        'router_model',
         # A list of vLans to be built in the VRF
         'vlans',
         # A list of VPNs to be built in the VRF
         'vpns',
+        # A list of firewall rules to be built in the VRF
+        'firewall_rules',
+        # if inbound firewall exists or not
+        'inbound_firewall',
+        # if outbound firewall exists or not
+        'outbound_firewall',
         # The IP Address of the VRF
         'vrf_ip',
         # The VRF IP Subnet Mask, which is needed when making the VRF
@@ -96,24 +101,14 @@ class Vrf(VrfMixin):
             return False
 
         # If everything is okay, commence building the VRF
-        router_model = template_data.pop('router_model')
-        management_ip = template_data.pop('management_ip')
-        try:
-            child_span = opentracing.tracer.start_span('generate_setconf', child_of=span)
-            template_name = f'vrf/build_{router_model}.j2'
-            child_span.set_tag('template_name', template_name)
-            conf = utils.JINJA_ENV.get_template(template_name).render(**template_data)
-            child_span.finish()
-        except Exception:
-            Vrf.logger.error(
-                f'Unable to find the build template for {router_model} Routers',
-                exc_info=True,
-            )
-            span.set_tag('failed_reason', 'invalid_template_name')
-            return False
+        child_span = opentracing.tracer.start_span('generate_setconf', child_of=span)
+        conf = utils.JINJA_ENV.get_template('vrf/build.j2').render(**template_data)
+        child_span.finish()
+
         Vrf.logger.debug(f'Generated setconf for VRF #{vrf_id}\n{conf}')
 
         # Deploy the generated setconf to the router
+        management_ip = template_data.pop('management_ip')
         child_span = opentracing.tracer.start_span('deploy_setconf', child_of=span)
         success = Vrf.deploy(conf, management_ip)
         child_span.finish()
@@ -190,29 +185,63 @@ class Vrf(VrfMixin):
         data['vrf_ip'] = vrf_ip['address']
         data['vrf_subnet_mask'] = vrf_subnet['addressRange'].split('/')[1]
 
-        # Get the management ip address and the router model
-        # These are used to determine the template to use and where to connect
+        # Get the management ip address
+        management_ip = Vrf._get_router_ip(vrf_data['idRouter'], span)
+        if management_ip is None:
+            # We can't unresource this, so just return
+            return None
+        data['management_ip'] = management_ip
+
+        # Get the ports data to determine the vrf's interface and public interface
         child_span = opentracing.tracer.start_span('get_router_data', child_of=span)
-        router_data = Vrf._get_router_data(vrf_data['idRouter'], child_span)
+        router_data = Vrf._get_router_data(vrf_data['idRouter'], vrf_ip['idSubnet'], child_span)
         child_span.finish()
 
         if router_data is None:
             return None
-        data['management_ip'] = router_data['management_ip']
-        data['router_model'] = router_data['router_model']
+        data['port_address_family'] = router_data['address_family']
+        data['private_port'] = router_data['private_port']
+        data['public_port'] = router_data['public_port']
 
-        # Get the port data for the VRF
-        child_span = opentracing.tracer.start_span('get_vrf_port_data', child_of=span)
-        port_data = Vrf._get_vrf_port_data(vrf_ip['idSubnet'], vrf_data['idRouter'], child_span)
-        child_span.finish()
+        # Firewall rules
+        data['inbound_firewall'] = False
+        data['outbound_firewall'] = False
+        firewalls: Deque[Dict[str, Any]] = deque()
+        vrf_address_book_name = f'vrf-{project_id}-address-book'
+        vrf_zone_name = f'vrf-{project_id}'
+        for firewall in sorted(vrf_data['firewall_rules'], key=lambda fw: fw['order']):
+            # Add the names of the source and destination addresses by replacing IP characters with hyphens
+            firewall['source_address_name'] = ADDRESS_NAME_SUB_PATTERN.sub('-', firewall['source'])
+            firewall['destination_address_name'] = ADDRESS_NAME_SUB_PATTERN.sub('-', firewall['destination'])
 
-        if port_data is None:
-            # The function will have done the logging so we should be okay to just return
-            return None
-        data['port_address_family'] = port_data['address_family']
-        data['has_firewall'] = port_data['has_firewall']
-        data['private_port'] = port_data['private_port']
-        data['public_port'] = port_data['public_port']
+            # Handle the inbound / outbound case stuff
+            if firewall['inbound']:
+                # Source is public, destination is private
+                firewall['source_address_book'] = 'global'
+                firewall['destination_address_book'] = vrf_address_book_name
+                firewall['scope'] = 'inbound'
+                firewall['from_zone'] = 'PUBLIC'
+                firewall['to_zone'] = vrf_zone_name
+                data['inbound_firewall'] = True
+            else:
+                # Source is private, destination is public
+                firewall['source_address_book'] = vrf_address_book_name
+                firewall['destination_address_book'] = 'global'
+                firewall['scope'] = 'outbound'
+                firewall['from_zone'] = vrf_zone_name
+                firewall['to_zone'] = 'PUBLIC'
+                data['outbound_firewall'] = True
+
+            # Determine what permission string to include in the firewall rule
+            firewall['permission'] = 'permit' if firewall['allow'] else 'deny'
+
+            # Check port and protocol to allow any port for a specific protocol
+            if firewall['port'] == -1 and firewall['protocol'] != 'any':
+                firewall['port'] = '0-65535'
+
+            firewalls.append(firewall)
+
+        data['firewall_rules'] = firewalls
 
         # Finally, get the VPNs for the Project
         vpns: Deque[Dict[str, Any]] = deque()

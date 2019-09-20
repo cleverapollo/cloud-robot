@@ -21,7 +21,7 @@ import utils
 __all__ = [
     'VrfMixin',
 ]
-PortData = Optional[Dict[str, Union[str, bool]]]
+PortData = Optional[Dict[str, Union[list, dict]]]
 RouterData = Optional[Dict[str, Optional[str]]]
 
 
@@ -109,109 +109,147 @@ class VrfMixin:
             return True
 
     @classmethod
-    def _get_router_data(cls, router_id: int, span: Span) -> RouterData:
+    def _get_router_ip(cls, router_id: int, span: Span) -> Optional[str]:
         """
-        TODO - Remove this once Compute in Python 3 fixes the mess that is Routers and Ports (if possible)
-        This function is a goddamn mess
+        It fetches the Management port ip of the Router #router_id
+        :param router_id:
+        :return: : dict of vrf port details like Port name (xe-0/0/1 or ge-0/0/1 or etc)
         """
-        manage_ip = None
-        router_model = None
-        ports = utils.api_list(IAAS.port, {}, router_id=router_id, span=span)
+        port_data = cls._get_port_data(router_id=router_id, span=span)
+        if port_data is not None:
+            ports = port_data['ports']
+            port_rmpf_pfs = port_data['port_rmpf_pfs']
+        else:
+            return None
+
+        management_ip = None
+        # collecting management ip
         for port in ports:
-            # Get the Port names ie xe-0/0/0 etc
-            rmpf = utils.api_read(IAAS.router_model_port_function, pk=port['model_port_id'], span=span)
-            if rmpf is None:
-                # utils method does the logging for us
-                return None
-            # Get the router model
-            router_model_response = utils.api_read(IAAS.router_model, pk=rmpf['router_model_id'], span=span)
-            if router_model_response is None:
-                return None
-            router_model = str(router_model_response['model'])
-            # Get the function names ie 'Management' etc
-            port_func = utils.api_read(IAAS.port_function, pk=rmpf['port_function_id'], span=span)
-            if port_func is None:
-                return None
-            if port_func['function'] == 'Management':
-                port_configs = utils.api_list(IAAS.port_config, {}, port_id=port['port_id'], span=span)
+            if port_rmpf_pfs[port][1] == 'Management':
+
+                # listing port_configs
+                port_configs = utils.api_list(IAAS.port_config, {}, port_id=port, span=span)
+                if len(port_configs) == 0:
+                    return None
+
                 for port_config in port_configs:
                     # Get the ip address details
                     ip = utils.api_read(IAAS.ipaddress, pk=port_config['port_ip_id'], span=span)
                     if ip is None:
                         return None
-                    manage_ip = str(ip['address'])
+                    management_ip = str(ip['address'])
                     break
-                break
-        return {'management_ip': manage_ip, 'router_model': router_model}
+
+        if management_ip is not None:
+            return management_ip
+        else:
+            cls.logger.error(
+                f'Failed to get VRF router"s management ip for Router #{router_id}',
+            )
+            return None
 
     @classmethod
-    def _get_vrf_port_data(cls, vrf_ip_subnet_id: int, router_id: int, span: Span) -> PortData:
+    def _get_router_data(cls, router_id: int, vrf_ip_subnet_id: int, span: Span) -> RouterData:
         """
-        TODO - Refactor (or hopefully remove) this method when we bring Compute to Python 3
-        It takes vrf ip to find out whether IP belongs to Floating or Floating Pre Filtered so that
-        vrf will be configured on the port corresponding to its nature using router
-        :param vrf_ip_subnet_id :type int subnet id of vrf ip
+        Collects the data such as private port name, public port name and address family of
+        given vrf_ip_subnet_id
         :param router_id:
-        :return: vrf_port: dict of vrf port details like Port name (xe-0/0/1 or ge-0/0/1 or etc)
+        :param vrf_ip_subnet_id :type int subnet id of vrf ip
+        :param span:
+        :return:
         """
-        firewall = False
-        interface = None
-        private_port = None
+        port_data = cls._get_port_data(router_id=router_id, span=span)
+        if port_data is not None:
+            ports = port_data['ports']
+            port_rmpf_pfs = port_data['port_rmpf_pfs']
+        else:
+            return None
+
+        private = None
+        public = None
         address_family = None
-        # Get the Ports which are Floating and Floating Pre Filtered of Router
-        for port in utils.api_list(IAAS.port, {}, router_id=router_id, span=span):
-            # Get the Port names ie xe-0/0/0 etc
-            rmpf = utils.api_read(IAAS.router_model_port_function, pk=port['model_port_id'], span=span)
-            if rmpf is None:
-                # utils method handles the error logging
-                return None
-            # Get the function names ie 'Management' etc
-            port_func = utils.api_read(IAAS.port_function, pk=rmpf['port_function_id'], span=span)
-            if port_func is None:
-                return None
-            if port_func['function'] == 'Private':
-                private_port = rmpf['port_name']
-            elif port_func['function'] == 'Floating Pre Filtered':
-                port_configs = utils.api_list(IAAS.port_config, {}, port_id=port['port_id'], span=span)
+
+        # collecting required data
+        for port in ports:
+
+            # Private port name
+            if port_rmpf_pfs[port][1] == 'Private':
+                private = port_rmpf_pfs[port][0]
+
+            # public_port and address_family
+            elif port_rmpf_pfs[port][1] == 'Floating':
+                public = port_rmpf_pfs[port][0]
+
+                port_configs = utils.api_list(IAAS.port_config, {}, port_id=port, span=span)
                 for port_config in port_configs:
                     # Get the ip address details
                     ip = utils.api_read(IAAS.ipaddress, pk=port_config['port_ip_id'], span=span)
                     if ip is None:
                         return None
                     if str(ip['idSubnet']) == str(vrf_ip_subnet_id):
-                        firewall = True
-                        interface = rmpf['port_name']
                         address_family = 'inet'
                         if IPAddress(ip['address']).version == 6:
                             address_family = 'inet6'
                         break
-            if firewall and interface is not None and private_port is not None:
-                break  # just exit for loop as we got required data
-            elif port_func['function'] == 'Floating':
-                port_configs = utils.api_list(IAAS.port_config, {}, port_id=port['port_id'], span=span)
-                for port_config in port_configs:
-                    # Get the ip address details
-                    ip = utils.api_read(IAAS.ipaddress, pk=port_config['port_ip_id'], span=span)
-                    if ip is None:
-                        return None
-                    if str(ip['idSubnet']) == str(vrf_ip_subnet_id):
-                        firewall = False
-                        interface = rmpf['port_name']
-                        address_family = 'inet'
-                        if IPAddress(ip['address']).version == 6:
-                            address_family = 'inet6'
-                        break
-            if not firewall and interface is not None and private_port is not None:
-                break  # just exit for loop as we got required data
-        if interface is not None and private_port is not None and address_family is not None:
+            if private is not None and public is not None and address_family is not None:
+                break
+
+        if private is not None and public is not None and address_family is not None:
             return {
+                'private_port': private,
+                'public_port': public,
                 'address_family': address_family,
-                'has_firewall': firewall,
-                'private_port': private_port,
-                'public_port': interface,
             }
         else:
             cls.logger.error(
-                f'Failed to get VRF Port details for Router #{router_id} and Subnet #{vrf_ip_subnet_id}',
+                f'Failed to get VRF"s router details for Router #{router_id} and Subnet #{vrf_ip_subnet_id}',
             )
+            return None
+
+    @staticmethod
+    def _get_port_data(router_id: int, span: Span) -> PortData:
+        """
+        Collects Port data for given router_id
+        :param router_id: id of router to deal with
+        :param span:
+        :return: port_data: dict of port details like port name, port function
+        """
+        ports = None
+        # listing ports
+        ports = utils.api_list(IAAS.port, {}, router_id=router_id, span=span)
+        if len(ports) == 0:
+            # utils method does the logging for us
+            return None
+
+        # listing rmpfs
+        rmpfs_params = {
+            'model_port_id__in': [port['model_port_id'] for port in ports],
+        }
+        rmpfs = utils.api_list(IAAS.router_model_port_function, rmpfs_params, span=span)
+        if len(rmpfs) == 0:
+            return None
+
+        # listing port_functions
+        pfs_params = {
+            'port_function_id__in': [rmpf['port_function_id'] for rmpf in rmpfs],
+        }
+        port_funcs = utils.api_list(IAAS.port_function, pfs_params, span=span)
+        if len(port_funcs) == 0:
+            return None
+
+        # link port_id with [port name(ie 'xe-0/0/0' etc) and port_function(ie 'Private' etc)]
+        port_rmpf_pfs = {}  # type: dict
+        for port in ports:
+            for rmpf in rmpfs:
+                for port_func in port_funcs:
+                    if port['model_port_id'] == rmpf['model_port_id'] and \
+                            rmpf['port_function_id'] == port_func['port_function_id']:
+                        port_rmpf_pfs[port['port_id']] = [rmpf['port_name'], port_func['function']]
+                        break
+        if ports is not None and port_rmpf_pfs is not None:
+            return {
+                'ports': [port['port_id'] for port in ports],
+                'port_rmpf_pfs': port_rmpf_pfs,
+            }
+        else:
             return None
