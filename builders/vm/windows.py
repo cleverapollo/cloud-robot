@@ -27,9 +27,6 @@ __all__ = [
     'Windows',
 ]
 
-# Map that maps image ids to the name of the unattend file that will be used for the VM
-UNATTEND_TEMPLATE_MAP = settings.OS_TEMPLATE_MAP['Windows']
-
 
 class Windows(WindowsMixin):
     """
@@ -257,18 +254,10 @@ class Windows(WindowsMixin):
         :param template_data: The retrieved template data for the vm
         :returns: A flag stating whether or not the job was successful
         """
-        # Determine the unattend template to use for the VM
-        os_name = UNATTEND_TEMPLATE_MAP.get(image_id, None)
         network_drive_path = settings.HYPERV_ROBOT_NETWORK_DRIVE_PATH
-        if os_name is None:
-            valid_ids = ', '.join(f'`{map_id}`' for map_id in UNATTEND_TEMPLATE_MAP.keys())
-            Windows.logger.error(
-                f'Invalid Windows Image ID for VM #{vm_id}. Received {image_id}, valid choices are {valid_ids}.',
-            )
-            return False
 
         # Render and attempt to write the unattend file
-        template_name = f'vm/windows/unattends/{os_name}.j2'
+        template_name = f'vm/windows/unattend.j2'
         unattend = utils.JINJA_ENV.get_template(template_name).render(**template_data)
         Windows.logger.debug(f'Generated unattend file for VM #{vm_id}\n{unattend}')
         try:
