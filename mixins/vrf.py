@@ -23,6 +23,7 @@ __all__ = [
 ]
 PortData = Optional[Dict[str, Union[list, dict]]]
 RouterData = Optional[Dict[str, Optional[str]]]
+MAX_ATTEMPTS = 10
 
 
 class VrfMixin:
@@ -45,17 +46,19 @@ class VrfMixin:
                 router.timeout = 2 * 60  # 2 minute timeout
                 cls.logger.debug(f'Successfully connected to Router {management_ip}, now attempting to load config')
 
-                for attempt in range(3):
+                for attempt in range(MAX_ATTEMPTS):
                     try:
                         return cls._configure(setconf, management_ip, router, ignore_missing)
                     except LockError:
                         cls.logger.warning(
-                            f'Unable to lock config on Router {management_ip}. (Attempt #{attempt + 1} / 3)',
+                            f'Unable to lock config on Router {management_ip}. '
+                            f'(Attempt #{attempt + 1} / {MAX_ATTEMPTS})',
                             exc_info=True,
                         )
-                        sleep(45)
+                        sleep(30 + (6 * attempt))
                 cls.logger.debug(
-                    f'3 attempts to lock Router {management_ip} have failed. This request is now considered a failure.',
+                    f'{MAX_ATTEMPTS} attempts to lock Router {management_ip} have failed. '
+                    'This request is now considered a failure.',
                 )
                 return False
         except ConnectError:

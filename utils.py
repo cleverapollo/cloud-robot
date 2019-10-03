@@ -10,6 +10,7 @@ from json import JSONEncoder
 from typing import Any, Deque, Dict, Iterable, Optional
 # lib
 import jinja2
+import netaddr
 from cloudcix.api import IAAS
 from cloudcix.client import Client
 from jaeger_client import Span
@@ -45,6 +46,10 @@ class DequeEncoder(JSONEncoder):
         try:
             return super(DequeEncoder, self).default(obj)
         except TypeError:
+            # Special case handling for IPNetwork objects because IPNetworks are iterable but we don't want to
+            # print them as a list
+            if isintance(obj, netaddr.IPNetwork):
+                return str(obj)
             try:
                 iterable = iter(obj)
             except TypeError:
