@@ -69,7 +69,7 @@
         state: started
         pull: true
         network_mode: host
-        restart_policy: "no"
+        restart_policy: "unless-stopped"
         env:
           ROBOT_ENV: "{{ env }}"
         command: "celery -A celery_app -l info worker -Q celery -O fair -n {{ inventory_hostname }} --concurrency 25"
