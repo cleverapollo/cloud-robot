@@ -48,7 +48,7 @@ class DequeEncoder(JSONEncoder):
         except TypeError:
             # Special case handling for IPNetwork objects because IPNetworks are iterable but we don't want to
             # print them as a list
-            if isintance(obj, netaddr.IPNetwork):
+            if isinstance(obj, netaddr.IPNetwork):
                 return str(obj)
             try:
                 iterable = iter(obj)
