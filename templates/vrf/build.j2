@@ -115,15 +115,9 @@ set groups vrf-{{ project_id }}-sp-{{ firewall['scope'] }} security policies fro
 set groups vrf-{{ project_id }}-sp-{{ firewall['scope'] }} security policies from-zone {{ firewall['from_zone'] }} to-zone {{ firewall['to_zone'] }} policy vrf-{{ project_id }}-policy-{{ firewall['scope'] }}-{{ firewall['order'] }} then log session-init
 set groups vrf-{{ project_id }}-sp-{{ firewall['scope'] }} security policies from-zone {{ firewall['from_zone'] }} to-zone {{ firewall['to_zone'] }} policy vrf-{{ project_id }}-policy-{{ firewall['scope'] }}-{{ firewall['order'] }} then log session-close
 {% endfor %}
-{# ------------------------------------------------------------------ #}
-{# inter-zone outbound for now allow all, will remove this eventually #}
-{% set outbound_firewall = True %}
-set groups vrf-{{ project_id }}-sp-outbound security policies from-zone vrf-{{ project_id }} to-zone PUBLIC policy vrf-{{ project_id }}-policy-outbound-permit-all match source-address any
-set groups vrf-{{ project_id }}-sp-outbound security policies from-zone vrf-{{ project_id }} to-zone PUBLIC policy vrf-{{ project_id }}-policy-outbound-permit-all match destination-address any
-set groups vrf-{{ project_id }}-sp-outbound security policies from-zone vrf-{{ project_id }} to-zone PUBLIC policy vrf-{{ project_id }}-policy-outbound-permit-all match application any
-set groups vrf-{{ project_id }}-sp-outbound security policies from-zone vrf-{{ project_id }} to-zone PUBLIC policy vrf-{{ project_id }}-policy-outbound-permit-all then permit
 {# ----------------------------------------------------------------------------------------------------------------- #}
-{# importing robosoc  and vrf-{project_id}-sp-{firewall['scope']} security policies into actual vrf-{project_id} security policy #}
+{# importing robosoc and vrf-{project_id}-sp-{firewall['scope']} security policies into actual vrf-{project_id} security policy #}
+{% if robosoc %}
 set groups vrf-{{ project_id }} security policies from-zone PUBLIC to-zone vrf-{{ project_id }} apply-groups PUBLIC-VRF
 {% if inbound_firewall %}
 set groups vrf-{{ project_id }} security policies from-zone PUBLIC to-zone vrf-{{ project_id }} apply-groups vrf-{{ project_id }}-sp-inbound

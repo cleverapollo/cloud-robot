@@ -63,6 +63,8 @@ class Vrf(VrfMixin):
         'vrf_subnet_mask',
         # The vxLan to use for the project (the project's address id)
         'vxlan',
+        # RoboSOC firewalls enabled only for inbound rule with source-address is 'any'
+        'robosoc',
     }
 
     @staticmethod
@@ -203,6 +205,8 @@ class Vrf(VrfMixin):
         data['private_port'] = router_data['private_port']
         data['public_port'] = router_data['public_port']
 
+        data['robosoc'] = False
+
         # Firewall rules
         data['inbound_firewall'] = False
         data['outbound_firewall'] = False
@@ -223,6 +227,8 @@ class Vrf(VrfMixin):
                 firewall['from_zone'] = 'PUBLIC'
                 firewall['to_zone'] = vrf_zone_name
                 data['inbound_firewall'] = True
+                if firewall['source'] == '0.0.0.0/0':
+                    data['robosoc'] = True
             else:
                 # Source is private, destination is public
                 firewall['source_address_book'] = vrf_address_book_name
