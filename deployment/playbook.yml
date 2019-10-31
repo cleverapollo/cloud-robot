@@ -89,7 +89,7 @@
         state: started
         pull: true
         network_mode: host
-        restart_policy: "no"
+        restart_policy: "unless-stopped"
         command: supervisord
         env:
           ROBOT_ENV: "{{ env }}"
