@@ -55,3 +55,9 @@ network --bootproto=static --ip={{ ip_address }} --netmask={{ netmask }} --gatew
 
 {# Do not configure the X Window System #}
 skipx
+
+{# Post Install #}
+%packages
+@ ubuntu-server
+@ openssh-server
+%end
