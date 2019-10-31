@@ -43,7 +43,7 @@ class VrfMixin:
             # Using context managers for Router and Config will ensure everything is properly cleaned up when exiting
             # the function, regardless of how we exit the function
             with Device(host=management_ip, user='robot', port=22) as router:
-                router.timeout = 2 * 60  # 2 minute timeout
+                router.timeout = 15 * 60  # 15 minute timeout
                 cls.logger.debug(f'Successfully connected to Router {management_ip}, now attempting to load config')
 
                 for attempt in range(MAX_ATTEMPTS):
@@ -80,6 +80,8 @@ class VrfMixin:
             try:
                 config.load(setconf, format='set', merge=True, ignore_warning=ignore_missing)
             except ConfigLoadError:
+                # Reduce device timeout so we're not waiting forever for it to close config
+                router.timeout = 2 * 60
                 cls.logger.error(
                     f'Unable to load configuration changes onto Router {management_ip}',
                     exc_info=True,
@@ -107,6 +109,8 @@ class VrfMixin:
                     )
                 cls.logger.debug(f'Response from commit on Router {management_ip}\n{detail}')
             except CommitError:
+                # Reduce device timeout so we're not waiting forever for it to close config
+                router.timeout = 2 * 60
                 cls.logger.error(f'Unable to commit changes onto Router {management_ip}', exc_info=True)
                 return False
             return True
