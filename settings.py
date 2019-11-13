@@ -28,7 +28,7 @@ __all__ = [
     'IN_PRODUCTION',
     'KVM_HOST_NETWORK_DRIVE_PATH',
     'KVM_ROBOT_NETWORK_DRIVE_PATH',
-    'LOGSTASH_IP',
+    'CLOUDCIX_LOGSTASH_URL',
     'NETWORK_PASSWORD',
     'OS_TEMPLATE_MAP',
     'REGION_NAME',
@@ -49,8 +49,8 @@ CLOUDCIX_INFLUX_DATABASE = 'robot'
 CLOUDCIX_INFLUX_PORT = 443
 # Hostname of influx endpoint
 CLOUDCIX_INFLUX_URL = 'influx.cloudcix.com'
-# IP Address of logstash for centralised logging
-LOGSTASH_IP = '2a02:2078:0:cb00::f12'
+# Hostname of logstash for centralised logging
+CLOUDCIX_LOGSTASH_URL = 'logstash.cloudcix.com'
 # Password for connecting to routers and servers
 NETWORK_PASSWORD = 'C1xacc355'
 # Env (used in log messages and other things)
