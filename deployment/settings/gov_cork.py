@@ -14,7 +14,7 @@ __all__ = [
     'HYPERV_ROBOT_NETWORK_DRIVE_PATH',
     'KVM_HOST_NETWORK_DRIVE_PATH',
     'KVM_ROBOT_NETWORK_DRIVE_PATH',
-    'LOGSTASH_IP',
+    'CLOUDCIX_LOGSTASH_URL',
     'NETWORK_PASSWORD',
     'OS_TEMPLATE_MAP',
     'REGION_NAME',
@@ -50,8 +50,8 @@ CLOUDCIX_INFLUX_PORT = 443
 # Hostname of influx endpoint
 CLOUDCIX_INFLUX_URL = 'influx.cloudcix.com'
 
-# IP Address of logstash for centralised logging
-LOGSTASH_IP = '10.1.1.7'
+# Hostname of logstash for centralised logging
+CLOUDCIX_LOGSTASH_URL = 'logstash.cloudcix.com'
 
 # Flag stating whether a region is in production or not
 IN_PRODUCTION = False

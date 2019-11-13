@@ -17,7 +17,7 @@ __all__ = [
     'HYPERV_ROBOT_NETWORK_DRIVE_PATH',
     'KVM_HOST_NETWORK_DRIVE_PATH',
     'KVM_ROBOT_NETWORK_DRIVE_PATH',
-    'LOGSTASH_IP',
+    'CLOUDCIX_LOGSTASH_URL',
     'NETWORK_PASSWORD',
     'OS_TEMPLATE_MAP',
     'REGION_NAME',
@@ -56,8 +56,8 @@ CLOUDCIX_INFLUX_URL = 'influx.cloudcix.com'
 # Flag stating whether a region is in production or not
 IN_PRODUCTION = False  # Alpha should never have this set to True
 
-# IP Address of logstash for centralised logging
-LOGSTASH_IP = '2a02:2078:0:cb00::f12'
+# Hostname of logstash for centralised logging
+CLOUDCIX_LOGSTASH_URL = 'logstash.cloudcix.com'
 
 # Password for connecting to routers and servers
 NETWORK_PASSWORD = 'C1xacc355'
