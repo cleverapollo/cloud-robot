@@ -4,7 +4,7 @@ set groups vrf-{{ project_id }} security zones security-zone vrf-{{ project_id }
 set groups vrf-{{ project_id }} security address-book vrf-{{ project_id }}-address-book attach zone vrf-{{ project_id }}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Create a northbound route #}
-set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} routing-options static route 0.0.0.0/0 next-table PUBLIC.inet.0
+set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} routing-options static route 0.0.0.0/0 next-table inet.0
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Define VRF public IP on ge-0/0/0.0 interface #}
 set groups vrf-{{ project_id }} interfaces {{ public_port }} unit 0 family {{ port_address_family }} address {{ vrf_ip }}/{{ vrf_subnet_mask }}
@@ -21,7 +21,7 @@ set groups vrf-{{ project_id }} security zones security-zone vrf-{{ project_id }
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Source (outbound) NAT #}
 set groups vrf-{{ project_id }} security nat source rule-set vrf-{{ project_id }}-outbound description vrf-{{ project_id }}-outbound-nat
-set groups vrf-{{ project_id }} security nat source pool vrf-{{ project_id }}-public routing-instance PUBLIC
+set groups vrf-{{ project_id }} security nat source pool vrf-{{ project_id }}-public routing-instance master
 set groups vrf-{{ project_id }} security nat source pool vrf-{{ project_id }}-public address {{ vrf_ip }}
 set groups vrf-{{ project_id }} security nat source rule-set vrf-{{ project_id }}-outbound from zone vrf-{{ project_id }}
 set groups vrf-{{ project_id }} security nat source rule-set vrf-{{ project_id }}-outbound to zone PUBLIC
