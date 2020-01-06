@@ -115,6 +115,16 @@ build_netsoc-cork01:
   only:
   - stable
 
+build_vodafone-cork01:
+  stage: build
+  tags:
+  - docker-build
+  script:
+  - docker build -f deployment/dockerfiles/vodafone-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/vodafone-cork01:latest --no-cache .
+  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/vodafone-cork01:latest
+  only:
+  - master # temporary, will change to stable just after first deployment
+
 ###############################################################################
 #                          Production Build Jobs End                          #
 ###############################################################################
@@ -132,4 +142,4 @@ deploy_production:
     # Deploy workers
     - ansible-playbook -i deployment/worker-hosts.yml deployment/worker-playbook.yml --extra-vars="deployment_host=production"
   only:
-    - stable
+    - master # temporary, will change to stable just after first deployment
