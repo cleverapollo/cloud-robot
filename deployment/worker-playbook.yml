@@ -3,16 +3,6 @@
   remote_user: administrator
   become: yes
   tasks:
-    - name: Check if influx is in the hosts file
-      shell: "grep influx.cloudcix.com /etc/hosts"
-      register: host_presence
-      ignore_errors: yes
-
-    - name: Add influx to the hosts file if it is not present
-      shell: "printf '\n2a02:2078:0:cb00::f11 influx.cloudcix.com\n10.1.1.6 influx.cloudcix.com\n' >> /etc/hosts"
-      args:
-        warn: no
-      when: host_presence.rc != 0
 
     - name: Check for presence of Docker
       shell: "docker --version"
