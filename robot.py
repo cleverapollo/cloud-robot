@@ -3,6 +3,7 @@ new robot that uses a class, methods and instance variables to clean up the code
 """
 # stdlib
 import logging
+import time
 from typing import cast, Optional, Union
 # lib
 from cloudcix.api import IAAS
@@ -137,6 +138,7 @@ class Robot:
             self.logger.debug('No VRFs found in the "Quiesce" state')
             return
         for vrf in to_quiesce:
+            time.sleep(120)
             self.vrf_dispatcher.quiesce(vrf['idVRF'])
 
     def _vm_quiesce(self):
