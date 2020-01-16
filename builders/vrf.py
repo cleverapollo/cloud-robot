@@ -236,7 +236,7 @@ class Vrf(VrfMixin):
             firewall['permission'] = 'permit' if firewall['allow'] else 'deny'
 
             # Check port and protocol to allow any port for a specific protocol
-            if firewall['port'] == -1 and firewall['protocol'] != 'any':
+            if firewall['port'] == '-1' and firewall['protocol'] != 'any':
                 firewall['port'] = '0-65535'
 
             firewalls.append(firewall)
