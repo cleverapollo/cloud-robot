@@ -31,3 +31,9 @@ all:
               ansible_host: "2a02:2078:9::3"
               env: netsoc-cork01
               ansible_become_pass: C1xacc355
+        vodafone-cork01:
+          hosts:
+            vodafone-cork01-worker0:
+              ansible_host: "2a02:2078:11::3"
+              env: vodafone-cork01
+              ansible_become_pass: C1xacc355
