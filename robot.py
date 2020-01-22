@@ -5,18 +5,19 @@ new robot that uses a class, methods and instance variables to clean up the code
 import logging
 from typing import cast, Optional, Union
 # lib
-from cloudcix.api import IAAS
+from cloudcix.api import compute
 # local
 import dispatchers
 import metrics
 import settings
 import utils
-
-# Define the filters for different states
-BUILD_FILTERS = {'state': 1}
-QUIESCE_FILTERS = {'state__in': [5, 8]}
-RESTART_FILTERS = {'state': 7}
-UPDATE_FILTERS = {'state': 10}
+from state import (
+    BUILD_FILTERS,
+    QUIESCE_FILTERS,
+    RESTART_FILTERS,
+    ROUTER_BUSY_FILTERS,
+    UPDATE_FILTERS,
+)
 
 
 class Robot:
@@ -109,7 +110,12 @@ class Robot:
             self.logger.debug('No VRFs found in the "Requested" state')
             return
         for vrf in to_build:
-            self.vrf_dispatcher.build(vrf['idVRF'])
+            # check if Router is busy.
+            busy = utils.api_list(IAAS.vrf, ROUTER_BUSY_FILTERS)
+            if len(busy) == 0:
+                self.vrf_dispatcher.build(vrf['idVRF'])
+            else:
+                break
 
     def _vm_build(self):
         """
@@ -121,7 +127,11 @@ class Robot:
             self.logger.debug('No VMs found in the "Requested" state')
             return
         for vm in to_build:
-            self.vm_dispatcher.build(vm['idVM'])
+            # check if vr is ready.
+            vrf_request_data = {'project': vm['idProject']}
+            vm_vrf = utils.api_list(IAAS.vrf, vrf_request_data)[0]
+            if vm_vrf['state'] == 4:
+                self.vm_dispatcher.build(vm['idVM'])
 
     # ############################################################## #
     #                             QUIESCE                            #
@@ -137,7 +147,12 @@ class Robot:
             self.logger.debug('No VRFs found in the "Quiesce" state')
             return
         for vrf in to_quiesce:
-            self.vrf_dispatcher.quiesce(vrf['idVRF'])
+            # check if Router is busy.
+            busy = utils.api_list(IAAS.vrf, ROUTER_BUSY_FILTERS)
+            if len(busy) == 0:
+                self.vrf_dispatcher.quiesce(vrf['idVRF'])
+            else:
+                break
 
     def _vm_quiesce(self):
         """
@@ -165,7 +180,12 @@ class Robot:
             self.logger.debug('No VRFs found in the "Restart" state')
             return
         for vrf in to_restart:
-            self.vrf_dispatcher.restart(vrf['idVRF'])
+            # check if Router is busy.
+            busy = utils.api_list(IAAS.vrf, ROUTER_BUSY_FILTERS)
+            if len(busy) == 0:
+                self.vrf_dispatcher.restart(vrf['idVRF'])
+            else:
+                break
 
     def _vm_restart(self):
         """
@@ -210,6 +230,7 @@ class Robot:
             self.logger.debug('No VRFs found in the "Scrub" state')
             return
         for vrf in to_scrub:
+            # since scrub runs only once, sending all requests.
             self.vrf_dispatcher.scrub(vrf['idVRF'])
 
     def _vm_scrub(self, timestamp: Optional[str]):
@@ -243,7 +264,12 @@ class Robot:
             self.logger.debug('No VRFs found in the "Update" state')
             return
         for vrf in to_update:
-            self.vrf_dispatcher.update(vrf['idVRF'])
+            # check if Router is busy.
+            busy = utils.api_list(IAAS.vrf, ROUTER_BUSY_FILTERS)
+            if len(busy) == 0:
+                self.vrf_dispatcher.update(vrf['idVRF'])
+            else:
+                break
 
     def _vm_update(self):
         """
