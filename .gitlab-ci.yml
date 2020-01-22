@@ -53,11 +53,10 @@ deploy_alpha:
   before_script:
     - cp ~/.ssh/application_framework/stage_key ~/.ssh/id_rsa
     - cp ~/.ssh/application_framework/stage_key.pub ~/.ssh/id_rsa.pub
-  environment: alpha
   stage: deploy
   script:
-    - ansible-playbook -i deployment/hosts.yml deployment/playbook.yml
-    - ansible-playbook -i deployment/worker-hosts.yml deployment/worker-playbook.yml
+    - ansible-playbook -i deployment/hosts/alpha.yml deployment/playbook.yml --extra-vars="deployment_host=alpha"
+    - ansible-playbook -i deployment/hosts/alpha.yml deployment/worker-playbook.yml --extra-vars="deployment_host=alpha-worker0"
   only:
     - master
 
@@ -92,13 +91,12 @@ deploy_cork01:
   before_script:
     - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
     - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
-  environment: cork01
   stage: deploy
   script:
     # Deploy Heartbear
-    - ansible-playbook -i deployment/hosts.yml deployment/playbook.yml --extra-vars="deployment_host=cork01"
+    - ansible-playbook -i deployment/hosts/cork01.yml deployment/playbook.yml --extra-vars="deployment_host=cork01"
     # Deploy workers
-    - ansible-playbook -i deployment/worker-hosts.yml deployment/worker-playbook.yml --extra-vars="deployment_host=cork01"
+    - ansible-playbook -i deployment/hosts/cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=cork01-worker0"
   only:
     - stable
 
@@ -118,13 +116,12 @@ deploy_nti-cork01:
   before_script:
     - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
     - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
-  environment: nti-cork01
   stage: deploy
   script:
     # Deploy Heartbear
-    - ansible-playbook -i deployment/hosts.yml deployment/playbook.yml --extra-vars="deployment_host=nti-cork01"
+    - ansible-playbook -i deployment/hosts/nti-cork01.yml deployment/playbook.yml --extra-vars="deployment_host=nti-cork01"
     # Deploy workers
-    - ansible-playbook -i deployment/worker-hosts.yml deployment/worker-playbook.yml --extra-vars="deployment_host=nti-cork01"
+    - ansible-playbook -i deployment/hosts/nti-cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=nti-cork01-worker0"
   only:
     - stable
 
@@ -144,13 +141,12 @@ deploy_netsoc-cork01:
   before_script:
     - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
     - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
-  environment: netsoc-cork01
   stage: deploy
   script:
     # Deploy Heartbear
-    - ansible-playbook -i deployment/hosts.yml deployment/playbook.yml --extra-vars="deployment_host=netsoc-cork01"
+    - ansible-playbook -i deployment/hosts/netsoc-cork01.yml deployment/playbook.yml --extra-vars="deployment_host=netsoc-cork01"
     # Deploy workers
-    - ansible-playbook -i deployment/worker-hosts.yml deployment/worker-playbook.yml --extra-vars="deployment_host=netsoc-cork01"
+    - ansible-playbook -i deployment/hosts/netsoc-cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=netsoc-cork01-worker0"
   only:
     - stable
 
@@ -170,12 +166,11 @@ deploy_vodafone-cork01:
   before_script:
     - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
     - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
-  environment: vodafone-cork01
   stage: deploy
   script:
     # Deploy Heartbear
-    - ansible-playbook -i deployment/hosts.yml deployment/playbook.yml --extra-vars="deployment_host=vodafone-cork01"
+    - ansible-playbook -i deployment/hosts/vodafone-cork01.yml deployment/playbook.yml --extra-vars="deployment_host=vodafone-cork01"
     # Deploy workers
-    - ansible-playbook -i deployment/worker-hosts.yml deployment/worker-playbook.yml --extra-vars="deployment_host=vodafone-cork01"
+    - ansible-playbook -i deployment/hosts/vodafone-cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=vodafone-cork01-worker0"
   only:
     - stable
