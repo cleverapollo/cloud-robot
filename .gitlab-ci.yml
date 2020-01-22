@@ -25,15 +25,15 @@ mypy:
     - stable
 
 
-build_base:
+stage_base:
   stage: base
   tags:
     - docker-build
   before_script:
     - echo "$GITLAB_KEY" > id_rsa
   script:
-    - docker build -f deployment/dockerfiles/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/base:latest --no-cache .
-    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/base:latest
+    - docker build -f deployment/dockerfiles/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/base:stage --no-cache .
+    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/base:stage
   only:
     - master
 
@@ -43,8 +43,8 @@ build_alpha:
   tags:
     - docker-build
   script:
-    - docker build -f deployment/dockerfiles/alpha.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/alpha:latest --no-cache .
-    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/alpha:latest
+    - docker build -f deployment/dockerfiles/alpha.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/alpha --no-cache .
+    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/alpha
   only:
   - master
 
@@ -53,93 +53,124 @@ deploy_alpha:
   before_script:
     - cp ~/.ssh/application_framework/stage_key ~/.ssh/id_rsa
     - cp ~/.ssh/application_framework/stage_key.pub ~/.ssh/id_rsa.pub
-  environment: staging
   stage: deploy
   script:
-    - ansible-playbook -i deployment/hosts.yml deployment/playbook.yml
-    - ansible-playbook -i deployment/worker-hosts.yml deployment/worker-playbook.yml
+    - ansible-playbook -i deployment/hosts/alpha.yml deployment/playbook.yml --extra-vars="deployment_host=alpha"
+    - ansible-playbook -i deployment/hosts/alpha.yml deployment/worker-playbook.yml --extra-vars="deployment_host=alpha-worker0"
   only:
     - master
 
 ###############################################################################
-#                         Production Build Jobs Start                         #
+#                         Production Build and Deploy                         #
 ###############################################################################
 
-build_toronto01:
-  stage: build
+stable_base:
+  stage: base
   tags:
-  - docker-build
+    - docker-build
+  before_script:
+    - echo "$GITLAB_KEY" > id_rsa
   script:
-  - docker build -f deployment/dockerfiles/toronto01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/toronto01:latest --no-cache .
-  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/toronto01:latest
+    - docker build -f deployment/dockerfiles/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/base:stable --no-cache .
+    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/base:stable
   only:
-  - stable
-
-build_gov_cork:
-  stage: build
-  tags:
-  - docker-build
-  script:
-  - docker build -f deployment/dockerfiles/gov_cork.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/gov_cork:latest --no-cache .
-  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/gov_cork:latest
-  only:
-  - stable
+    - stable
 
 build_cork01:
   stage: build
   tags:
   - docker-build
   script:
-  - docker build -f deployment/dockerfiles/cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/cork01:latest --no-cache .
-  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/cork01:latest
+  - docker build -f deployment/dockerfiles/cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/cork01 --no-cache .
+  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/cork01
   only:
   - stable
+
+deploy_cork01:
+  image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
+  before_script:
+    - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
+    - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
+  stage: deploy
+  script:
+    # Deploy Heartbear
+    - ansible-playbook -i deployment/hosts/cork01.yml deployment/playbook.yml --extra-vars="deployment_host=cork01"
+    # Deploy workers
+    - ansible-playbook -i deployment/hosts/cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=cork01-worker0"
+  only:
+    - stable
+
 
 build_nti-cork01:
   stage: build
   tags:
   - docker-build
   script:
-  - docker build -f deployment/dockerfiles/nti-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/nti-cork01:latest --no-cache .
-  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/nti-cork01:latest
+  - docker build -f deployment/dockerfiles/nti-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/nti-cork01 --no-cache .
+  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/nti-cork01
   only:
   - stable
+
+deploy_nti-cork01:
+  image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
+  before_script:
+    - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
+    - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
+  stage: deploy
+  script:
+    # Deploy Heartbear
+    - ansible-playbook -i deployment/hosts/nti-cork01.yml deployment/playbook.yml --extra-vars="deployment_host=nti-cork01"
+    # Deploy workers
+    - ansible-playbook -i deployment/hosts/nti-cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=nti-cork01-worker0"
+  only:
+    - stable
+
 
 build_netsoc-cork01:
   stage: build
   tags:
   - docker-build
   script:
-  - docker build -f deployment/dockerfiles/netsoc-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/netsoc-cork01:latest --no-cache .
-  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/netsoc-cork01:latest
+  - docker build -f deployment/dockerfiles/netsoc-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/netsoc-cork01 --no-cache .
+  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/netsoc-cork01
   only:
   - stable
+
+deploy_netsoc-cork01:
+  image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
+  before_script:
+    - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
+    - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
+  stage: deploy
+  script:
+    # Deploy Heartbear
+    - ansible-playbook -i deployment/hosts/netsoc-cork01.yml deployment/playbook.yml --extra-vars="deployment_host=netsoc-cork01"
+    # Deploy workers
+    - ansible-playbook -i deployment/hosts/netsoc-cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=netsoc-cork01-worker0"
+  only:
+    - stable
+
 
 build_vodafone-cork01:
   stage: build
   tags:
   - docker-build
   script:
-  - docker build -f deployment/dockerfiles/vodafone-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/vodafone-cork01:latest --no-cache .
-  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/vodafone-cork01:latest
+  - docker build -f deployment/dockerfiles/vodafone-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/vodafone-cork01 --no-cache .
+  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/vodafone-cork01
   only:
   - stable
 
-###############################################################################
-#                          Production Build Jobs End                          #
-###############################################################################
-
-deploy_production:
+deploy_vodafone-cork01:
   image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
   before_script:
     - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
     - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
-  environment: production
   stage: deploy
   script:
     # Deploy Heartbear
-    - ansible-playbook -i deployment/hosts.yml deployment/playbook.yml --extra-vars="deployment_host=production"
+    - ansible-playbook -i deployment/hosts/vodafone-cork01.yml deployment/playbook.yml --extra-vars="deployment_host=vodafone-cork01"
     # Deploy workers
-    - ansible-playbook -i deployment/worker-hosts.yml deployment/worker-playbook.yml --extra-vars="deployment_host=production"
+    - ansible-playbook -i deployment/hosts/vodafone-cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=vodafone-cork01-worker0"
   only:
     - stable
