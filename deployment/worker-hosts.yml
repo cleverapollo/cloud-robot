@@ -2,7 +2,7 @@ all:
   vars:
     ansible_python_interpreter: /usr/bin/python3
   children:
-    staging:
+    alpha:
       children:
         alpha:
           hosts:
@@ -11,7 +11,7 @@ all:
           vars:
             env: alpha
             ansible_become_pass: J1t3nd3r1sKw3l
-    production:
+    cork01:
       children:
         cork01:
           hosts:
@@ -19,18 +19,24 @@ all:
               ansible_host: "2a02:2078:4::3"
               env: cork01
               ansible_become_pass: C1xacc355
+    nti-cork01:
+      children:
         nti-cork01:
           hosts:
             nti-cork01-worker0:
               ansible_host: "2a02:2078:8::3"
               env: nti-cork01
               ansible_become_pass: C1xacc355
+    netsoc-cork01:
+      children:
         netsoc-cork01:
           hosts:
             netsoc-cork01-worker0:
               ansible_host: "2a02:2078:9::3"
               env: netsoc-cork01
               ansible_become_pass: C1xacc355
+    vodafone-cork01:
+      children:
         vodafone-cork01:
           hosts:
             vodafone-cork01-worker0:

@@ -17,7 +17,7 @@ REGION_NAME = 'netsoc-cork01'
 CLOUDCIX_EMAIL_USERNAME = 'Netsoc Cork01 <netsoc-cork01@cloudcix.net>'
 
 # Flag stating whether a region is in production or not
-IN_PRODUCTION = False  # Temp to False because NetSoc want to test
+IN_PRODUCTION = True
 
 # Configuration settings
 # KVM path
