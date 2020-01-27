@@ -1,4 +1,5 @@
 import os
+from pprint import pprint
 os.environ.setdefault('CLOUDCIX_SETTINGS_MODULE', 'test_settings')
 from cloudcix.api.compute import Compute
 from cloudcix.auth import get_admin_token
@@ -14,8 +15,9 @@ def api_read(client, pk, **kwargs):
     )
     if response.status_code != 200:
         print(response.json())
+        return None
     else:
-        print(response.json()['content'])
+        return response.json()['content']
 
 
 def api_list(client, params, **kwargs):
@@ -31,4 +33,7 @@ def api_list(client, params, **kwargs):
 
 
 if __name__ == '__main__':
-    api_list(Compute.project, params={})
+    vm = api_read(Compute.vm, pk=1156)
+    pprint(vm)
+    #server = api_read(Compute.server, pk=16)
+    #pprint(server)

@@ -2,7 +2,7 @@
 import logging
 # lib
 import opentracing
-from cloudcix.api import IAAS
+from cloudcix.api.compute import Compute
 # local
 import metrics
 import state
@@ -25,7 +25,7 @@ class PhantomVrf:
         logger = logging.getLogger('robot.dispatchers.phantom_vrf.build')
         logger.info(f'Updating VRF #{vrf_id} to state BUILDING')
         # Change the state to BUILDING and report a success to influx
-        response = IAAS.vrf.update(
+        response = Compute.virtual_router.update(
             token=Token.get_instance().token,
             pk=vrf_id,
             data={'state': state.BUILDING},
@@ -38,7 +38,7 @@ class PhantomVrf:
             metrics.vrf_build_failure()
         logger.info(f'Updating VRF #{vrf_id} to state RUNNING')
         # Change the state to RUNNING and report a success to influx
-        response = IAAS.vrf.update(
+        response = Compute.virtual_router.update(
             token=Token.get_instance().token,
             pk=vrf_id,
             data={'state': state.RUNNING},
@@ -60,12 +60,12 @@ class PhantomVrf:
         """
         logger = logging.getLogger('robot.dispatchers.phantom_vrf.quiesce')
         # In order to change the state to the correct value we need to read the VRF and check its state
-        vrf = utils.api_read(IAAS.vrf, vrf_id)
+        vrf = utils.api_read(Compute.virtual_router, vrf_id)
         if vrf is None:
             return
         if vrf['state'] == state.QUIESCE:
             logger.info(f'Updating VRF #{vrf_id} to state QUIESCING')
-            response = IAAS.vrf.partial_update(
+            response = Compute.virtual_router.partial_update(
                 token=Token.get_instance().token,
                 pk=vrf_id,
                 data={'state': state.QUIESCING},
@@ -77,7 +77,7 @@ class PhantomVrf:
                 metrics.vrf_quiesce_failure()
                 return
             logger.info(f'Updating VRF #{vrf_id} to state QUIESCED')
-            response = IAAS.vrf.partial_update(
+            response = Compute.virtual_router.partial_update(
                 token=Token.get_instance().token,
                 pk=vrf_id,
                 data={'state': state.QUIESCED},
@@ -91,7 +91,7 @@ class PhantomVrf:
             metrics.vrf_quiesce_success()
         elif vrf['state'] == state.SCRUB:
             logger.info(f'Updating VRF #{vrf_id} to state SCRUB_PREP')
-            response = IAAS.vrf.partial_update(
+            response = Compute.virtual_router.partial_update(
                 token=Token.get_instance().token,
                 pk=vrf_id,
                 data={'state': state.SCRUB_PREP},
@@ -103,7 +103,7 @@ class PhantomVrf:
                 metrics.vrf_quiesce_failure()
                 return
             logger.info(f'Updating VRF #{vrf_id} to state SCRUB_QUEUE')
-            response = IAAS.vrf.partial_update(
+            response = Compute.virtual_router.partial_update(
                 token=Token.get_instance().token,
                 pk=vrf_id,
                 data={'state': state.SCRUB_QUEUE},
@@ -130,7 +130,7 @@ class PhantomVrf:
         """
         logger = logging.getLogger('robot.dispatchers.phantom_vrf.restart')
         logger.info(f'Updating VRF #{vrf_id} to state RESTARTING')
-        response = IAAS.vrf.update(
+        response = Compute.virtual_router.update(
             token=Token.get_instance().token,
             pk=vrf_id,
             data={'state': state.RESTARTING},
@@ -143,7 +143,7 @@ class PhantomVrf:
             metrics.vrf_restart_failure()
         logger.info(f'Updating VRF #{vrf_id} to state RUNNING')
         # Change the state of the VRF to RUNNING and report a success to influx
-        response = IAAS.vrf.update(
+        response = Compute.virtual_router.update(
             token=Token.get_instance().token,
             pk=vrf_id,
             data={'state': state.RUNNING},
@@ -166,11 +166,11 @@ class PhantomVrf:
         logger = logging.getLogger('robot.dispatchers.phantom_vrf.scrub')
         logger.debug(f'Scrubbing phantom VRF #{vrf_id}')
         # In order to check the project for deletion, we need to read the vrf and get the project id from it
-        vrf = utils.api_read(IAAS.vrf, vrf_id)
+        vrf = utils.api_read(Compute.virtual_router, vrf_id)
         if vrf is None:
             return
         span = opentracing.tracer.start_span('phantom_vrf_project_delete')
-        utils.project_delete(vrf['idProject'], span)
+        utils.project_delete(vrf['project']['id'], span)
         span.finish()
         metrics.vrf_scrub_success()
 
@@ -182,7 +182,7 @@ class PhantomVrf:
         """
         logger = logging.getLogger('robot.dispatchers.phantom_vrf.update')
         logger.info(f'Updating VRF #{vrf_id} to state UPDATING')
-        response = IAAS.vrf.update(
+        response = Compute.virtual_router.update(
             token=Token.get_instance().token,
             pk=vrf_id,
             data={'state': state.UPDATING},
@@ -195,7 +195,7 @@ class PhantomVrf:
             metrics.vrf_update_failure()
         # Change the state of the VRF to RUNNING and report a success to influx
         logger.info(f'Updating VRF #{vrf_id} to state RUNNING')
-        response = IAAS.vrf.update(
+        response = Compute.virtual_router.update(
             token=Token.get_instance().token,
             pk=vrf_id,
             data={'state': state.RUNNING},

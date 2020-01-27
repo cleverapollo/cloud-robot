@@ -1,5 +1,5 @@
 """
-builder class for linux vms
+builder class for vm vms
 
 - gathers template data
 - generates necessary files
@@ -7,6 +7,7 @@ builder class for linux vms
 """
 # stdlib
 import logging
+import os
 import random
 import string
 from collections import deque
@@ -14,7 +15,7 @@ from crypt import crypt, mksalt, METHOD_SHA512
 from typing import Any, Deque, Dict, Optional, Tuple
 # lib
 import opentracing
-from cloudcix.api import IAAS
+from cloudcix.api.compute import Compute
 from jaeger_client import Span
 from netaddr import IPAddress, IPNetwork
 from paramiko import AutoAddPolicy, SSHClient, SSHException
@@ -27,9 +28,6 @@ from mixins import LinuxMixin
 __all__ = [
     'Linux',
 ]
-
-# Map that maps image ids to the name of the kickstart file that will be used for the VM
-KICKSTART_TEMPLATE_MAP = settings.OS_TEMPLATE_MAP['Linux']
 
 
 class Linux(LinuxMixin):
@@ -63,8 +61,10 @@ class Linux(LinuxMixin):
         'host_sudo_passwd',
         # the filename of the image used to build the vm
         'image_filename',
-        # the id of the image used to build the VM
-        'image_id',
+        # the answer_files file of the image used to build the VM
+        'image_answer_file_name',
+        # the os variant of the image used to build the VM
+        'image_os_variant',
         # the ip address of the vm in its subnet
         'ip_address',
         # the keyboard layout to use for the vm
@@ -75,6 +75,8 @@ class Linux(LinuxMixin):
         'netmask',
         # the path on the host where the network drive is found
         'network_drive_path',
+        # path for vm's .img files located in host
+        'vms_path',
         # the amount of RAM in the VM
         'ram',
         # the ssd primary drive of the VM 'id:size'
@@ -88,19 +90,18 @@ class Linux(LinuxMixin):
     }
 
     @staticmethod
-    def build(vm_data: Dict[str, Any], image_data: Dict[str, Any], span: Span) -> bool:
+    def build(vm_data: Dict[str, Any], span: Span) -> bool:
         """
         Commence the build of a vm using the data read from the API
         :param vm_data: The result of a read request for the specified VM
-        :param image_data: The data of the image for the VM
         :param span: The tracing span in use for this build task
         :return: A flag stating whether or not the build was successful
         """
-        vm_id = vm_data['idVM']
+        vm_id = vm_data['id']
 
         # Generate the necessary template data
         child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
-        template_data = Linux._get_template_data(vm_data, image_data, child_span)
+        template_data = Linux._get_template_data(vm_data, child_span)
         child_span.finish()
 
         # Check that the data was successfully generated
@@ -125,11 +126,11 @@ class Linux(LinuxMixin):
 
         # If everything is okay, commence building the VM
         host_ip = template_data.pop('host_ip')
-        image_id = template_data.pop('image_id')
+        answer_file = template_data.pop('image_answer_file_name')
 
         # Write necessary files into the network drive
         child_span = opentracing.tracer.start_span('write_files_to_network_drive', child_of=span)
-        file_write_success = Linux._generate_network_drive_files(vm_id, image_id, template_data)
+        file_write_success = Linux._generate_network_drive_files(vm_id, answer_file, template_data)
         child_span.finish()
 
         if not file_write_success:
@@ -151,17 +152,17 @@ class Linux(LinuxMixin):
             client.connect(hostname=host_ip, username='administrator')  # No need for password as it should have keys
             span.set_tag('host', host_ip)
 
-            # Attempt to execute the bridge build command
-            Linux.logger.debug(f'Executing bridge build command for VM #{vm_id}')
+            # Attempt to execute the bridge build commands
+            Linux.logger.debug(f'Executing bridge build commands for VM #{vm_id}')
 
             child_span = opentracing.tracer.start_span('build_bridge', child_of=span)
             stdout, stderr = Linux.deploy(bridge_build_cmd, client, child_span)
             child_span.finish()
 
             if stdout:
-                Linux.logger.debug(f'Bridge build command for VM #{vm_id} generated stdout.\n{stdout}')
+                Linux.logger.debug(f'Bridge build commands for VM #{vm_id} generated stdout.\n{stdout}')
             if stderr:
-                Linux.logger.warning(f'Bridge build command for VM #{vm_id} generated stderr.\n{stderr}')
+                Linux.logger.warning(f'Bridge build commands for VM #{vm_id} generated stderr.\n{stderr}')
 
             # Now attempt to execute the vm build command
             Linux.logger.debug(f'Executing vm build command for VM #{vm_id}')
@@ -175,6 +176,10 @@ class Linux(LinuxMixin):
             if stderr:
                 Linux.logger.warning(f'VM build command for VM #{vm_id} generated stderr.\n{stderr}')
             built = 'Domain creation completed' in stdout
+
+            # remove the generated files from the network drive
+            Linux._remove_network_drive_files(vm_id, template_data)
+
         except SSHException:
             Linux.logger.error(
                 f'Exception occurred while building VM #{vm_id} in {host_ip}',
@@ -186,30 +191,30 @@ class Linux(LinuxMixin):
         return built
 
     @staticmethod
-    def _get_template_data(vm_data: Dict[str, Any], image_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
+    def _get_template_data(vm_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
         """
         Given the vm data from the API, create a dictionary that contains all of the necessary keys for the template
         The keys will be checked in the build method and not here, this method is only concerned with fetching the data
         that it can.
         :param vm_data: The data of the VM read from the API
-        :param image_data: The data of the Image for the VM
         :param span: The tracing span in use for this task. In this method, just pass it to API calls.
         :returns: The data needed for the templates to build a Linux VM
         """
-        vm_id = vm_data['idVM']
+        vm_id = vm_data['id']
         Linux.logger.debug(f'Compiling template data for VM #{vm_id}')
         data: Dict[str, Any] = {key: None for key in Linux.template_keys}
 
-        data['vm_identifier'] = f'{vm_data["idProject"]}_{vm_data["idVM"]}'
-        data['image_filename'] = image_data['filename']
-        data['image_id'] = image_data['idImage']
-        # RAM is needed in MB for the builder but we take it in in GB (1024, not 1000)
+        data['vm_identifier'] = f'{vm_data["project"]["id"]}_{vm_id}'
+        data['image_filename'] = vm_data['image']['filename']
+        data['image_answer_file_name'] = vm_data['image']['answer_file_name']
+        data['image_os_variant'] = vm_data['image']['os_variant']
+        # RAM is needed in MB for the builder but we take it in GB (1024, not 1000)
         data['ram'] = vm_data['ram'] * 1024
         data['cpu'] = vm_data['cpu']
         data['dns'] = vm_data['dns']
 
         # Generate encrypted passwords
-        admin_password = Linux._password_generator(size=8)
+        admin_password = Linux._password_generator(size=12)
         data['admin_password'] = admin_password
         # Also save the password back to the VM data dict
         vm_data['admin_password'] = admin_password
@@ -218,44 +223,39 @@ class Linux(LinuxMixin):
         data['crypted_root_password'] = str(crypt(root_password, mksalt(METHOD_SHA512)))
 
         # Fetch the drives for the VM and add them to the data
-        drives: Deque[Dict[str, str]] = deque()
-        for storage in utils.api_list(IAAS.storage, {}, vm_id=vm_id, span=span):
+        drives: Deque[Dict[str, Any]] = deque()
+        primary = False
+        for storage in vm_data['storages']:
             # Check if the storage is primary
             if storage['primary']:
-                # Determine which field (hdd or ssd) to populate with this storage information
-                if storage['storage_type'] == 'HDD':
-                    data['hdd'] = f'{storage["idStorage"]}:{storage["gb"]}'
-                    data['ssd'] = 0
-                elif storage['storage_type'] == 'SSD':
-                    data['hdd'] = 0
-                    data['ssd'] = f'{storage["idStorage"]}:{storage["gb"]}'
-                else:
-                    Linux.logger.error(
-                        f'Invalid primary drive storage type {storage["storage_type"]}. Expected either "HDD" or "SSD"',
-                    )
-                    return None
-            else:
-                # Just append to the drives deque
+                primary = True
                 drives.append({
-                    'id': storage['idStorage'],
-                    'type': storage['storage_type'],
+                    'id': storage['id'],
+                    'primary': storage['primary'],
                     'size': storage['gb'],
                 })
+
+            # Just append to the drives deque
+            drives.append({
+                'id': storage['id'],
+                'primary': storage['primary'],
+                'size': storage['gb'],
+            })
+
+        # validate if primary storage drive exists or not.
+        if not primary:
+            Linux.logger.error(
+                f'No primary storage drive found. Expected one primary storage drive',
+            )
+            return None
+
         data['drives'] = drives
 
         # Get the Networking details
-        for ip_address in utils.api_list(IAAS.ipaddress, {'vm': vm_id}, span=span):
-            # The private IP for the VM will be the one we need to pass to the template
-            if not IPAddress(ip_address['address']).is_private():
-                continue
-            data['ip_address'] = ip_address['address']
-            # Read the subnet for the IPAddress to fetch information like the gateway and subnet mask
-            subnet = utils.api_read(IAAS.subnet, ip_address['idSubnet'], span=span)
-            if subnet is None:
-                return None
-            net = IPNetwork(subnet['addressRange'])
-            data['gateway'], data['netmask'] = str(net.ip), str(net.netmask)
-            data['vlan'] = subnet['vLAN']
+        data['ip_address'] = vm_data['ip_address']['address']
+        net = IPNetwork(vm_data['ip_address']['subnet']['address_range'])
+        data['gateway'], data['netmask'] = str(net.ip), str(net.netmask)
+        data['vlan'] = vm_data['ip_address']['subnet']['vlan']
 
         # Add locale data to the VM
         data['keyboard'] = 'ie'
@@ -263,57 +263,59 @@ class Linux(LinuxMixin):
         data['timezone'] = 'Europe/Dublin'
 
         # Get the ip address of the host
-        for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer'], span=span):
-            if mac['status'] is True and mac['ip'] is not None:
-                data['host_ip'] = mac['ip']
-                break
+        host_ip = None
+        for interface in utils.api_read(Compute.server, pk=vm_data['server_id'], span=span)['interfaces']:
+            if interface['enabled'] is True and interface['ip_address'] is not None:
+                if IPAddress(str(interface['ip_address'])).version == 6:
+                    host_ip = interface['ip_address']
+                    break
+
+        if host_ip is None:
+            Linux.logger.error(
+                f'Host ip address not found for the server # {vm_data["server_id"]}',
+            )
+            return None
+        data['host_ip'] = host_ip
 
         # Add the host information to the data
         data['host_sudo_passwd'] = settings.NETWORK_PASSWORD
         data['network_drive_path'] = settings.KVM_HOST_NETWORK_DRIVE_PATH
+        data['vms_path'] = settings.KVM_VMS_PATH
         return data
 
     @staticmethod
-    def _generate_network_drive_files(vm_id: int, image_id: int, template_data: Dict[str, Any]) -> bool:
+    def _generate_network_drive_files(vm_id: int, answer_file_name: str, template_data: Dict[str, Any]) -> bool:
         """
         Generate and write files into the network drive so they are on the host for the build scripts to utilise.
         Writes the following files to the drive;
-            - kickstart file
+            - answer file
             - bridge definition file
         :param vm_id: The id of the VM being built. Used for log messages
-        :param image_id: The id of the image used to build the VM
-        :param template_data: The retrieved template data for the vm
+        :param answer_file_name: The name of the image's answer_file_name file used to build the VM
+        :param template_data: The retrieved template data for the kvm vm
         :returns: A flag stating whether or not the job was successful
         """
-        # Determine the kickstart template to use for the VM
-        os_name = KICKSTART_TEMPLATE_MAP.get(image_id, None)
         network_drive_path = settings.KVM_ROBOT_NETWORK_DRIVE_PATH
-        if os_name is None:
-            valid_ids = ', '.join(f'`{map_id}`' for map_id in KICKSTART_TEMPLATE_MAP.keys())
-            Linux.logger.error(
-                f'Invalid Linux Image ID for VM #{vm_id}. Received {image_id}, valid choices are {valid_ids}.',
-            )
-            return False
 
-        # Render and attempt to write the kickstart file
-        template_name = f'vm/linux/kickstarts/{os_name}.j2'
-        kickstart = utils.JINJA_ENV.get_template(template_name).render(**template_data)
-        Linux.logger.debug(f'Generated kickstart file for VM #{vm_id}\n{kickstart}')
+        # Render and attempt to write the answer file
+        template_name = f'vm/kvm/answer_files/{answer_file_name}.j2'
+        answer_file_data = utils.JINJA_ENV.get_template(template_name).render(**template_data)
+        Linux.logger.debug(f'Generated answer file for VM #{vm_id}\n{answer_file_data}')
         try:
             # Attempt to write
-            kickstart_filename = f'{network_drive_path}/kickstarts/{template_data["vm_identifier"]}.cfg'
-            with open(kickstart_filename, 'w') as f:
-                f.write(kickstart)
-            Linux.logger.debug(f'Successfully wrote kickstart file for VM #{vm_id} to {kickstart_filename}')
+            answer_file_path = f'{network_drive_path}/answer_files/{template_data["vm_identifier"]}.cfg'
+            with open(answer_file_path, 'w') as f:
+                f.write(answer_file_data)
+            Linux.logger.debug(f'Successfully wrote answer file for VM #{vm_id} to {answer_file_path}')
         except IOError:
             Linux.logger.error(
-                f'Failed to write kickstart file for VM #{vm_id} to {kickstart_filename}',
+                f'Failed to write answer file for VM #{vm_id} to {answer_file_path}',
                 exc_info=True,
             )
             return False
 
         # Render and attempt to write the bridge definition file
-        template_name = 'kvm/bridge_definition.j2'
+        template_name = 'vm/kvm/bridge/definition.j2'
         bridge_def = utils.JINJA_ENV.get_template(template_name).render(**template_data)
         Linux.logger.debug(f'Generated bridge definition file for VM #{vm_id}\n{bridge_def}')
         try:
@@ -343,23 +345,53 @@ class Linux(LinuxMixin):
         :param template_data: The retrieved template data for the vm
         :returns: A flag stating whether or not the job was successful
         """
-        # Render the bridge build command
-        bridge_cmd = utils.JINJA_ENV.get_template('kvm/bridge_build_cmd.j2').render(**template_data)
+        # Render the bridge build commands
+        bridge_cmd = utils.JINJA_ENV.get_template('vm/kvm/bridge/build.j2').render(**template_data)
         Linux.logger.debug(f'Generated bridge build command for VM #{vm_id}\n{bridge_cmd}')
 
         # Render the VM build command
-        vm_cmd = utils.JINJA_ENV.get_template('vm/linux/build_cmd.j2').render(**template_data)
+        vm_cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/build.j2').render(**template_data)
         Linux.logger.debug(f'Generated vm build command for VM #{vm_id}\n{vm_cmd}')
 
         return bridge_cmd, vm_cmd
 
     @staticmethod
-    def _password_generator(size: int = 8, chars: Optional[str] = None) -> str:
+    def _remove_network_drive_files(vm_id: int, template_data: Dict[str, Any]):
+        """
+        Removes files from the network drive as they are not necessary after build and are not supposed to be left.
+        Remove the following files from the drive;
+            - answer file
+            - bridge definition file
+        :param vm_id: The id of the VM being built. Used for log messages
+        :param template_data: The retrieved template data for the vm
+        """
+        network_drive_path = settings.KVM_ROBOT_NETWORK_DRIVE_PATH
+
+        # Remove answer file
+        answer_file_path = f'{network_drive_path}/answer_files/{template_data["vm_identifier"]}.cfg'
+        if os.path.exists(answer_file_path):
+            try:
+                os.remove(answer_file_path)
+                Linux.logger.debug(f'Successfully removed answer file {answer_file_path} of VM #{vm_id}')
+            except IOError:
+                pass  # ignoring on fail as this step is optional
+
+        # Remove bridge xml file
+        bridge_def_filename = f'{network_drive_path}/bridge_xmls/br{template_data["vlan"]}.xml'
+        if os.path.exists(bridge_def_filename):
+            try:
+                os.remove(bridge_def_filename)
+                Linux.logger.debug(f'Successfully removed bridge definition file {bridge_def_filename} of VM #{vm_id}')
+            except IOError:
+                pass  # ignoring on fail as this step is optional
+
+    @staticmethod
+    def _password_generator(size: int = 12, chars: Optional[str] = None) -> str:
         """
         Returns a string of random characters, useful in generating temporary
         passwords for automated password resets.
 
-        :param size: default=8; override to provide smaller/larger passwords
+        :param size: default=12; override to provide smaller/larger passwords
         :param chars: default=A-Za-z0-9; override to provide more/less diversity
         :return: A password of length 'size' generated randomly from 'chars'
         """

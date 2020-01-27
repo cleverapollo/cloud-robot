@@ -7,15 +7,16 @@ builder class for windows vms
 """
 # stdlib
 import logging
+import os
 import random
 import string
 from collections import deque
 from typing import Any, Deque, Dict, Optional
 # lib
 import opentracing
-from cloudcix.api import IAAS
+from cloudcix.api.compute import Compute
 from jaeger_client import Span
-from netaddr import IPAddress
+from netaddr import IPAddress, IPNetwork
 from winrm.exceptions import WinRMError
 # local
 import settings
@@ -49,14 +50,12 @@ class Windows(WindowsMixin):
         'freenas_url',
         # the subnet gateway
         'gateway',
-        # the hdd primary drive of the VM 'id:size'
-        'hdd',
         # the DNS hostname for the host machine, as WinRM cannot use IPv6
         'host_name',
         # the name of the image used to build the vm
         'image_name',
-        # the id of the image used to build the VM
-        'image_id',
+        # the answer_files file of the image used to build the VM
+        'image_answer_file_name',
         # the ip address of the vm in its subnet
         'ip_address',
         # the language of the vm
@@ -65,8 +64,6 @@ class Windows(WindowsMixin):
         'netmask_int',
         # the amount of RAM in the VM
         'ram',
-        # the ssd primary drive of the VM 'id:size'
-        'ssd',
         # the timezone of the vm
         'timezone',
         # the vlan that the vm is a part of
@@ -76,19 +73,18 @@ class Windows(WindowsMixin):
     }
 
     @staticmethod
-    def build(vm_data: Dict[str, Any], image_data: Dict[str, Any], span: Span) -> bool:
+    def build(vm_data: Dict[str, Any], span: Span) -> bool:
         """
         Commence the build of a vm using the data read from the API
         :param vm_data: The result of a read request for the specified VM
-        :param image_data: The data of the image for the VM
         :param span: The tracing span in use for this build task
         :return: A flag stating whether or not the build was successful
         """
-        vm_id = vm_data['idVM']
+        vm_id = vm_data['id']
 
         # Generate the necessary template data
         child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
-        template_data = Windows._get_template_data(vm_data, image_data, child_span)
+        template_data = Windows._get_template_data(vm_data, child_span)
         child_span.finish()
 
         # Check that the data was successfully generated
@@ -113,11 +109,10 @@ class Windows(WindowsMixin):
 
         # If everything is okay, commence building the VM
         host_name = template_data.pop('host_name')
-        image_id = template_data.pop('image_id')
 
         # Write necessary files into the network drive
         child_span = opentracing.tracer.start_span('write_files_to_network_drive', child_of=span)
-        file_write_success = Windows._generate_network_drive_files(vm_id, image_id, template_data)
+        file_write_success = Windows._generate_network_drive_files(vm_id, template_data)
         child_span.finish()
 
         if not file_write_success:
@@ -127,7 +122,7 @@ class Windows(WindowsMixin):
 
         # Render the build command
         child_span = opentracing.tracer.start_span('generate_command', child_of=span)
-        cmd = utils.JINJA_ENV.get_template('vm/windows/build_cmd.j2').render(**template_data)
+        cmd = utils.JINJA_ENV.get_template('vm/hyperv/commands/build.j2').render(**template_data)
         child_span.finish()
 
         # Open a client and run the two necessary commands on the host
@@ -153,122 +148,118 @@ class Windows(WindowsMixin):
             if response.std_err and '#< CLIXML\r\n' not in response.std_err:
                 msg = response.std_err.strip()
                 Windows.logger.warning(f'VM build command for VM #{vm_id} generated stderr\n{msg}')
+            # Remove the answer file from network drive
+            Windows._remove_network_drive_files(vm_id, template_data)
         return built
 
     @staticmethod
-    def _get_template_data(vm_data: Dict[str, Any], image_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
+    def _get_template_data(vm_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
         """
         Given the vm data from the API, create a dictionary that contains all of the necessary keys for the template
         The keys will be checked in the build method and not here, this method is only concerned with fetching the data
         that it can.
         :param vm_data: The data of the VM read from the API
-        :param image_data: The data of the Image for the VM
         :param span: The tracing span in use for this task. In this method, just pass it to API calls.
         :returns: The data needed for the templates to build a Windows VM
         """
-        vm_id = vm_data['idVM']
+        vm_id = vm_data['id']
         Windows.logger.debug(f'Compiling template data for VM #{vm_id}')
         data: Dict[str, Any] = {key: None for key in Windows.template_keys}
 
-        data['vm_identifier'] = f'{vm_data["idProject"]}_{vm_data["idVM"]}'
-        data['image_name'] = image_data['name']
-        data['image_id'] = image_data['idImage']
+        data['vm_identifier'] = f'{vm_data["project"]["id"]}_{vm_id}'
+        data['image_answer_file_name'] = vm_data['image']['answer_file_name']
+        data['image_name'] = vm_data['image']['display_name']
         # RAM is needed in MB for the builder but we take it in in GB (1024, not 1000)
         data['ram'] = vm_data['ram'] * 1024
         data['cpu'] = vm_data['cpu']
         data['dns'] = [server.strip() for server in vm_data['dns'].split(',')]
 
         # Generate encrypted passwords
-        data['admin_password'] = Windows._password_generator(size=8)
+        data['admin_password'] = Windows._password_generator(size=12)
         # Also save the password back to the VM data dict
         vm_data['admin_password'] = data['admin_password']
 
         # Fetch the drives for the VM and add them to the data
         drives: Deque[Dict[str, Any]] = deque()
-        for storage in utils.api_list(IAAS.storage, {}, vm_id=vm_id, span=span):
+        primary = False
+        for storage in vm_data['storages']:
             # Check if the storage is primary
             if storage['primary']:
-                data['drive_id'] = storage['idStorage']
-                # Determine which field (hdd or ssd) to populate with this storage information
-                if storage['storage_type'] == 'HDD':
-                    data['drive_format'] = 'HDD'
-                    data['hdd'] = storage['gb']
-                    data['ssd'] = 0
-                elif storage['storage_type'] == 'SSD':
-                    data['drive_format'] = 'SSD'
-                    data['hdd'] = 0
-                    data['ssd'] = storage['gb']
-                else:
-                    Windows.logger.error(
-                        f'Invalid primary drive storage type {storage["storage_type"]}. Expected either "HDD" or "SSD"',
-                    )
-                    return None
-            else:
-                # Just append to the drives deque
-                drives.append(
-                    {
-                        'drive_id': storage['idStorage'],
-                        'drive_size': storage['gb'],
-                    },
-                )
-        if len(drives) > 0:
-            data['drives'] = drives
-        else:
-            data['drives'] = 0
+                primary = True
+                drives.append({
+                    'id': storage['id'],
+                    'primary': storage['primary'],
+                    'size': storage['gb'],
+                })
+
+            # Just append to the drives deque
+            drives.append({
+                'id': storage['id'],
+                'primary': storage['primary'],
+                'size': storage['gb'],
+            })
+
+        # validate if primary storage drive exists or not.
+        if not primary:
+            Windows.logger.error(
+                f'No primary storage drive found. Expected one primary storage drive',
+            )
+            return None
+
+        data['drives'] = drives
 
         # Get the Networking details
-        for ip_address in utils.api_list(IAAS.ipaddress, {'vm': vm_id}, span=span):
-            # The private IP for the VM will be the one we need to pass to the template
-            if not IPAddress(ip_address['address']).is_private():
-                continue
-            data['ip_address'] = ip_address['address']
-            # Read the subnet for the IPAddress to fetch information like the gateway and subnet mask
-            subnet = utils.api_read(IAAS.subnet, ip_address['idSubnet'], span=span)
-            if subnet is None:
-                return None
-            data['gateway'], data['netmask_int'] = subnet['addressRange'].split('/')
-            data['vlan'] = subnet['vLAN']
+        data['ip_address'] = vm_data['ip_address']['address']
+        net = IPNetwork(vm_data['ip_address']['subnet']['address_range'])
+        data['gateway'], data['netmask'] = str(net.ip), str(net.netmask)
+        data['vlan'] = vm_data['ip_address']['subnet']['vlan']
 
         # Add locale data to the VM
         data['language'] = 'en_IE'
         data['timezone'] = 'GMT Standard Time'
 
-        # Get the ip address of the host
-        for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer'], span=span):
-            if mac['status'] is True and mac['ip'] is not None:
-                data['host_name'] = mac['dnsName']
-                break
+        # Get the server dns name of the host
+        host_name = None
+        for interface in utils.api_read(Compute.server, pk=vm_data['server_id'], span=span)['interfaces']:
+            if interface['enabled'] is True and interface['hostname'] is not None:
+                if IPAddress(str(interface['ip_address'])).version == 6:
+                    host_name = interface['hostname']
+                    break
 
+        if host_name is None:
+            Windows.logger.error(
+                f'Host name is not found for the server # {vm_data["server_id"]}',
+            )
+            return None
         # Add the host information to the data
         data['freenas_url'] = settings.FREENAS_URL
         return data
 
     @staticmethod
-    def _generate_network_drive_files(vm_id: int, image_id: int, template_data: Dict[str, Any]) -> bool:
+    def _generate_network_drive_files(vm_id: int, template_data: Dict[str, Any]) -> bool:
         """
         Generate and write files into the network drive so they are on the host for the build scripts to utilise.
         Writes the following files to the drive;
             - unattend file
         :param vm_id: The id of the VM being built. Used for log messages
-        :param image_id: The id of the image used to build the VM
         :param template_data: The retrieved template data for the vm
         :returns: A flag stating whether or not the job was successful
         """
         network_drive_path = settings.HYPERV_ROBOT_NETWORK_DRIVE_PATH
 
         # Render and attempt to write the unattend file
-        template_name = f'vm/windows/unattend.j2'
-        unattend = utils.JINJA_ENV.get_template(template_name).render(**template_data)
-        Windows.logger.debug(f'Generated unattend file for VM #{vm_id}\n{unattend}')
+        template_name = f'vm/hyperv/answer_files/unattend.j2'
+        answer_file_data = utils.JINJA_ENV.get_template(template_name).render(**template_data)
+        Windows.logger.debug(f'Generated unattend file for VM #{vm_id}\n{answer_file_data}')
         try:
             # Attempt to write
-            unattend_filename = f'{network_drive_path}/unattend_xmls/{template_data["vm_identifier"]}.xml'
-            with open(unattend_filename, 'w') as f:
-                f.write(unattend)
-            Windows.logger.debug(f'Successfully wrote unattend file for VM #{vm_id} to {unattend_filename}')
+            answer_file_path = f'{network_drive_path}/answer_files/{template_data["vm_identifier"]}.xml'
+            with open(answer_file_path, 'w') as f:
+                f.write(answer_file_path)
+            Windows.logger.debug(f'Successfully wrote answer file for VM #{vm_id} to {answer_file_data}')
         except IOError:
             Windows.logger.error(
-                f'Failed to write unattend file for VM #{vm_id} to {unattend_filename}',
+                f'Failed to write answer file for VM #{vm_id} to {answer_file_path}',
                 exc_info=True,
             )
             return False
@@ -277,12 +268,32 @@ class Windows(WindowsMixin):
         return True
 
     @staticmethod
-    def _password_generator(size: int = 8, chars: Optional[str] = None) -> str:
+    def _remove_network_drive_files(vm_id: int, template_data: Dict[str, Any]):
+        """
+        Removes files from the network drive as they are not necessary after build and are not supposed to be left.
+        Remove the following files from the drive;
+            - answer file
+        :param vm_id: The id of the VM being built. Used for log messages
+        :param template_data: The retrieved template data for the vm
+        """
+        network_drive_path = settings.HYPERV_ROBOT_NETWORK_DRIVE_PATH
+
+        # Remove answer file
+        answer_file_path = f'{network_drive_path}/answer_files/{template_data["vm_identifier"]}.cfg'
+        if os.path.exists(answer_file_path):
+            try:
+                os.remove(answer_file_path)
+                Windows.logger.debug(f'Successfully removed answer file {answer_file_path} of VM #{vm_id}')
+            except IOError:
+                pass  # ignoring on fail as this step is optional
+
+    @staticmethod
+    def _password_generator(size: int = 12, chars: Optional[str] = None) -> str:
         """
         Returns a string of random characters, useful in generating temporary
         passwords for automated password resets.
 
-        :param size: default=8; override to provide smaller/larger passwords
+        :param size: default=12; override to provide smaller/larger passwords
         :param chars: default=A-Za-z0-9; override to provide more/less diversity
         :return: A password of length 'size' generated randomly from 'chars'
         """

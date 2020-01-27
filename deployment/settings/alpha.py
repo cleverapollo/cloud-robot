@@ -23,6 +23,8 @@ __all__ = [
     'REGION_NAME',
     'ROBOT_ENV',
     'VRFS_ENABLED',
+    'KVM_VMS_PATH',
+    'HYPERV_VMS_PATH',
 ]
 
 # Alpha Robot Settings
@@ -76,28 +78,12 @@ VRFS_ENABLED = True
 # KVM path
 KVM_ROBOT_NETWORK_DRIVE_PATH = '/mnt/images/KVM'
 KVM_HOST_NETWORK_DRIVE_PATH = KVM_ROBOT_NETWORK_DRIVE_PATH
+# KVM vms path
+KVM_VMS_PATH = '/var/lib/libvirt/images/'
 # HyperV path
 HYPERV_ROBOT_NETWORK_DRIVE_PATH = '/mnt/images/HyperV'
 HYPERV_HOST_NETWORK_DRIVE_PATH = HYPERV_ROBOT_NETWORK_DRIVE_PATH
+# HyperV vms path
+HYPERV_VMS_PATH = 'D:\HyperV\\'
 # FreeNas mount url
 FREENAS_URL = f'\\\\{REGION_NAME}-freenas.cloudcix.com\\mnt\\volume\\{REGION_NAME}'
-# Images dict
-OS_TEMPLATE_MAP = {
-    'Linux': {
-        6: 'ubuntu',
-        7: 'ubuntu',
-        8: 'ubuntu',
-        9: 'ubuntu',
-        10: 'centos',
-        11: 'centos',
-        12: 'ubuntu',
-    },
-    'Windows': {
-        2: '2012',
-        3: '2016',
-        13: '2019',
-    },
-    'Phantom': {
-        14: 'phantom',
-    },
-}

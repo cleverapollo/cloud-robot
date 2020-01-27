@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict
 # lib
 import opentracing
-from cloudcix.api import IAAS
+from cloudcix.api.compute import Compute
 from jaeger_client import Span
 # local
 import metrics
@@ -22,19 +22,21 @@ __all__ = [
     'quiesce_vm',
 ]
 
+UPDATE_STATUS_CODE = 204
+
 
 def _unresource(vm: Dict[str, Any], span: Span):
     """
     unresource the specified vm because something went wrong
     """
     logger = logging.getLogger('robot.tasks.vm.quiesce')
-    vm_id = vm['idVM']
+    vm_id = vm['id']
     # Send failure metric
     metrics.vm_quiesce_failure()
 
     # Update state to UNRESOURCED in the API
     child_span = opentracing.tracer.start_span('update_to_unresourced', child_of=span)
-    response = IAAS.vm.partial_update(
+    response = Compute.vm.partial_update(
         token=Token.get_instance().token,
         pk=vm_id,
         data={'state': state.UNRESOURCED},
@@ -42,7 +44,7 @@ def _unresource(vm: Dict[str, Any], span: Span):
     )
     child_span.finish()
 
-    if response.status_code != 204:
+    if response.status_code != UPDATE_STATUS_CODE:
         logger.error(
             f'Could not update VM #{vm_id} to state UNRESOURCED. Response: {response.content.decode()}.',
         )
@@ -52,7 +54,7 @@ def _unresource(vm: Dict[str, Any], span: Span):
         EmailNotifier.failure(vm, 'quiesce')
     except Exception:
         logger.error(
-            f'Failed to send failure email for VM #{vm["idVM"]}',
+            f'Failed to send failure email for VM #{vm["id"]}',
             exc_info=True,
         )
     child_span.finish()
@@ -81,7 +83,7 @@ def _quiesce_vm(vm_id: int, span: Span):
 
     # Read the VM
     child_span = opentracing.tracer.start_span('read_vm', child_of=span)
-    vm = utils.api_read(IAAS.vm, vm_id, span=child_span)
+    vm = utils.api_read(Compute.vm, vm_id, span=child_span)
     child_span.finish()
 
     # Ensure it is not none
@@ -94,7 +96,7 @@ def _quiesce_vm(vm_id: int, span: Span):
     # Ensure that the state of the vm is still currently SCRUB or QUIESCE
     valid_states = [state.QUIESCE, state.SCRUB]
     if vm['state'] not in valid_states:
-        logger.warn(
+        logger.warning(
             f'Cancelling quiesce of VM #{vm_id}. Expected state to be one of {valid_states}, found {vm["state"]}.',
         )
         # Return out of this function without doing anything
@@ -104,7 +106,7 @@ def _quiesce_vm(vm_id: int, span: Span):
     if vm['state'] == state.QUIESCE:
         # Update the state to QUIESCING (12)
         child_span = opentracing.tracer.start_span('update_to_quiescing', child_of=span)
-        response = IAAS.vm.partial_update(
+        response = Compute.vm.partial_update(
             token=Token.get_instance().token,
             pk=vm_id,
             data={'state': state.QUIESCING},
@@ -113,7 +115,7 @@ def _quiesce_vm(vm_id: int, span: Span):
         child_span.finish()
 
         # Ensure the update was successful
-        if response.status_code != 204:
+        if response.status_code != UPDATE_STATUS_CODE:
             logger.error(
                 f'Could not update VM #{vm_id} to QUIESCING. Response: {response.content.decode()}.',
             )
@@ -123,7 +125,7 @@ def _quiesce_vm(vm_id: int, span: Span):
     else:
         # Update the state to SCRUB_PREP (14)
         child_span = opentracing.tracer.start_span('update_to_scrub_prep', child_of=span)
-        response = IAAS.vm.partial_update(
+        response = Compute.vm.partial_update(
             token=Token.get_instance().token,
             pk=vm_id,
             data={'state': state.SCRUB_PREP},
@@ -131,7 +133,7 @@ def _quiesce_vm(vm_id: int, span: Span):
         )
         child_span.finish()
         # Ensure the update was successful
-        if response.status_code != 204:
+        if response.status_code != UPDATE_STATUS_CODE:
             logger.error(
                 f'Could not update VM #{vm_id} to SCRUB_PREP. Response: {response.content.decode()}.',
             )
@@ -141,7 +143,7 @@ def _quiesce_vm(vm_id: int, span: Span):
 
     # Read the VM image to get the hypervisor id
     child_span = opentracing.tracer.start_span('read_vm_image', child_of=span)
-    image = utils.api_read(IAAS.image, vm['idImage'], span=child_span)
+    image = utils.api_read(Compute.image, vm['idImage'], span=child_span)
     child_span.finish()
 
     if image is None:

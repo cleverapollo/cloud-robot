@@ -30,10 +30,11 @@ __all__ = [
     'KVM_ROBOT_NETWORK_DRIVE_PATH',
     'CLOUDCIX_LOGSTASH_URL',
     'NETWORK_PASSWORD',
-    'OS_TEMPLATE_MAP',
     'REGION_NAME',
     'ROBOT_ENV',
     'VRFS_ENABLED',
+    'KVM_VMS_PATH',
+    'HYPERV_VMS_PATH',
 ]
 
 # Member ID
@@ -60,25 +61,9 @@ VRFS_ENABLED = True
 # Configuration settings
 # KVM path
 KVM_ROBOT_NETWORK_DRIVE_PATH = '/mnt/images/KVM'
+# KVM vms path
+KVM_VMS_PATH = '/var/lib/libvirt/images/'
 # HyperV path
 HYPERV_ROBOT_NETWORK_DRIVE_PATH = '/mnt/images/HyperV'
-# Images dict
-OS_TEMPLATE_MAP = {
-    'Linux': {
-        6: 'ubuntu',
-        7: 'ubuntu',
-        8: 'ubuntu',
-        9: 'ubuntu',
-        10: 'centos',
-        11: 'centos',
-        12: 'ubuntu',
-    },
-    'Windows': {
-        2: '2012',
-        3: '2016',
-        13: '2019',
-    },
-    'Phantom': {
-        14: 'phantom',
-    },
-}
+# HyperV vms path
+HYPERV_VMS_PATH = 'D:\HyperV\\'

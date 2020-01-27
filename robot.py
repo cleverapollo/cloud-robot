@@ -5,7 +5,7 @@ new robot that uses a class, methods and instance variables to clean up the code
 import logging
 from typing import cast, Optional, Union
 # lib
-from cloudcix.api import compute
+from cloudcix.api.compute import Compute
 # local
 import dispatchers
 import metrics
@@ -16,6 +16,7 @@ from state import (
     QUIESCE_FILTERS,
     RESTART_FILTERS,
     ROUTER_BUSY_FILTERS,
+    SCRUB_QUEUE,
     UPDATE_FILTERS,
 )
 
@@ -105,15 +106,15 @@ class Robot:
         Check the API for VRFs to build, and asyncronously build them
         """
         # Retrive the VRFs from the API
-        to_build = utils.api_list(IAAS.vrf, BUILD_FILTERS)
+        to_build = utils.api_list(Compute.virtual_router, BUILD_FILTERS)
         if len(to_build) == 0:
             self.logger.debug('No VRFs found in the "Requested" state')
             return
         for vrf in to_build:
             # check if Router is busy.
-            busy = utils.api_list(IAAS.vrf, ROUTER_BUSY_FILTERS)
+            busy = utils.api_list(Compute.virtual_router, ROUTER_BUSY_FILTERS)
             if len(busy) == 0:
-                self.vrf_dispatcher.build(vrf['idVRF'])
+                self.vrf_dispatcher.build(vrf['id'])
             else:
                 break
 
@@ -122,16 +123,16 @@ class Robot:
         Check the API for VMs to build, and asyncronously build them
         """
         # Retrive the VMs from the API
-        to_build = utils.api_list(IAAS.vm, BUILD_FILTERS)
+        to_build = utils.api_list(Compute.vm, BUILD_FILTERS)
         if len(to_build) == 0:
             self.logger.debug('No VMs found in the "Requested" state')
             return
         for vm in to_build:
             # check if vr is ready.
-            vrf_request_data = {'project': vm['idProject']}
-            vm_vrf = utils.api_list(IAAS.vrf, vrf_request_data)[0]
+            vrf_request_data = {'project_id': vm['project']['id']}
+            vm_vrf = utils.api_list(Compute.virtual_router, vrf_request_data)[0]
             if vm_vrf['state'] == 4:
-                self.vm_dispatcher.build(vm['idVM'])
+                self.vm_dispatcher.build(vm['id'])
 
     # ############################################################## #
     #                             QUIESCE                            #
@@ -142,15 +143,15 @@ class Robot:
         Check the API for VRFs to quiesce, and asyncronously quiesce them
         """
         # Retrive the VRFs from the API
-        to_quiesce = utils.api_list(IAAS.vrf, QUIESCE_FILTERS)
+        to_quiesce = utils.api_list(Compute.virtual_router, QUIESCE_FILTERS)
         if len(to_quiesce) == 0:
             self.logger.debug('No VRFs found in the "Quiesce" state')
             return
         for vrf in to_quiesce:
             # check if Router is busy.
-            busy = utils.api_list(IAAS.vrf, ROUTER_BUSY_FILTERS)
+            busy = utils.api_list(Compute.virtual_router, ROUTER_BUSY_FILTERS)
             if len(busy) == 0:
-                self.vrf_dispatcher.quiesce(vrf['idVRF'])
+                self.vrf_dispatcher.quiesce(vrf['id'])
             else:
                 break
 
@@ -159,12 +160,12 @@ class Robot:
         Check the API for VMs to quiesce, and asyncronously quiesce them
         """
         # Retrive the VMs from the API
-        to_quiesce = utils.api_list(IAAS.vm, QUIESCE_FILTERS)
+        to_quiesce = utils.api_list(Compute.vm, QUIESCE_FILTERS)
         if len(to_quiesce) == 0:
             self.logger.debug('No VMs found in the "Quiesce" state')
             return
         for vm in to_quiesce:
-            self.vm_dispatcher.quiesce(vm['idVM'])
+            self.vm_dispatcher.quiesce(vm['id'])
 
     # ############################################################## #
     #                             RESTART                            #
@@ -175,15 +176,15 @@ class Robot:
         Check the API for VRFs to restart, and asyncronously restart them
         """
         # Retrive the VRFs from the API
-        to_restart = utils.api_list(IAAS.vrf, RESTART_FILTERS)
+        to_restart = utils.api_list(Compute.virtual_router, RESTART_FILTERS)
         if len(to_restart) == 0:
             self.logger.debug('No VRFs found in the "Restart" state')
             return
         for vrf in to_restart:
             # check if Router is busy.
-            busy = utils.api_list(IAAS.vrf, ROUTER_BUSY_FILTERS)
+            busy = utils.api_list(Compute.virtual_router, ROUTER_BUSY_FILTERS)
             if len(busy) == 0:
-                self.vrf_dispatcher.restart(vrf['idVRF'])
+                self.vrf_dispatcher.restart(vrf['id'])
             else:
                 break
 
@@ -192,12 +193,12 @@ class Robot:
         Check the API for VMs to restart, and asyncronously restart them
         """
         # Retrive the VMs from the API
-        to_restart = utils.api_list(IAAS.vm, RESTART_FILTERS)
+        to_restart = utils.api_list(Compute.vm, RESTART_FILTERS)
         if len(to_restart) == 0:
             self.logger.debug('No VMs found in the "Restart" state')
             return
         for vm in to_restart:
-            self.vm_dispatcher.restart(vm['idVM'])
+            self.vm_dispatcher.restart(vm['id'])
 
     # ############################################################## #
     #                              SCRUB                             #
@@ -220,35 +221,35 @@ class Robot:
         Check the API for VRFs to scrub, and asyncronously scrub them
         :param timestamp: The timestamp to use when listing VRFs to delete
         """
-        params = {'state': '9'}
+        params = {'state': SCRUB_QUEUE}
         if timestamp is not None:
             params['updated__lte'] = timestamp
 
         # Retrive the VRFs from the API
-        to_scrub = utils.api_list(IAAS.vrf, params)
+        to_scrub = utils.api_list(Compute.virtual_router, params)
         if len(to_scrub) == 0:
             self.logger.debug('No VRFs found in the "Scrub" state')
             return
         for vrf in to_scrub:
             # since scrub runs only once, sending all requests.
-            self.vrf_dispatcher.scrub(vrf['idVRF'])
+            self.vrf_dispatcher.scrub(vrf['id'])
 
     def _vm_scrub(self, timestamp: Optional[str]):
         """
         Check the API for VMs to scrub, and asyncronously scrub them
         :param timestamp: The timestamp to use when listing VRFs to delete
         """
-        params = {'state': '9'}
+        params = {'state': SCRUB_QUEUE}
         if timestamp is not None:
             params['updated__lte'] = timestamp
 
         # Retrive the VMs from the API
-        to_scrub = utils.api_list(IAAS.vm, params)
+        to_scrub = utils.api_list(Compute.vm, params)
         if len(to_scrub) == 0:
             self.logger.debug('No VMs found in the "Scrub" state')
             return
         for vm in to_scrub:
-            self.vm_dispatcher.scrub(vm['idVM'])
+            self.vm_dispatcher.scrub(vm['id'])
 
     # ############################################################## #
     #                             UPDATE                             #
@@ -259,15 +260,15 @@ class Robot:
         Check the API for VRFs to update, and asyncronously update them
         """
         # Retrive the VRFs from the API
-        to_update = utils.api_list(IAAS.vrf, UPDATE_FILTERS)
+        to_update = utils.api_list(Compute.virtual_router, UPDATE_FILTERS)
         if len(to_update) == 0:
             self.logger.debug('No VRFs found in the "Update" state')
             return
         for vrf in to_update:
             # check if Router is busy.
-            busy = utils.api_list(IAAS.vrf, ROUTER_BUSY_FILTERS)
+            busy = utils.api_list(Compute.virtual_router, ROUTER_BUSY_FILTERS)
             if len(busy) == 0:
-                self.vrf_dispatcher.update(vrf['idVRF'])
+                self.vrf_dispatcher.update(vrf['id'])
             else:
                 break
 
@@ -276,9 +277,9 @@ class Robot:
         Check the API for VMs to update, and asyncronously update them
         """
         # Retrive the VMs from the API
-        to_update = utils.api_list(IAAS.vm, UPDATE_FILTERS)
+        to_update = utils.api_list(Compute.vm, UPDATE_FILTERS)
         if len(to_update) == 0:
             self.logger.debug('No VMs found in the "Update" state')
             return
         for vm in to_update:
-            self.vm_dispatcher.update(vm['idVM'])
+            self.vm_dispatcher.update(vm['id'])

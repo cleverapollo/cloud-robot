@@ -124,14 +124,12 @@ def project_delete(project_id: int, span: Span):
     :param span: The span currently tracing the job. Just passed into the API calls this function makes
     """
     logger = logging.getLogger('robot.utils.project_delete')
-    # Check that list requests for VRF and VM both are empty, and if so, delete the project
-    project = api_read(Compute.cloud, pk=project_id, span=span)
-    active_vrfs = len(project['virtual_router'])
-    active_vrfs = len(api_list(IAAS.vrf, {'project': project_id}, span=span))
-    active_vms = len(api_list(IAAS.vm, {'project_id': project_id}, span=span))
-    if active_vms == 0 and active_vrfs == 0:
+    # Check that list requests for VR and VM both are empty, and if so, delete the project
+    active_vrs = len(api_list(Compute.virtual_router, {'project_id': project_id}, span=span))
+    active_vms = len(api_list(Compute.vm, {'project_id': project_id}, span=span))
+    if active_vms == 0 and active_vrs == 0:
         logger.debug(f'Project #{project_id} is empty. Sending delete request.')
-        response = IAAS.project.delete(token=Token.get_instance().token, pk=project_id, span=span)
+        response = Compute.project.delete(token=Token.get_instance().token, pk=project_id, span=span)
         if response.status_code == 204:
             logger.info(f'Successfully deleted Project #{project_id} from the CMDB')
         else:
@@ -140,7 +138,7 @@ def project_delete(project_id: int, span: Span):
                 f'Response Text: {response.content.decode()}',
             )
     else:
-        logger.debug(f'Cannot delete Project #{project_id}. {active_vrfs} VRFs and {active_vms} VMs remain active.')
+        logger.debug(f'Cannot delete Project #{project_id}. {active_vrs} VRFs and {active_vms} VMs remain active.')
 
 
 # Methods that wrap cloudcix clients to abstract retrieval and checking
