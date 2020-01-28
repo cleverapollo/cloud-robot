@@ -19,11 +19,19 @@ try {
 {# 1. Shutdown the VM first #}
   Stop-VM -Name $VMName
 {# 2. Updates the processor/cpu count and Ram sizes even if changed or not #}
-  Set-VMProcessor $VMName -Count {{ cpu }}
-  Set-VMMemory $VMName -DynamicMemoryEnabled $false -StartupBytes {{ ram }}MB
+{% if changes['cpu'] %}
+  Set-VMProcessor $VMName -Count {{ changes['cpu'] }}
+{% endif %}
+{% if changes['ram'] %}
+  Set-VMMemory $VMName -DynamicMemoryEnabled $false -StartupBytes {{ changes['ram'] }}MB
+{% endif %}
 {# 3. Set the vLan #}
   Set-VMNetworkAdapterVlan -VMName {{ vm_identifier }} -Access -VlanId {{ vlan }}
 {# 4. Update Drive Sizes #}
+{% if changes['storages'] %}
+{% set hdd = changes['storages']['hdd'] %}
+{% set ssd = changes['storages']['ssd'] %}
+{% set drives = changes['storages']['drives'] %}
 {# 4a. Primary Drive #}
 {# considering new_size > old_size always #}
 {% if hdd and int(hdd.split(":")[1]) > int(hdd.split(":")[2]) %}
@@ -63,5 +71,6 @@ try {
   Add-VMHardDiskDrive -VMName $VMName -Path D:\HyperV\$VMName\$VMName_{{ drive["type"] }}_{{ drive["id"] }}.vhdx
 {% endif %}
 {% endfor %}
+{% endif %}
   Write-Host "VM Successfully Updated."
 }catch {Write-Error "VM failed to update. Error Message: $_.Exception.Message"}

@@ -33,24 +33,16 @@ class Linux(LinuxMixin, VmUpdateMixin):
     logger = logging.getLogger('robot.updaters.vm.linux')
     # Keep track of the keys necessary for the template, so we can ensure that all keys are present before updating
     template_keys = {
-        # the number of cpus in the vm
-        'cpu',
-        # the drives in the vm
-        'drives',
-        # the hdd primary drive of the VM 'id:size'
-        'hdd',
         # the ip address of the host that the VM is running on
         'host_ip',
         # the sudo password of the host, used to run some commands
         'host_sudo_passwd',
-        # the amount of RAM in the VM
-        'ram',
         # a flag stating whether or not the VM should be turned back on after updating it
         'restart',
-        # the ssd primary drive of the VM 'id:size'
-        'ssd',
         # an identifier that uniquely identifies the vm
         'vm_identifier',
+        # changes for updates
+        'changes',
     }
 
     @staticmethod
@@ -160,9 +152,17 @@ class Linux(LinuxMixin, VmUpdateMixin):
         data: Dict[str, Any] = {key: None for key in Linux.template_keys}
 
         data['vm_identifier'] = f'{vm_data["idProject"]}_{vm_data["idVM"]}'
-        # RAM is needed in MB for the updater but we take it in in GB (1024, not 1000)
-        data['ram'] = vm_data['ram'] * 1024
-        data['cpu'] = vm_data['cpu']
+        # changes
+        changes: Dict[str, Any] = {
+            'ram': False,
+            'cpu': False,
+            'storages': False,
+        }
+        if 'ram' in vm_data['changes_this_month'][0]['details'].keys():
+            # RAM is needed in MB for the updater but we take it in in GB (1024, not 1000)
+            changes['ram'] = vm_data['ram'] * 1024
+        if 'cpu' in vm_data['changes_this_month'][0]['details'].keys():
+            changes['cpu'] = vm_data['cpu']
 
         # Get the ip address of the host
         Linux.logger.debug(f'Fetching host address for VM #{vm_id}')
@@ -175,9 +175,14 @@ class Linux(LinuxMixin, VmUpdateMixin):
         data['host_sudo_passwd'] = settings.NETWORK_PASSWORD
 
         # Fetch the drive information for the update
-        Linux.logger.debug(f'Fetching drives for VM #{vm_id}')
-        data['hdd'], data['ssd'], data['drives'] = Linux.fetch_drive_updates(vm_data, span)
-
+        if 'storages' in vm_data['changes_this_month'][0]['details'].keys():
+            Linux.logger.debug(f'Fetching drives for VM #{vm_id}')
+            hdd, ssd, drives = Linux.fetch_drive_updates(vm_data, span)
+            changes['storages'] = {
+                'hdd': hdd,
+                'ssd': ssd,
+                'drives': drives,
+            }
         # Determine whether or not we should turn the VM back on after the update finishes
         Linux.logger.debug(f'Determining if VM #{vm_id} should be powered on after update')
         data['restart'] = Linux.determine_should_restart(vm_data)
