@@ -118,44 +118,58 @@ def _update_vm(vm_id: int, span: Span):
         return
 
     success: bool = False
-    # Read the VM image to get the hypervisor id
-    child_span = opentracing.tracer.start_span('read_vm_image', child_of=span)
-    image = utils.api_read(IAAS.image, vm['idImage'], span=child_span)
-    child_span.finish()
+    changes: bool = False
+    # check if any changes in any of cpu, ram, storages otherwise ignore
+    # the first change in changes_this_month list is the one we need to update about vm
+    if len(vm['changes_this_month']) != 0:
+        for detail in vm['changes_this_month'][0]['details'].keys():
+            if detail in ['cpu', 'ram', 'storages']:
+                changes = True
+                break
 
-    if image is None:
-        logger.error(
-            f'Could not update VM #{vm_id} as its Image was not readable',
-        )
-        span.set_tag('return_reason', 'image_not_read')
-        _unresource(vm, span)
-        return
+    if changes:
+        # Read the VM image to get the hypervisor id
+        child_span = opentracing.tracer.start_span('read_vm_image', child_of=span)
+        image = utils.api_read(IAAS.image, vm['idImage'], span=child_span)
+        child_span.finish()
 
-    hypervisor = image['idHypervisor']
-    child_span = opentracing.tracer.start_span('update', child_of=span)
-    try:
-        if hypervisor == 1:  # HyperV -> Windows
-            success = WindowsVmUpdater.update(vm, child_span)
-            child_span.set_tag('hypervisor', 'windows')
-        elif hypervisor == 2:  # KVM -> Linux
-            success = LinuxVmUpdater.update(vm, child_span)
-            child_span.set_tag('hypervisor', 'linux')
-        elif hypervisor == 3:  # Phantom
-            success = True
-            child_span.set_tag('hypervisor', 'phantom')
-        else:
+        if image is None:
             logger.error(
-                f'Unsupported Hypervisor ID #{hypervisor} for VM #{vm_id}',
+                f'Could not update VM #{vm_id} as its Image was not readable',
             )
-            child_span.set_tag('hypervisor', 'unsupported')
-    except Exception:
-        logger.error(
-            f'An unexpected error occurred when attempting to update VM #{vm_id}',
-            exc_info=True,
-        )
-    child_span.finish()
+            span.set_tag('return_reason', 'image_not_read')
+            _unresource(vm, span)
+            return
 
-    span.set_tag('return_reason', f'success: {success}')
+        hypervisor = image['idHypervisor']
+        child_span = opentracing.tracer.start_span('update', child_of=span)
+        try:
+            if hypervisor == 1:  # HyperV -> Windows
+                success = WindowsVmUpdater.update(vm, child_span)
+                child_span.set_tag('hypervisor', 'windows')
+            elif hypervisor == 2:  # KVM -> Linux
+                success = LinuxVmUpdater.update(vm, child_span)
+                child_span.set_tag('hypervisor', 'linux')
+            elif hypervisor == 3:  # Phantom
+                success = True
+                child_span.set_tag('hypervisor', 'phantom')
+            else:
+                logger.error(
+                    f'Unsupported Hypervisor ID #{hypervisor} for VM #{vm_id}',
+                )
+                child_span.set_tag('hypervisor', 'unsupported')
+        except Exception:
+            logger.error(
+                f'An unexpected error occurred when attempting to update VM #{vm_id}',
+                exc_info=True,
+            )
+        child_span.finish()
+
+        span.set_tag('return_reason', f'success: {success}')
+
+    else:
+        # change the state back to previous as
+        success = True
 
     if success:
         logger.info(f'Successfully updated VM #{vm_id}.')
