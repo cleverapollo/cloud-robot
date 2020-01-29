@@ -24,27 +24,25 @@ mypy:
     - master
     - stable
 
-
-stage_base:
+docker_base:
   stage: base
   tags:
     - docker-build
   before_script:
     - echo "$GITLAB_KEY" > id_rsa
   script:
-    - docker build -f deployment/dockerfiles/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/base:stage --no-cache .
-    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/base:stage
+    - docker build -f deployment/dockerfiles/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/base:latest --no-cache .
+    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/base:latest
   only:
     - master
-
 
 build_alpha:
   stage: build
   tags:
     - docker-build
   script:
-    - docker build -f deployment/dockerfiles/alpha.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/alpha --no-cache .
-    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/alpha
+    - docker build -f deployment/dockerfiles/alpha.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/alpha:latest --no-cache .
+    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/alpha:latest
   only:
   - master
 
@@ -71,8 +69,8 @@ stable_base:
   before_script:
     - echo "$GITLAB_KEY" > id_rsa
   script:
-    - docker build -f deployment/dockerfiles/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/base:stable --no-cache .
-    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/base:stable
+    - docker build -f deployment/dockerfiles/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/base:stable:latest --no-cache .
+    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/base:stable:latest
   only:
     - stable
 
@@ -81,8 +79,8 @@ build_cork01:
   tags:
   - docker-build
   script:
-  - docker build -f deployment/dockerfiles/cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/cork01 --no-cache .
-  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/cork01
+  - docker build -f deployment/dockerfiles/cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/cork01:latest --no-cache .
+  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/cork01:latest
   only:
   - stable
 
@@ -106,8 +104,8 @@ build_nti-cork01:
   tags:
   - docker-build
   script:
-  - docker build -f deployment/dockerfiles/nti-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/nti-cork01 --no-cache .
-  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/nti-cork01
+  - docker build -f deployment/dockerfiles/nti-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/nti-cork01:latest --no-cache .
+  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/nti-cork01:latest
   only:
   - stable
 
@@ -131,8 +129,8 @@ build_netsoc-cork01:
   tags:
   - docker-build
   script:
-  - docker build -f deployment/dockerfiles/netsoc-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/netsoc-cork01 --no-cache .
-  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/netsoc-cork01
+  - docker build -f deployment/dockerfiles/netsoc-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/netsoc-cork01:latest --no-cache .
+  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/netsoc-cork01:latest
   only:
   - stable
 
@@ -156,8 +154,8 @@ build_vodafone-cork01:
   tags:
   - docker-build
   script:
-  - docker build -f deployment/dockerfiles/vodafone-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/vodafone-cork01 --no-cache .
-  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/vodafone-cork01
+  - docker build -f deployment/dockerfiles/vodafone-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/vodafone-cork01:latest --no-cache .
+  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/vodafone-cork01:latest
   only:
   - stable
 
