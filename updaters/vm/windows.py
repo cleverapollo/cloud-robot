@@ -199,7 +199,8 @@ class Windows(WindowsMixin, VmUpdateMixin):
                 'ssd': ssd,
                 'drives': drives,
             }
-
+        # Add changes to data
+        data['changes'] = changes
         # Determine whether or not we should turn the VM back on after the update finishes
         Windows.logger.debug(f'Determining if VM #{vm_id} should be powered on after update')
         data['restart'] = Windows.determine_should_restart(vm_data)

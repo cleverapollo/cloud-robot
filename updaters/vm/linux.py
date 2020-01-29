@@ -50,7 +50,6 @@ class Linux(LinuxMixin, VmUpdateMixin):
         """
         Commence the update of a vm using the data read from the API
         :param vm_data: The result of a read request for the specified VM
-        :param image_data: The data of the image for the VM
         :param span: The tracing span in use for this update task
         :return: A flag stating whether or not the update was successful
         """
@@ -183,6 +182,8 @@ class Linux(LinuxMixin, VmUpdateMixin):
                 'ssd': ssd,
                 'drives': drives,
             }
+        # Add changes to data
+        data['changes'] = changes
         # Determine whether or not we should turn the VM back on after the update finishes
         Linux.logger.debug(f'Determining if VM #{vm_id} should be powered on after update')
         data['restart'] = Linux.determine_should_restart(vm_data)
