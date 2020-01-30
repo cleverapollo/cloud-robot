@@ -70,7 +70,7 @@ stable_base:
     - echo "$GITLAB_KEY" > id_rsa
   script:
     - docker build -f deployment/dockerfiles/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/base:stable --no-cache .
-    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/base:stable:latest
+    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/base:stable
   only:
     - stable
 
