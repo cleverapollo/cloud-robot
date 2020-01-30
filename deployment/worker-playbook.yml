@@ -31,7 +31,7 @@
         password: C1xacc355
 
     - name: Delete previous images
-      shell: "docker rmi $(docker images -q)"
+      shell: "echo {{ ansible_become_pass }} | sudo -S docker rmi $(docker images -q)"
       ignore_errors: yes
 
     - name: Deploy Jaeger Agent for reporting Spans to Jaeger

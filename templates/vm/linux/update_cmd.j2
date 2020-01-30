@@ -6,21 +6,29 @@
   done
 
   {# 2. Update the RAM #}
+  {% if changes['ram'] %}
   {# 2a. Maximum #}
-  echo {{ host_sudo_passwd }} | sudo -S virsh setmaxmem {{ vm_identifier }} {{ ram }}M --config
+  echo {{ host_sudo_passwd }} | sudo -S virsh setmaxmem {{ vm_identifier }} {{ changes['ram'] }}M --config
   {# 2b. Current #}
-  echo {{ host_sudo_passwd }} | sudo -S virsh setmem {{ vm_identifier }} {{ ram }}M --config
+  echo {{ host_sudo_passwd }} | sudo -S virsh setmem {{ vm_identifier }} {{ changes['ram'] }}M --config
+  {% endif %}
 
   {# 3. Update the vCPU values #}
+  {% if changes['cpu'] %}
   {# 3a. Maximum #}
-  echo {{ host_sudo_passwd }} | sudo -S virsh setvcpus {{ vm_identifier }} --maximum {{ cpu }} --config
+  echo {{ host_sudo_passwd }} | sudo -S virsh setvcpus {{ vm_identifier }} --maximum {{ changes['cpu'] }} --config
   {# 3b. Current #}
-  echo {{ host_sudo_passwd }} | sudo -S virsh setvcpus {{ vm_identifier }} --count {{ cpu }} --config
+  echo {{ host_sudo_passwd }} | sudo -S virsh setvcpus {{ vm_identifier }} --count {{ changes['cpu'] }} --config
+  {% endif %}
 
   {# 4. Update IP Configurations #}
   {# TODO #}
 
   {# 5. Upgrade Drive Sizes #}
+  {% if changes['storages'] %}
+  {% set hdd = changes['storages']['hdd'] %}
+  {% set ssd = changes['storages']['ssd'] %}
+  {% set drives = changes['storages']['drives'] %}
   {# 5a. Primary Drive #}
   {# considering new_size > old_size always #}
   {% if hdd and int(hdd.split(':')[1]) != int(hdd.split(':')[2]) %}
@@ -55,4 +63,6 @@
     --source /var/lib/libvirt/images/{{ vm_identifier }}_{{ drive['type'] }}_{{ drive['id'] }}.img \
     --target vd{{ alphabet }}
   {% endfor %}
+
+  {% endif %}
 }

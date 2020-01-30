@@ -15,7 +15,6 @@ from jaeger_client import Span
 from netaddr import IPAddress, IPNetwork
 from winrm.exceptions import WinRMError
 # local
-import settings
 import utils
 from mixins import VmUpdateMixin, WindowsMixin
 
@@ -36,30 +35,22 @@ class Windows(WindowsMixin, VmUpdateMixin):
     template_keys = {
         # # the admin password for the vm, unencrypted
         # 'admin_password',
-        # the number of cpus in the vm
-        'cpu',
         # the dns servers for the vm
         'dns',
-        # the drives in the vm
-        'drives',
         # the subnet gateway
         'gateway',
-        # the hdd primary drive of the VM 'id:size'
-        'hdd',
         # the ip address of the vm in its subnet
         'ip_address',
         # the subnet mask in address form (255.255.255.0)
         'netmask',
-        # the amount of RAM in the VM
-        'ram',
         # a flag stating whether or not the VM should be turned back on after updating it
         'restart',
-        # the ssd primary drive of the VM 'id:size'
-        'ssd',
         # the vlan that the vm is a part of
         'vlan',
         # an identifier that uniquely identifies the vm
         'vm_identifier',
+        # changes of vm
+        'changes',
     }
 
     @staticmethod
@@ -164,9 +155,18 @@ class Windows(WindowsMixin, VmUpdateMixin):
         data: Dict[str, Any] = {key: None for key in Windows.template_keys}
 
         data['vm_identifier'] = f'{vm_data["idProject"]}_{vm_data["idVM"]}'
-        # RAM is needed in MB for the updater but we take it in in GB (1024, not 1000)
-        data['ram'] = vm_data['ram'] * 1024
-        data['cpu'] = vm_data['cpu']
+        # changes
+        changes: Dict[str, Any] = {
+            'ram': False,
+            'cpu': False,
+            'storages': False,
+        }
+        if 'ram' in vm_data['changes_this_month'][0]['details'].keys():
+            # RAM is needed in MB for the updater but we take it in in GB (1024, not 1000)
+            changes['ram'] = vm_data['ram'] * 1024
+        if 'cpu' in vm_data['changes_this_month'][0]['details'].keys():
+            changes['cpu'] = vm_data['cpu']
+
         data['dns'] = vm_data['dns'].replace(',', '", "')
 
         # Get the Networking details
@@ -191,12 +191,16 @@ class Windows(WindowsMixin, VmUpdateMixin):
                 break
 
         # Fetch the drive information for the update
-        Windows.logger.debug(f'Fetching drives for VM #{vm_id}')
-        data['hdd'], data['ssd'], data['drives'] = Windows.fetch_drive_updates(vm_data, span)
-
-        # Add the host information to the data
-        data['freenas_url'] = settings.FREENAS_URL
-
+        if 'storages' in vm_data['changes_this_month'][0]['details'].keys():
+            Windows.logger.debug(f'Fetching drives for VM #{vm_id}')
+            hdd, ssd, drives = Windows.fetch_drive_updates(vm_data, span)
+            changes['storages'] = {
+                'hdd': hdd,
+                'ssd': ssd,
+                'drives': drives,
+            }
+        # Add changes to data
+        data['changes'] = changes
         # Determine whether or not we should turn the VM back on after the update finishes
         Windows.logger.debug(f'Determining if VM #{vm_id} should be powered on after update')
         data['restart'] = Windows.determine_should_restart(vm_data)
