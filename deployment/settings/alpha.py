@@ -12,19 +12,21 @@ __all__ = [
     'CLOUDCIX_API_VERSION',
     'CLOUDCIX_API_V2_URL',
     'CLOUDCIX_EMAIL_USERNAME',
-    'FREENAS_URL',
     'HYPERV_HOST_NETWORK_DRIVE_PATH',
     'HYPERV_ROBOT_NETWORK_DRIVE_PATH',
+    'HYPERV_VMS_PATH',
     'KVM_HOST_NETWORK_DRIVE_PATH',
     'KVM_ROBOT_NETWORK_DRIVE_PATH',
+    'KVM_VMS_PATH',
     'CLOUDCIX_LOGSTASH_URL',
+    'NETWORK_DRIVE_URL',
     'NETWORK_PASSWORD',
-    'OS_TEMPLATE_MAP',
+    'NOT_FOUND_STATUS_CODE',
     'REGION_NAME',
     'ROBOT_ENV',
-    'VRFS_ENABLED',
-    'KVM_VMS_PATH',
-    'HYPERV_VMS_PATH',
+    'SUCCESS_STATUS_CODE',
+    'UPDATE_STATUS_CODE',
+    'VRS_ENABLED',
 ]
 
 # Alpha Robot Settings
@@ -71,8 +73,8 @@ ROBOT_ENV = os.environ.get('ROBOT_ENV', 'dev')
 # Name of region (used to tag data sent to influx)
 REGION_NAME = 'alpha'
 
-# Flag to state whether VRFs are enabled or not
-VRFS_ENABLED = True
+# Flag to state whether VRs are enabled or not
+VRS_ENABLED = True
 
 # Configuration settings
 # KVM path
@@ -85,5 +87,9 @@ HYPERV_ROBOT_NETWORK_DRIVE_PATH = '/mnt/images/HyperV'
 HYPERV_HOST_NETWORK_DRIVE_PATH = HYPERV_ROBOT_NETWORK_DRIVE_PATH
 # HyperV vms path
 HYPERV_VMS_PATH = 'D:\HyperV\\'
-# FreeNas mount url
-FREENAS_URL = f'\\\\{REGION_NAME}-freenas.cloudcix.com\\mnt\\volume\\{REGION_NAME}'
+# Nas drive mount url
+NETWORK_DRIVE_URL = f'\\\\{REGION_NAME}-freenas.cloudcix.com\\mnt\\volume\\{REGION_NAME}'
+# Api response code
+NOT_FOUND_STATUS_CODE = 404
+SUCCESS_STATUS_CODE = 200
+UPDATE_STATUS_CODE = 204

@@ -10,8 +10,8 @@ import logging
 from typing import Any, Dict, Optional
 # lib
 import opentracing
-from cloudcix.api import IAAS
 from jaeger_client import Span
+from netaddr import IPAddress
 from paramiko import AutoAddPolicy, SSHClient, SSHException
 # local
 import settings
@@ -49,11 +49,11 @@ class Linux(LinuxMixin):
         :param span: The tracing span for the restart task
         :return: A flag stating whether or not the restart was successful
         """
-        vm_id = vm_data['idVM']
+        vm_id = vm_data['id']
 
         # Generate the necessary template data
         child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
-        template_data = Linux._get_template_data(vm_data, child_span)
+        template_data = Linux._get_template_data(vm_data)
         child_span.finish()
 
         # Check that the data was successfully generated
@@ -81,10 +81,10 @@ class Linux(LinuxMixin):
 
         # Generate the restart command using the template data
         child_span = opentracing.tracer.start_span('generate_command', child_of=span)
-        cmd = utils.JINJA_ENV.get_template('vm/linux/restart_cmd.j2').render(**template_data)
+        cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/restart.j2').render(**template_data)
         child_span.finish()
 
-        Linux.logger.debug(f'Generated VM restart command for VM #{vm_data["idVM"]}\n{cmd}')
+        Linux.logger.debug(f'Generated VM restart command for VM #{vm_id}\n{cmd}')
 
         # Open a client and run the two necessary commands on the host
         restarted = False
@@ -118,26 +118,33 @@ class Linux(LinuxMixin):
         return restarted
 
     @staticmethod
-    def _get_template_data(vm_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
+    def _get_template_data(vm_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Given the vm data from the API, create a dictionary that contains all of the necessary keys for the template
         The keys will be checked in the restart method and not here, this method is only concerned with fetching the
         data that it can.
         :param vm_data: The data of the VM read from the API
-        :param span: The tracing span in use for this task. In this method, just pass it to API calls.
         :returns: The data needed for the templates to restart a Linux VM
         """
-        vm_id = vm_data['idVM']
+        vm_id = vm_data['id']
         Linux.logger.debug(f'Compiling template data for VM #{vm_id}')
         data: Dict[str, Any] = {key: None for key in Linux.template_keys}
 
-        data['vm_identifier'] = f'{vm_data["idProject"]}_{vm_data["idVM"]}'
+        data['vm_identifier'] = f'{vm_data["project"]["id"]}_{vm_id}'
         data['host_sudo_passwd'] = settings.NETWORK_PASSWORD
 
         # Get the ip address of the host
-        for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer'], span=span):
-            if mac['status'] is True and mac['ip'] is not None:
-                data['host_ip'] = mac['ip']
-                break
+        host_ip = None
+        for interface in vm_data['server_data']['interfaces']:
+            if interface['enabled'] is True and interface['ip_address'] is not None:
+                if IPAddress(str(interface['ip_address'])).version == 6:
+                    host_ip = interface['ip_address']
+                    break
+        if host_ip is None:
+            Linux.logger.error(
+                f'Host ip address not found for the server # {vm_data["server_id"]}',
+            )
+            return None
+        data['host_ip'] = host_ip
 
         return data

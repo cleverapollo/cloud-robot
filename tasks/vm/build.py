@@ -17,12 +17,11 @@ from builders.vm import (
 from celery_app import app
 from cloudcix_token import Token
 from email_notifier import EmailNotifier
+from settings import UPDATE_STATUS_CODE
 
 __all__ = [
     'build_vm',
 ]
-
-UPDATE_STATUS_CODE = 204
 
 
 def _unresource(vm: Dict[str, Any], span: Span):
@@ -48,10 +47,10 @@ def _unresource(vm: Dict[str, Any], span: Span):
         )
     child_span = opentracing.tracer.start_span('send_email', child_of=span)
     try:
-        EmailNotifier.build_failure(vm)
+        EmailNotifier.vm_build_failure(vm)
     except Exception:
         logging.getLogger('robot.tasks.vm.build').error(
-            f'Failed to send build failure email for VM #{vm["idVM"]}',
+            f'Failed to send build failure email for VM #{vm_id}',
             exc_info=True,
         )
     child_span.finish()
@@ -97,27 +96,28 @@ def _build_vm(vm_id: int, span: Span):
         span.set_tag('return_reason', 'not_in_correct_state')
         return
 
-    # Also ensure that the VRF is built for the VM
-    child_span = opentracing.tracer.start_span('read_project_vrf', child_of=span)
-    vrf_request_data = {'project': vm['project']['id']}
-    vm_vrf = utils.api_list(Compute.virtual_router, vrf_request_data, span=child_span)[0]
+    # Also ensure that the VR is built for the VM
+    child_span = opentracing.tracer.start_span('read_project_vr', child_of=span)
+    vr_id = vm['project']['virtual_router_id']
+    # need to read so to get the current state of vr
+    vm_vr = utils.api_read(Compute.virtual_router, pk=vr_id, span=child_span)
     child_span.finish()
 
-    if vm_vrf['state'] == state.UNRESOURCED:
-        # If the VRF is UNRESOURCED, we cannot build the VM
+    if vm_vr['state'] == state.UNRESOURCED:
+        # If the VR is UNRESOURCED, we cannot build the VM
         logger.error(
-            f'VRF #{vm_vrf["id"]} is UNRESOURCED so we cannot build VM #{vm_id}',
+            f'Virtual Router #{vm_vr["id"]} is UNRESOURCED so we cannot build VM #{vm_id}',
         )
         _unresource(vm, span)
-        span.set_tag('return_reason', 'vrf_unresourced')
+        span.set_tag('return_reason', 'vr_unresourced')
         return
-    elif vm_vrf['state'] != state.RUNNING:
+    elif vm_vr['state'] != state.RUNNING:
         logger.warning(
-            f'VRF #{vm_vrf["id"]} is not yet built, postponing build of VM #{vm_id}. '
-            f'VRF is currently in state {vm_vrf["state"]}',
+            f'Virtual Router #{vm_vr["id"]} is not yet built, postponing build of VM #{vm_id}. '
+            f'Virtual Router is currently in state {vm_vr["state"]}',
         )
         # Return without changing the state
-        span.set_tag('return_reason', 'vrf_not_read')
+        span.set_tag('return_reason', 'vr_not_read')
         return
 
     # If all is well and good here, update the VM state to BUILDING and pass the data to the builder
@@ -138,10 +138,6 @@ def _build_vm(vm_id: int, span: Span):
         span.set_tag('return_reason', 'could_not_update_state')
         return
 
-    # Call the appropriate builder
-    success: bool = False
-    send_email = True
-
     # Read the VM server to get the server type
     child_span = opentracing.tracer.start_span('read_vm_server', child_of=span)
     server = utils.api_read(Compute.server, vm['server_id'], span=child_span)
@@ -154,16 +150,21 @@ def _build_vm(vm_id: int, span: Span):
         span.set_tag('return_reason', 'server_not_read')
         return
     server_type = server['type']['name']
+    # add server details to vm
+    vm['server_data'] = server
 
+    # Call the appropriate builder
+    success: bool = False
+    send_email: bool = True
     child_span = opentracing.tracer.start_span('build', child_of=span)
     try:
-        if server_type == 'HyperV':  # HyperV -> Windows
+        if server_type == 'HyperV':
             success = WindowsVmBuilder.build(vm, child_span)
             child_span.set_tag('server_type', 'vm')
-        elif server_type == 'KVM':  # KVM -> Linux
+        elif server_type == 'KVM':
             success = LinuxVmBuilder.build(vm, child_span)
             child_span.set_tag('server_type', 'vm')
-        elif server_type == 'Phantom':  # Phantom
+        elif server_type == 'Phantom':
             success = True
             send_email = False
             child_span.set_tag('server_type', 'phantom')
@@ -202,7 +203,7 @@ def _build_vm(vm_id: int, span: Span):
         if send_email:
             child_span = opentracing.tracer.start_span('send_email', child_of=span)
             try:
-                EmailNotifier.build_success(vm)
+                EmailNotifier.vm_build_success(vm)
             except Exception:
                 logger.error(
                     f'Failed to send build success email for VM #{vm["idVM"]}',

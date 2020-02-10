@@ -10,10 +10,11 @@ import logging
 from typing import Any, Dict, Optional
 # lib
 import opentracing
-from cloudcix.api import IAAS
 from jaeger_client import Span
+from netaddr import IPAddress
 from winrm.exceptions import WinRMError
 # local
+import settings
 import utils
 from mixins import WindowsMixin
 
@@ -36,6 +37,8 @@ class Windows(WindowsMixin):
         'host_name',
         # an identifier that uniquely identifies the vm
         'vm_identifier',
+        # path for vm's folders files located in host
+        'vms_path',
     }
 
     @staticmethod
@@ -46,11 +49,11 @@ class Windows(WindowsMixin):
         :param span: The tracing span in use for this task
         :return: A flag stating whether or not the scrub was successful
         """
-        vm_id = vm_data['idVM']
+        vm_id = vm_data['id']
 
         # Generate the necessary template data
         child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
-        template_data = Windows._get_template_data(vm_data, child_span)
+        template_data = Windows._get_template_data(vm_data)
         child_span.finish()
 
         # Check that the data was successfully generated
@@ -78,7 +81,7 @@ class Windows(WindowsMixin):
 
         # Render the scrub command
         child_span = opentracing.tracer.start_span('generate_command', child_of=span)
-        cmd = utils.JINJA_ENV.get_template('vm/windows/scrub_cmd.j2').render(**template_data)
+        cmd = utils.JINJA_ENV.get_template('vm/hyperv/commands/scrub.j2').render(**template_data)
         child_span.finish()
 
         # Open a client and run the two necessary commands on the host
@@ -107,25 +110,33 @@ class Windows(WindowsMixin):
         return scrubbed
 
     @staticmethod
-    def _get_template_data(vm_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
+    def _get_template_data(vm_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Given the vm data from the API, create a dictionary that contains all of the necessary keys for the template
         The keys will be checked in the build method and not here, this method is only concerned with fetching the data
         that it can.
         :param vm_data: The data of the VM read from the API
-        :param span: The tracing span in use for this task. In this method just pass it to API calls
         :returns: The data needed for the templates to build a Windows VM
         """
-        vm_id = vm_data['idVM']
+        vm_id = vm_data['id']
         Windows.logger.debug(f'Compiling template data for VM #{vm_id}')
         data: Dict[str, Any] = {key: None for key in Windows.template_keys}
 
-        data['vm_identifier'] = f'{vm_data["idProject"]}_{vm_data["idVM"]}'
+        data['vm_identifier'] = f'{vm_data["project"]["id"]}_{vm_id}'
+        data['vms_path'] = settings.HYPERV_VMS_PATH
 
-        # Get the ip address of the host
-        for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer'], span=span):
-            if mac['status'] is True and mac['ip'] is not None:
-                data['host_name'] = mac['dnsName']
-                break
+        # Get the host name of the server
+        host_name = None
+        for interface in vm_data['server_data']['interfaces']:
+            if interface['enabled'] is True and interface['hostname'] is not None:
+                if IPAddress(str(interface['ip_address'])).version == 6:
+                    host_name = interface['hostname']
+                    break
+        if host_name is None:
+            Windows.logger.error(
+                f'Host name is not found for the server # {vm_data["server_id"]}',
+            )
+            return None
+        data['host_name'] = host_name
 
         return data

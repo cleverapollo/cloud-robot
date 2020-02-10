@@ -1,5 +1,5 @@
 """
-updater class for vrfs
+updater class for vrs
 
 - gathers template data
 - generates setconf
@@ -14,74 +14,75 @@ import opentracing
 from jaeger_client import Span
 # local
 import utils
-from builders import Vrf as VrfBuilder
+from builders import Vr as VrBuilder
 
 __all__ = [
-    'Vrf',
+    'Vr',
 ]
 
 
-class Vrf(VrfBuilder):
+class Vr(VrBuilder):
     """
-    Class that handles the updating of the specified VRF
+    Class that handles the updating of the specified VR
 
     Inherits the Builder class as both classes have the same template data gathering method
     """
     # Keep a logger for logging messages from this class
-    logger = logging.getLogger('robot.updaters.vrf')
+    logger = logging.getLogger('robot.updaters.vr')
 
     # Override this method to ensure that nobody calls this accidentally
     @staticmethod
-    def build(vrf_data: Dict[str, Any], span: Span) -> bool:
+    def build(vr_data: Dict[str, Any], span: Span) -> bool:
         """
         Shadow the build class build job to make sure we don't accidentally call it in this class
         """
-        raise NotImplementedError('If you want to build a VRF, use `builders.vrf`, not `updaters.vrf`')
+        raise NotImplementedError('If you want to build a VR, use `builders.vr`, not `updaters.vr`')
 
     @staticmethod
-    def update(vrf_data: Dict[str, Any], span: Span) -> bool:
+    def update(vr_data: Dict[str, Any], span: Span) -> bool:
         """
-        Commence the update of a vrf using the data read from the API
-        :param vrf_data: The result of a read request for the specified VRF
+        Commence the update of a vr using the data read from the API
+        :param span: The tracing span in use for this update task
+        :param vr_data: The result of a read request for the specified VR
         :return: A flag stating whether or not the update was successful
         """
-        vrf_id = vrf_data['idVRF']
+        vr_id = vr_data['id']
 
         # Start by generating the proper dict of data needed by the template
         child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
-        template_data = Vrf._get_template_data(vrf_data, child_span)
+        template_data = Vr._get_template_data(vr_data, child_span)
         child_span.finish()
 
         # Check that the template data was successfully retrieved
         if template_data is None:
-            Vrf.logger.error(
-                f'Failed to retrieve template data for VRF #{vrf_data["idVRF"]}.',
+            Vr.logger.error(
+                f'Failed to retrieve template data for VR #{vr_id}.',
             )
             span.set_tag('failed_reason', 'template_data_failed')
             return False
 
         # Check that all of the necessary keys are present
-        if not all(template_data[key] is not None for key in Vrf.template_keys):
+        if not all(template_data[key] is not None for key in Vr.template_keys):
             missing_keys = [
-                f'"{key}"' for key in Vrf.template_keys if template_data[key] is None
+                f'"{key}"' for key in Vr.template_keys if template_data[key] is None
             ]
-            Vrf.logger.error(
-                f'Template Data Error, the following keys were missing from the VRF update data: '
+            Vr.logger.error(
+                f'Template Data Error, the following keys were missing from the VR update data: '
                 f'{", ".join(missing_keys)}',
             )
             span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
-        # If everything is okay, commence updating the VRF
+        # If everything is okay, commence updating the VR
         child_span = opentracing.tracer.start_span('generate_setconf', child_of=span)
-        update_conf = utils.JINJA_ENV.get_template('vrf/update.j2').render(**template_data)
+        update_conf = utils.JINJA_ENV.get_template('vr/update.j2').render(**template_data)
         child_span.finish()
 
-        Vrf.logger.debug(f'Generated update setconf for VRF #{vrf_id}\n{update_conf}')
+        Vr.logger.debug(f'Generated update setconf for VR #{vr_id}\n{update_conf}')
 
         # Deploy the generated setconf to the router
         management_ip = template_data.pop('management_ip')
         child_span = opentracing.tracer.start_span('deploy_update_setconf', child_of=span)
-        success = Vrf.deploy(update_conf, management_ip, True)
+        success = Vr.deploy(update_conf, management_ip, True)
         child_span.finish()
         return success

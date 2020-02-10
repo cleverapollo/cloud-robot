@@ -1,27 +1,27 @@
 {
-  {#----------------------- Drives creations------------------------- #}
-  {% for drive in drives %}
-  echo {{ host_sudo_passwd }} | sudo -S qemu-img create -f qcow2 {{ vms_path }}{{ vm_identifier }}_{{ drive["id"] }}.img {{ drive["size"] }}G
-  {% endfor %}
+{#----------------------- Storage creation------------------------- #}
+{% for storage in storages %}
+  echo {{ host_sudo_passwd }} | sudo -S qemu-img create -f qcow2 {{ vms_path }}{{ vm_identifier }}_{{ storage_type }}_{{ storage["id"] }}.img {{ storage["gb"] }}G
+{% endfor %}
 
-  {#----------------------- VM creation------------------------- #}
+{#----------------------- VM creation------------------------- #}
   echo {{ host_sudo_passwd }} | sudo -S virt-install --name {{ vm_identifier }} \
   --memory {{ ram }} \
   --vcpus {{ cpu }} \
-  {# Primary drive first #}
-  {% for drive in drives %}
-  {% if drive["primary"] %}
-  --disk path="{{ vms_path }}{{ vm_identifier }}_{{ drive["id"] }}.img,device=disk,bus=virtio" \
+{# Primary storage first #}
+{% for storage in storages %}
+  {% if storage["primary"] %}
+  --disk path="{{ vms_path }}{{ vm_identifier }}_{{ storage_type }}_{{ storage["id"] }}.img,device=disk,bus=virtio" \
   {% endif %}
-  {% endfor %}
-  {% for drive in drives %}
-  {% if not drive["primary"] %}
-  --disk path="{{ vms_path }}{{ vm_identifier }}_{{ drive["id"] }}.img,device=disk,bus=virtio" \
+{% endfor %}
+{% for storage in storages %}
+  {% if not storage["primary"] %}
+  --disk path="{{ vms_path }}{{ vm_identifier }}_{{ storage_type }}_{{ storage["id"] }}.img,device=disk,bus=virtio" \
   {% endif %}
-  {% endfor %}
+{% endfor %}
   --graphics vnc \
   --location {{ network_drive_path }}/ISOs/{{ image_filename }} \
-  --os-variant rhel6 \
+  --os-variant {{ image_os_variant }} \
   --initrd-inject={{ network_drive_path }}/answer_files/{{ vm_identifier }}.cfg -x "ks=file:/{{ vm_identifier }}.cfg" \
   --network bridge=br{{ vlan }} \
   --autostart

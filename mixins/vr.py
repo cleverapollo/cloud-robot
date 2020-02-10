@@ -1,5 +1,5 @@
 """
-mixin class containing methods that are needed by vrf task classes
+mixin class containing methods that are needed by vr task classes
 methods included;
     - method to get management ip and router model since they're not currently easy
     - method to get port data since that's not currently easy either
@@ -9,7 +9,7 @@ import logging
 from time import asctime, sleep
 from typing import Dict, Optional, Union
 # lib
-from cloudcix.api import IAAS
+from cloudcix.api.compute import Compute
 from jaeger_client import Span
 from jnpr.junos import Device
 from jnpr.junos.exception import CommitError, ConfigLoadError, ConnectError, LockError
@@ -19,14 +19,14 @@ from netaddr import IPAddress
 import utils
 
 __all__ = [
-    'VrfMixin',
+    'VrMixin',
 ]
 PortData = Optional[Dict[str, Union[list, dict]]]
 RouterData = Optional[Dict[str, Optional[str]]]
 MAX_ATTEMPTS = 10
 
 
-class VrfMixin:
+class VrMixin:
     logger: logging.Logger
 
     @classmethod
@@ -116,52 +116,12 @@ class VrfMixin:
             return True
 
     @classmethod
-    def _get_router_ip(cls, router_id: int, span: Span) -> Optional[str]:
-        """
-        It fetches the Management port ip of the Router #router_id
-        :param router_id:
-        :return: : dict of vrf port details like Port name (xe-0/0/1 or ge-0/0/1 or etc)
-        """
-        port_data = cls._get_port_data(router_id=router_id, span=span)
-        if port_data is not None:
-            ports = port_data['ports']
-            port_rmpf_pfs = port_data['port_rmpf_pfs']
-        else:
-            return None
-
-        management_ip = None
-        # collecting management ip
-        for port in ports:
-            if port_rmpf_pfs[port][1] == 'Management':
-
-                # listing port_configs
-                port_configs = utils.api_list(IAAS.port_config, {}, port_id=port, span=span)
-                if len(port_configs) == 0:
-                    return None
-
-                for port_config in port_configs:
-                    # Get the ip address details
-                    ip = utils.api_read(IAAS.ipaddress, pk=port_config['port_ip_id'], span=span)
-                    if ip is None:
-                        return None
-                    management_ip = str(ip['address'])
-                    break
-
-        if management_ip is not None:
-            return management_ip
-        else:
-            cls.logger.error(
-                f'Failed to get VRF router"s management ip for Router #{router_id}',
-            )
-            return None
-
-    @classmethod
-    def _get_router_data(cls, router_id: int, vrf_ip_subnet_id: int, span: Span) -> RouterData:
+    def _get_router_data(cls, router_id: int, vr_ip_subnet_id: int, span: Span) -> RouterData:
         """
         Collects the data such as private port name, public port name and address family of
-        given vrf_ip_subnet_id
+        given vr_ip_subnet_id
         :param router_id:
-        :param vrf_ip_subnet_id :type int subnet id of vrf ip
+        :param vr_ip_subnet_id :type int subnet id of vr ip
         :param span:
         :return:
         """
@@ -193,7 +153,7 @@ class VrfMixin:
                     ip = utils.api_read(IAAS.ipaddress, pk=port_config['port_ip_id'], span=span)
                     if ip is None:
                         return None
-                    if str(ip['idSubnet']) == str(vrf_ip_subnet_id):
+                    if str(ip['idSubnet']) == str(vr_ip_subnet_id):
                         address_family = 'inet'
                         if IPAddress(ip['address']).version == 6:
                             address_family = 'inet6'
@@ -209,7 +169,7 @@ class VrfMixin:
             }
         else:
             cls.logger.error(
-                f'Failed to get VRF"s router details for Router #{router_id} and Subnet #{vrf_ip_subnet_id}',
+                f'Failed to get VR"s router details for Router #{router_id} and Subnet #{vr_ip_subnet_id}',
             )
             return None
 

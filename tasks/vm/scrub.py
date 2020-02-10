@@ -2,10 +2,11 @@
 import logging
 # lib
 import opentracing
-from cloudcix.api import IAAS
+from cloudcix.api.compute import Compute
 from jaeger_client import Span
 # local
 import metrics
+import settings
 import state
 import utils
 from celery_app import app
@@ -44,20 +45,20 @@ def _scrub_vm(vm_id: int, span: Span):
     # Read the VM
     # Don't use utils so we can check the response code
     child_span = opentracing.tracer.start_span('read_vm', child_of=span)
-    response = IAAS.vm.read(
+    response = Compute.vm.read(
         token=Token.get_instance().token,
         pk=vm_id,
         span=child_span,
     )
     child_span.finish()
 
-    if response.status_code == 404:
+    if response.status_code == settings.NOT_FOUND_STATUS_CODE:
         logger.info(
             f'Received scrub task for VM #{vm_id} but it was already deleted from the API',
         )
         span.set_tag('return_reason', 'already_deleted')
         return
-    elif response.status_code != 200:
+    elif response.status_code != settings.SUCCESS_STATUS_CODE:
         logger.error(
             f'HTTP {response.status_code} error occurred when attempting to fetch VM #{vm_id};\n'
             f'Response Text: {response.content.decode()}',
@@ -68,45 +69,45 @@ def _scrub_vm(vm_id: int, span: Span):
 
     # Ensure that the state of the vm is still currently SCRUB_QUEUE
     if vm['state'] != state.SCRUB_QUEUE:
-        logger.warn(
+        logger.warning(
             f'Cancelling scrub of VM #{vm_id}. Expected state to be SCRUB_QUEUE, found {vm["state"]}.',
         )
         # Return out of this function without doing anything
         span.set_tag('return_reason', 'not_in_valid_state')
         return
 
+    # Read the VM server to get the server type
+    child_span = opentracing.tracer.start_span('read_vm_server', child_of=span)
+    server = utils.api_read(Compute.server, vm['server_id'], span=child_span)
+    child_span.finish()
+    if server is None:
+        logger.error(
+            f'Could not build VM #{vm_id} as its Server was not readable',
+        )
+        span.set_tag('return_reason', 'server_not_read')
+        return
+    server_type = server['type']['name']
+    # add server details to vm
+    vm['server_data'] = server
+
     # There's no in-between state for scrub tasks, just jump straight to doing the work
     success: bool = False
-
-    # Read the VM image to get the hypervisor id
-    child_span = opentracing.tracer.start_span('read_vm_image', child_of=span)
-    image = utils.api_read(IAAS.image, vm['idImage'], span=child_span)
-    child_span.finish()
-
-    if image is None:
-        logger.error(
-            f'Could not scrub VM #{vm_id} as its Image was not readable',
-        )
-        span.set_tag('return_reason', 'image_not_read')
-        return
-
-    hypervisor = image['idHypervisor']
     child_span = opentracing.tracer.start_span('scrub', child_of=span)
     try:
-        if hypervisor == 1:  # HyperV -> Windows
+        if server_type == 'HyperV':
             success = WindowsVmScrubber.scrub(vm, child_span)
-            child_span.set_tag('hypervisor', 'windows')
-        elif hypervisor == 2:  # KVM -> Linux
+            child_span.set_tag('server_type', 'windows')
+        elif server_type == 'KVM':
             success = LinuxVmScrubber.scrub(vm, child_span)
-            child_span.set_tag('hypervisor', 'linux')
-        elif hypervisor == 3:  # Phantom
+            child_span.set_tag('server_type', 'linux')
+        elif server_type == 'Phantom':
             success = True
-            child_span.set_tag('hypervisor', 'phantom')
+            child_span.set_tag('server_type', 'phantom')
         else:
             logger.error(
-                f'Unsupported Hypervisor ID #{hypervisor} for VM #{vm_id}',
+                f'Unsupported server ID #{server_type} for VM #{vm_id}',
             )
-            child_span.set_tag('hypervisor', 'linux')
+            child_span.set_tag('server_type', 'linux')
     except Exception:
         logger.error(
             f'An unexpected error occurred when attempting to scrub VM #{vm_id}',
@@ -120,22 +121,22 @@ def _scrub_vm(vm_id: int, span: Span):
         logger.info(f'Successfully scrubbed VM #{vm_id} from hardware.')
         metrics.vm_scrub_success()
         # Do API deletions
-        logger.debug(f'Deleting VM #{vm_id} from the CMDB')
+        logger.debug(f'Deleting VM #{vm_id} from the Compute')
 
         child_span = opentracing.tracer.start_span('delete_vm_from_api', child_of=span)
-        response = IAAS.vm.delete(token=Token.get_instance().token, pk=vm_id, span=child_span)
+        response = Compute.vm.delete(token=Token.get_instance().token, pk=vm_id, span=child_span)
         child_span.finish()
 
-        if response.status_code != 204:
+        if response.status_code != settings.UPDATE_STATUS_CODE:
             logger.error(
                 f'HTTP {response.status_code} error occurred when attempting to delete VM #{vm_id};\n'
                 f'Response Text: {response.content.decode()}',
             )
             return
-        logger.info(f'Successfully deleted VM #{vm_id} from the CMDB.')
+        logger.info(f'Successfully deleted VM #{vm_id} from the Compute.')
 
         child_span = opentracing.tracer.start_span('delete_project_from_api', child_of=span)
-        utils.project_delete(vm['idProject'], child_span)
+        utils.project_delete(vm['project']['id'], child_span)
         child_span.finish()
     else:
         logger.error(f'Failed to scrub VM #{vm_id}')
@@ -143,10 +144,10 @@ def _scrub_vm(vm_id: int, span: Span):
         # Email the user
         child_span = opentracing.tracer.start_span('send_email', child_of=span)
         try:
-            EmailNotifier.failure(vm, 'scrub')
+            EmailNotifier.vm_failure(vm, 'scrub')
         except Exception:
             logger.error(
-                f'Failed to send failure email for VM #{vm["idVM"]}',
+                f'Failed to send failure email for VM #{vm_id}',
                 exc_info=True,
             )
         child_span.finish()

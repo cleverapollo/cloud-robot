@@ -24,5 +24,5 @@ CLOUDCIX_EMAIL_USERNAME = 'CloudCIX Toronto01 <toronto01@cloudcix.net>'
 KVM_HOST_NETWORK_DRIVE_PATH = '/var/lib/libvirt/ISOs/KVM'
 # HyperV path
 HYPERV_HOST_NETWORK_DRIVE_PATH = '/var/lib/libvirt/ISOs/HyperV'
-# FreeNas mount url
-FREENAS_URL = f'\\\\{REGION_NAME}-robothost.cloudcix.com\\var\\lib\\libvirt'
+# Nas drive mount url
+NETWORK_DRIVE_URL = f'\\\\{REGION_NAME}-robothost.cloudcix.com\\var\\lib\\libvirt'

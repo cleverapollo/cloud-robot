@@ -10,11 +10,9 @@ import logging
 import os
 import random
 import string
-from collections import deque
-from typing import Any, Deque, Dict, Optional
+from typing import Any, Dict, Optional
 # lib
 import opentracing
-from cloudcix.api.compute import Compute
 from jaeger_client import Span
 from netaddr import IPAddress, IPNetwork
 from winrm.exceptions import WinRMError
@@ -44,18 +42,16 @@ class Windows(WindowsMixin):
         'cpu',
         # the dns servers for the vm (in list form, not string form)
         'dns',
-        # the drives in the vm
-        'drives',
-        # the freenas url for the region
-        'freenas_url',
+        # the nas drive url for the region
+        'nas_drive_url',
         # the subnet gateway
         'gateway',
         # the DNS hostname for the host machine, as WinRM cannot use IPv6
         'host_name',
-        # the name of the image used to build the vm
-        'image_name',
         # the answer_files file of the image used to build the VM
         'image_answer_file_name',
+        # the name of the image used to build the vm
+        'image_name',
         # the ip address of the vm in its subnet
         'ip_address',
         # the language of the vm
@@ -64,12 +60,18 @@ class Windows(WindowsMixin):
         'netmask_int',
         # the amount of RAM in the VM
         'ram',
+        # storage type (HDD/SSD)
+        'storage_type'
+        # storages of the vm
+        'storages',
         # the timezone of the vm
         'timezone',
         # the vlan that the vm is a part of
         'vlan',
         # an identifier that uniquely identifies the vm
         'vm_identifier',
+        # path for vm's folders files located in host
+        'vms_path',
     }
 
     @staticmethod
@@ -84,7 +86,7 @@ class Windows(WindowsMixin):
 
         # Generate the necessary template data
         child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
-        template_data = Windows._get_template_data(vm_data, child_span)
+        template_data = Windows._get_template_data(vm_data)
         child_span.finish()
 
         # Check that the data was successfully generated
@@ -148,18 +150,20 @@ class Windows(WindowsMixin):
             if response.std_err and '#< CLIXML\r\n' not in response.std_err:
                 msg = response.std_err.strip()
                 Windows.logger.warning(f'VM build command for VM #{vm_id} generated stderr\n{msg}')
-            # Remove the answer file from network drive
-            Windows._remove_network_drive_files(vm_id, template_data)
+        # Remove the answer file from network drive
+        child_span = opentracing.tracer.start_span('delete_files_from_network_drive', child_of=span)
+        Windows._remove_network_drive_files(vm_id, template_data)
+        child_span.finish()
+
         return built
 
     @staticmethod
-    def _get_template_data(vm_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
+    def _get_template_data(vm_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Given the vm data from the API, create a dictionary that contains all of the necessary keys for the template
         The keys will be checked in the build method and not here, this method is only concerned with fetching the data
         that it can.
         :param vm_data: The data of the VM read from the API
-        :param span: The tracing span in use for this task. In this method, just pass it to API calls.
         :returns: The data needed for the templates to build a Windows VM
         """
         vm_id = vm_data['id']
@@ -179,34 +183,19 @@ class Windows(WindowsMixin):
         # Also save the password back to the VM data dict
         vm_data['admin_password'] = data['admin_password']
 
-        # Fetch the drives for the VM and add them to the data
-        drives: Deque[Dict[str, Any]] = deque()
-        primary = False
+        # Check for the primary storage
+        primary: bool = False
         for storage in vm_data['storages']:
-            # Check if the storage is primary
             if storage['primary']:
                 primary = True
-                drives.append({
-                    'id': storage['id'],
-                    'primary': storage['primary'],
-                    'size': storage['gb'],
-                })
-
-            # Just append to the drives deque
-            drives.append({
-                'id': storage['id'],
-                'primary': storage['primary'],
-                'size': storage['gb'],
-            })
-
-        # validate if primary storage drive exists or not.
         if not primary:
             Windows.logger.error(
                 f'No primary storage drive found. Expected one primary storage drive',
             )
             return None
 
-        data['drives'] = drives
+        data['storages'] = vm_data['storages']
+        data['storage_type'] = vm_data['storage_type']
 
         # Get the Networking details
         data['ip_address'] = vm_data['ip_address']['address']
@@ -218,21 +207,23 @@ class Windows(WindowsMixin):
         data['language'] = 'en_IE'
         data['timezone'] = 'GMT Standard Time'
 
-        # Get the server dns name of the host
+        # Get the host name of the server
         host_name = None
-        for interface in utils.api_read(Compute.server, pk=vm_data['server_id'], span=span)['interfaces']:
+        for interface in vm_data['server_data']['interfaces']:
             if interface['enabled'] is True and interface['hostname'] is not None:
                 if IPAddress(str(interface['ip_address'])).version == 6:
                     host_name = interface['hostname']
                     break
-
         if host_name is None:
             Windows.logger.error(
                 f'Host name is not found for the server # {vm_data["server_id"]}',
             )
             return None
+
         # Add the host information to the data
-        data['freenas_url'] = settings.FREENAS_URL
+        data['host_name'] = host_name
+        data['network_drive_url'] = settings.NETWORK_DRIVE_URL
+        data['vms_path'] = settings.HYPERV_VMS_PATH
         return data
 
     @staticmethod
@@ -247,10 +238,10 @@ class Windows(WindowsMixin):
         """
         network_drive_path = settings.HYPERV_ROBOT_NETWORK_DRIVE_PATH
 
-        # Render and attempt to write the unattend file
-        template_name = f'vm/hyperv/answer_files/unattend.j2'
+        # Render and attempt to write the answer file
+        template_name = f'vm/hyperv/answer_files/windows.j2'
         answer_file_data = utils.JINJA_ENV.get_template(template_name).render(**template_data)
-        Windows.logger.debug(f'Generated unattend file for VM #{vm_id}\n{answer_file_data}')
+        Windows.logger.debug(f'Generated answer file for VM #{vm_id}\n{answer_file_data}')
         try:
             # Attempt to write
             answer_file_path = f'{network_drive_path}/answer_files/{template_data["vm_identifier"]}.xml'
@@ -279,13 +270,17 @@ class Windows(WindowsMixin):
         network_drive_path = settings.HYPERV_ROBOT_NETWORK_DRIVE_PATH
 
         # Remove answer file
-        answer_file_path = f'{network_drive_path}/answer_files/{template_data["vm_identifier"]}.cfg'
+        file_path = f'answer_files/{template_data["vm_identifier"]}.cfg'
+        answer_file_path = os.path.join(network_drive_path, file_path)
         if os.path.exists(answer_file_path):
             try:
                 os.remove(answer_file_path)
                 Windows.logger.debug(f'Successfully removed answer file {answer_file_path} of VM #{vm_id}')
             except IOError:
-                pass  # ignoring on fail as this step is optional
+                Windows.logger.error(
+                    f'Exception occurred while attempting to delete {file_path} from the network drive for VM #{vm_id}',
+                    exc_info=True,
+                )
 
     @staticmethod
     def _password_generator(size: int = 12, chars: Optional[str] = None) -> str:

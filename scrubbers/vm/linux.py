@@ -6,12 +6,10 @@ scrubber class for linux vms
 """
 # stdlib
 import logging
-import os
-from collections import deque
-from typing import Any, Deque, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 # lib
 import opentracing
-from cloudcix.api import IAAS
+from cloudcix.api.compute import Compute
 from jaeger_client import Span
 from netaddr import IPAddress
 from paramiko import AutoAddPolicy, SSHClient, SSHException
@@ -37,20 +35,20 @@ class Linux(LinuxMixin):
     template_keys = {
         # a flag stating whether or not we need to delete the bridge as well (only if there are no more VMs)
         'delete_bridge',
-        # the drives in the vm
-        'drives',
-        # the hdd primary drive of the VM 'id:size'
-        'hdd',
         # the ip address of the host that the VM to scrub is running on
         'host_ip',
         # the sudo password of the host, used to run some commands
         'host_sudo_passwd',
-        # the ssd primary drive of the VM 'id:size'
-        'ssd',
+        # storage type (HDD/SSD)
+        'storage_type'
+        # storages of the vm
+        'storages',
         # the vlan that the vm is a part of
         'vlan',
         # an identifier that uniquely identifies the vm
         'vm_identifier',
+        # path for vm's .img files located in host
+        'vms_path',
     }
 
     @staticmethod
@@ -61,7 +59,7 @@ class Linux(LinuxMixin):
         :param span: The tracing span for the scrub task
         :return: A flag stating whether or not the scrub was successful
         """
-        vm_id = vm_data['idVM']
+        vm_id = vm_data['id']
 
         # Generate the necessary template data
         child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
@@ -116,10 +114,6 @@ class Linux(LinuxMixin):
             if stdout:
                 Linux.logger.debug(f'VM scrub command for VM #{vm_id} generated stdout.\n{stdout}')
                 scrubbed = True
-                # Attempt to delete the config file from the network drive
-                child_span = opentracing.tracer.start_span('delete_kickstart_file', child_of=span)
-                Linux._delete_network_file(vm_id, f'kickstarts/{template_data["vm_identifier"]}.cfg')
-                child_span.finish()
             if stderr:
                 Linux.logger.warning(f'VM scrub command for VM #{vm_id} generated stderr.\n{stderr}')
 
@@ -135,10 +129,7 @@ class Linux(LinuxMixin):
                     Linux.logger.debug(f'Bridge scrub command for VM #{vm_id} generated stdout\n{stdout}')
                 if stderr:
                     Linux.logger.warning(f'Bridge scrub command for VM #{vm_id} generated stderr\n{stderr}')
-                # Attempt to delete the bridge definition file from the network drive
-                child_span = opentracing.tracer.start_span('delete_bridge_def_file', child_of=span)
-                Linux._delete_network_file(vm_id, f'bridge_xmls/br{template_data["vlan"]}.xml')
-                child_span.finish()
+
         except SSHException:
             Linux.logger.error(
                 f'Exception occurred while scrubbing VM #{vm_id} in {host_ip}',
@@ -159,56 +150,30 @@ class Linux(LinuxMixin):
         :param span: The tracing span in use for this task. In this method, just pass it to API calls.
         :returns: The data needed for the templates to build a Linux VM
         """
-        vm_id = vm_data['idVM']
+        vm_id = vm_data['id']
         Linux.logger.debug(f'Compiling template data for VM #{vm_id}')
         data: Dict[str, Any] = {key: None for key in Linux.template_keys}
 
-        data['vm_identifier'] = f'{vm_data["idProject"]}_{vm_data["idVM"]}'
+        data['vm_identifier'] = f'{vm_data["project"]["id"]}_{vm_id}'
         data['host_sudo_passwd'] = settings.NETWORK_PASSWORD
-
-        # Fetch the drives for the VM and add them to the data
-        drives: Deque[Dict[str, str]] = deque()
-        for storage in utils.api_list(IAAS.storage, {}, vm_id=vm_id, span=span):
-            # Check if the storage is primary
-            if storage['primary']:
-                # Determine which field (hdd or ssd) to populate with this storage information
-                if storage['storage_type'] == 'HDD':
-                    data['hdd'] = f'{storage["idStorage"]}:{storage["gb"]}'
-                    data['ssd'] = 0
-                elif storage['storage_type'] == 'SSD':
-                    data['hdd'] = 0
-                    data['ssd'] = f'{storage["idStorage"]}:{storage["gb"]}'
-                else:
-                    Linux.logger.error(
-                        f'Invalid primary drive storage type {storage["storage_type"]}. Expected either "HDD" or "SSD"',
-                    )
-                    return None
-            else:
-                # Just append to the drives deque
-                drives.append({
-                    'id': storage['idStorage'],
-                    'type': storage['storage_type'],
-                    'size': storage['gb'],
-                })
-        data['drives'] = drives
-
-        # Get the Networking details
-        for ip_address in utils.api_list(IAAS.ipaddress, {'vm': vm_id}, span=span):
-            # The private IP for the VM will be the one we need to pass to the template
-            if not IPAddress(ip_address['address']).is_private():
-                continue
-            data['ip_address'] = ip_address['address']
-            # Read the subnet for the IPAddress to fetch information like the gateway and subnet mask
-            subnet = utils.api_read(IAAS.subnet, ip_address['idSubnet'], span=span)
-            if subnet is None:
-                return None
-            data['vlan'] = subnet['vLAN']
+        data['storages'] = vm_data['storages']
+        data['storage_type'] = vm_data['storage_type']
+        data['vlan'] = vm_data['ip_address']['subnet']['vlan']
+        data['vms_path'] = settings.KVM_VMS_PATH
 
         # Get the ip address of the host
-        for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer'], span=span):
-            if mac['status'] is True and mac['ip'] is not None:
-                data['host_ip'] = mac['ip']
-                break
+        host_ip = None
+        for interface in vm_data['server_data']['interfaces']:
+            if interface['enabled'] is True and interface['ip_address'] is not None:
+                if IPAddress(str(interface['ip_address'])).version == 6:
+                    host_ip = interface['ip_address']
+                    break
+        if host_ip is None:
+            Linux.logger.error(
+                f'Host ip address not found for the server # {vm_data["server_id"]}',
+            )
+            return None
+        data['host_ip'] = host_ip
 
         child_span = opentracing.tracer.start_span('determine_bridge_deletion', child_of=span)
         data['delete_bridge'] = Linux._determine_bridge_deletion(vm_data, child_span)
@@ -227,74 +192,41 @@ class Linux(LinuxMixin):
         :returns: (bridge_scrub_command, vm_scrub_command)
         """
         # Render the bridge scrub command
-        bridge_cmd = utils.JINJA_ENV.get_template('kvm/bridge_scrub_cmd.j2').render(**template_data)
+        bridge_cmd = utils.JINJA_ENV.get_template('vm/kvm/bridge/scrub.j2').render(**template_data)
         Linux.logger.debug(f'Generated bridge scrub command for VM #{vm_id}\n{bridge_cmd}')
 
         # Render the VM scrub command
-        vm_cmd = utils.JINJA_ENV.get_template('vm/linux/scrub_cmd.j2').render(**template_data)
+        vm_cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/scrub.j2').render(**template_data)
         Linux.logger.debug(f'Generated vm scrub command for VM #{vm_id}\n{vm_cmd}')
 
         return bridge_cmd, vm_cmd
 
     @staticmethod
-    def _delete_network_file(vm_id: int, path: str):
-        """
-        Given a path to a file, attempt to delete it from the network drive
-        """
-        abspath = os.path.join(settings.KVM_ROBOT_NETWORK_DRIVE_PATH, path)
-        if not os.path.exists(abspath):
-            return
-        try:
-            os.remove(abspath)
-            Linux.logger.debug(f'Deleted {path} from the network drive')
-        except IOError:
-            Linux.logger.error(
-                f'Exception occurred while attempting to delete {path} from the network drive for VM #{vm_id}',
-                exc_info=True,
-            )
-
-    @staticmethod
     def _determine_bridge_deletion(vm_data: Dict[str, Any], span: Span) -> bool:
         """
         Given a VM, determine if we need to delete it's bridge.
-        We need to delete the bridge if the VM is the last Linux VM left in the Subnet
+        We need to delete the bridge if the VM is the last one left in the Subnet on the Server.
 
         Steps:
-            - Get the private IP Address of the VM being deleted
-            - Read the other private IP Addresses (fip_id__isnull=False) in the same Subnet (excluding this VM's id)
-            - List all the VMs pointed to by the idVM fields of the returned (if any)
-            - For each VM, check if it is Windows or Linux
-            - If we find a Linux one, return False
-            - If we make it through the entire loop, return True
+            - Get all other VMs in the same Server of this VM and of the same Project of this VM.
+            - Filter out the VMs list with this VM's subnet id (we get the list of VMs in the vlan of this VM).
+            - If the list is empty then the Bridge needs to be deleted, other wise not.
         """
-        vm_id = vm_data['idVM']
-        # Get the details of the VM's private IP by getting all IPs associated with the VM and finding the private one
-        priv_ip: Optional[Dict[str, Any]] = None
-        for ip_data in utils.api_list(IAAS.ipaddress, {'vm': vm_id}, span=span):
-            if IPAddress(ip_data['address']).is_private():
-                priv_ip = ip_data
-                break
-        if priv_ip is None:
-            Linux.logger.error(f'Unable to find private IP Address for VM #{vm_data["idVM"]}.')
-            return False
-
-        # Find the other private ip addresses in the subnet
+        bridge: bool = False
+        vm_id = vm_data['id']
+        # Get the list of VMs with following params
         params = {
-            'fip_id__isnull': False,
-            'exclude__idIPAddress': priv_ip['idIPAddress'],
-            'subnet__idSubnet': priv_ip['idSubnet'],
+            'exclude__id': vm_id,
+            'project_id': vm_data['project']['id'],
+            'server_id': vm_data['server_id'],
         }
-        subnet_ips = utils.api_list(IAAS.ipaddress, params, span=span)
+        vms = utils.api_list(Compute.vm, params, span=span)
 
-        # List the other VMs in the subnet
-        subnet_vm_ids = list(map(lambda ip: ip['idVM'], subnet_ips))
-        subnet_vms = utils.api_list(IAAS.vm, {'idVM__in': subnet_vm_ids}, span=span)
+        subnet_vms_ids = [
+            vm['id'] for vm in vms if vm['ip_address']['subnet']['id'] == vm_data['ip_address']['subnet']['id']
+        ]
 
-        # Get the images from the VMs and check for linux hypervisors
-        image_ids = list(set(map(lambda vm: vm['idImage'], subnet_vms)))
-        images = utils.api_list(IAAS.image, {'idImage__in': image_ids}, span=span)
+        if len(subnet_vms_ids) == 0:
+            bridge = True
 
-        # Check the list of images for any linux hypervisor
-        # any returns True if any item in the iterable is True
-        # make an iterable that checks if the image's idHypervisor is 2
-        return any(image['idHypervisor'] == 2 for image in images)
+        return bridge

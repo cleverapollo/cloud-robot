@@ -1,10 +1,10 @@
-from .phantom_vrf import PhantomVrf
+from .phantom_vr import PhantomVr
 from .vm import Vm
-from .vrf import Vrf
+from .vr import Vr
 
 
 __all__ = [
-    'PhantomVrf',
+    'PhantomVr',
     'Vm',
-    'Vrf',
+    'Vr',
 ]

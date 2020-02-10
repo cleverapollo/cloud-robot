@@ -9,17 +9,25 @@ __all__ = [
     'CLOUDCIX_API_VERSION',
     'CLOUDCIX_API_V2_URL',
     'CLOUDCIX_EMAIL_USERNAME',
-    'FREENAS_URL',
+    'CLOUDCIX_INFLUX_DATABASE',
+    'CLOUDCIX_INFLUX_PORT',
+    'CLOUDCIX_INFLUX_URL',
     'HYPERV_HOST_NETWORK_DRIVE_PATH',
     'HYPERV_ROBOT_NETWORK_DRIVE_PATH',
+    'HYPERV_VMS_PATH',
+    'IN_PRODUCTION',
     'KVM_HOST_NETWORK_DRIVE_PATH',
     'KVM_ROBOT_NETWORK_DRIVE_PATH',
+    'KVM_VMS_PATH',
     'CLOUDCIX_LOGSTASH_URL',
+    'NETWORK_DRIVE_URL',
     'NETWORK_PASSWORD',
-    'OS_TEMPLATE_MAP',
+    'NOT_FOUND_STATUS_CODE',
     'REGION_NAME',
     'ROBOT_ENV',
-    'VRFS_ENABLED',
+    'SUCCESS_STATUS_CODE',
+    'UPDATE_STATUS_CODE',
+    'VRS_ENABLED',
 ]
 
 # Gov Robot Settings
@@ -66,35 +74,23 @@ ROBOT_ENV = os.environ.get('ROBOT_ENV', 'dev')
 # Name of region (used to tag data sent to influx)
 REGION_NAME = 'gov_cork'
 
-# Disable VRFs for the GovCloud Robots
-VRFS_ENABLED = False
+# Disable VRs for the GovCloud Robots
+VRS_ENABLED = False
 
 # Configuration settings
 # KVM path
 KVM_ROBOT_NETWORK_DRIVE_PATH = '/mnt/images/KVM'
 KVM_HOST_NETWORK_DRIVE_PATH = '/var/lib/libvirt/ISOs/KVM'
+# KVM vms path
+KVM_VMS_PATH = '/var/lib/libvirt/images/'
 # HyperV path
 HYPERV_ROBOT_NETWORK_DRIVE_PATH = '/mnt/images/HyperV'
 HYPERV_HOST_NETWORK_DRIVE_PATH = '/var/lib/libvirt/ISOs/HyperV'
-# FreeNas mount url
-FREENAS_URL = f'\\\\{REGION_NAME}-robothost.cloudcix.com\\var\\lib\\libvirt\\robot-drive'
-# Images dict
-OS_TEMPLATE_MAP = {
-    'Linux': {
-        6: 'ubuntu',
-        7: 'ubuntu',
-        8: 'ubuntu',
-        9: 'ubuntu',
-        10: 'centos',
-        11: 'centos',
-        12: 'ubuntu',
-    },
-    'Windows': {
-        2: '2012',
-        3: '2016',
-        13: '2019',
-    },
-    'Phantom': {
-        14: 'phantom',
-    },
-}
+# HyperV vms path
+HYPERV_VMS_PATH = 'D:\HyperV\\'
+# Nas drive mount url
+NETWORK_DRIVE_URL = f'\\\\{REGION_NAME}-robothost.cloudcix.com\\var\\lib\\libvirt\\robot-drive'
+# Api response code
+NOT_FOUND_STATUS_CODE = 404
+SUCCESS_STATUS_CODE = 200
+UPDATE_STATUS_CODE = 204

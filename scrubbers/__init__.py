@@ -1,8 +1,8 @@
-from .vrf import Vrf
+from .vr import Vr
 from .vm import Linux, Windows
 
 __all__ = [
-    'Vrf',
+    'Vr',
     'Linux',
     'Windows',
 ]

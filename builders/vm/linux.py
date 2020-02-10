@@ -10,12 +10,10 @@ import logging
 import os
 import random
 import string
-from collections import deque
 from crypt import crypt, mksalt, METHOD_SHA512
-from typing import Any, Deque, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 # lib
 import opentracing
-from cloudcix.api.compute import Compute
 from jaeger_client import Span
 from netaddr import IPAddress, IPNetwork
 from paramiko import AutoAddPolicy, SSHClient, SSHException
@@ -41,28 +39,24 @@ class Linux(LinuxMixin):
     template_keys = {
         # the admin password for the vm, unencrypted
         'admin_password',
+        # the number of cpus in the vm
+        'cpu',
         # the admin password for the vm, pre-crpyted
         'crypted_admin_password',
         # root password encrypted, needed for centos kickstart
         'crypted_root_password',
-        # the number of cpus in the vm
-        'cpu',
         # the dns servers for the vm
         'dns',
-        # the drives in the vm
-        'drives',
         # the subnet gateway
         'gateway',
-        # the hdd primary drive of the VM 'id:size'
-        'hdd',
         # the ip address of the host that the VM will be built on
         'host_ip',
         # the sudo password of the host, used to run some commands
         'host_sudo_passwd',
-        # the filename of the image used to build the vm
-        'image_filename',
         # the answer_files file of the image used to build the VM
         'image_answer_file_name',
+        # the filename of the image used to build the vm
+        'image_filename',
         # the os variant of the image used to build the VM
         'image_os_variant',
         # the ip address of the vm in its subnet
@@ -75,18 +69,20 @@ class Linux(LinuxMixin):
         'netmask',
         # the path on the host where the network drive is found
         'network_drive_path',
-        # path for vm's .img files located in host
-        'vms_path',
         # the amount of RAM in the VM
         'ram',
-        # the ssd primary drive of the VM 'id:size'
-        'ssd',
+        # storage type (HDD/SSD)
+        'storage_type'
+        # storages of the vm
+        'storages',
         # the timezone of the vm
         'timezone',
         # the vlan that the vm is a part of
         'vlan',
         # an identifier that uniquely identifies the vm
         'vm_identifier',
+        # path for vm's .img files located in host
+        'vms_path',
     }
 
     @staticmethod
@@ -101,7 +97,7 @@ class Linux(LinuxMixin):
 
         # Generate the necessary template data
         child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
-        template_data = Linux._get_template_data(vm_data, child_span)
+        template_data = Linux._get_template_data(vm_data)
         child_span.finish()
 
         # Check that the data was successfully generated
@@ -177,9 +173,6 @@ class Linux(LinuxMixin):
                 Linux.logger.warning(f'VM build command for VM #{vm_id} generated stderr.\n{stderr}')
             built = 'Domain creation completed' in stdout
 
-            # remove the generated files from the network drive
-            Linux._remove_network_drive_files(vm_id, template_data)
-
         except SSHException:
             Linux.logger.error(
                 f'Exception occurred while building VM #{vm_id} in {host_ip}',
@@ -188,16 +181,21 @@ class Linux(LinuxMixin):
             span.set_tag('failed_reason', 'ssh_error')
         finally:
             client.close()
+
+        # remove the generated files from the network drive
+        child_span = opentracing.tracer.start_span('delete_files_from_network_drive', child_of=span)
+        Linux._remove_network_drive_files(vm_id, template_data)
+        child_span.finish()
+
         return built
 
     @staticmethod
-    def _get_template_data(vm_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
+    def _get_template_data(vm_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Given the vm data from the API, create a dictionary that contains all of the necessary keys for the template
         The keys will be checked in the build method and not here, this method is only concerned with fetching the data
         that it can.
         :param vm_data: The data of the VM read from the API
-        :param span: The tracing span in use for this task. In this method, just pass it to API calls.
         :returns: The data needed for the templates to build a Linux VM
         """
         vm_id = vm_data['id']
@@ -222,34 +220,19 @@ class Linux(LinuxMixin):
         root_password = Linux._password_generator(size=128)
         data['crypted_root_password'] = str(crypt(root_password, mksalt(METHOD_SHA512)))
 
-        # Fetch the drives for the VM and add them to the data
-        drives: Deque[Dict[str, Any]] = deque()
-        primary = False
+        # Check for the primary storage
+        primary: bool = False
         for storage in vm_data['storages']:
-            # Check if the storage is primary
             if storage['primary']:
                 primary = True
-                drives.append({
-                    'id': storage['id'],
-                    'primary': storage['primary'],
-                    'size': storage['gb'],
-                })
-
-            # Just append to the drives deque
-            drives.append({
-                'id': storage['id'],
-                'primary': storage['primary'],
-                'size': storage['gb'],
-            })
-
-        # validate if primary storage drive exists or not.
         if not primary:
             Linux.logger.error(
                 f'No primary storage drive found. Expected one primary storage drive',
             )
             return None
 
-        data['drives'] = drives
+        data['storages'] = vm_data['storages']
+        data['storage_type'] = vm_data['storage_type']
 
         # Get the Networking details
         data['ip_address'] = vm_data['ip_address']['address']
@@ -264,12 +247,11 @@ class Linux(LinuxMixin):
 
         # Get the ip address of the host
         host_ip = None
-        for interface in utils.api_read(Compute.server, pk=vm_data['server_id'], span=span)['interfaces']:
+        for interface in vm_data['server_data']['interfaces']:
             if interface['enabled'] is True and interface['ip_address'] is not None:
                 if IPAddress(str(interface['ip_address'])).version == 6:
                     host_ip = interface['ip_address']
                     break
-
         if host_ip is None:
             Linux.logger.error(
                 f'Host ip address not found for the server # {vm_data["server_id"]}',
@@ -368,22 +350,30 @@ class Linux(LinuxMixin):
         network_drive_path = settings.KVM_ROBOT_NETWORK_DRIVE_PATH
 
         # Remove answer file
-        answer_file_path = f'{network_drive_path}/answer_files/{template_data["vm_identifier"]}.cfg'
+        file_path = f'answer_files/{template_data["vm_identifier"]}.cfg'
+        answer_file_path = os.path.join(network_drive_path, file_path)
         if os.path.exists(answer_file_path):
             try:
                 os.remove(answer_file_path)
                 Linux.logger.debug(f'Successfully removed answer file {answer_file_path} of VM #{vm_id}')
             except IOError:
-                pass  # ignoring on fail as this step is optional
+                Linux.logger.error(
+                    f'Exception occurred while attempting to delete {file_path} from the network drive for VM #{vm_id}',
+                    exc_info=True,
+                )
 
         # Remove bridge xml file
-        bridge_def_filename = f'{network_drive_path}/bridge_xmls/br{template_data["vlan"]}.xml'
+        file_path = f'bridge_xmls/br{template_data["vlan"]}.xml'
+        bridge_def_filename = os.path.join(network_drive_path, file_path)
         if os.path.exists(bridge_def_filename):
             try:
                 os.remove(bridge_def_filename)
                 Linux.logger.debug(f'Successfully removed bridge definition file {bridge_def_filename} of VM #{vm_id}')
             except IOError:
-                pass  # ignoring on fail as this step is optional
+                Linux.logger.error(
+                    f'Exception occurred while attempting to delete {file_path} from the network drive for VM #{vm_id}',
+                    exc_info=True,
+                )
 
     @staticmethod
     def _password_generator(size: int = 12, chars: Optional[str] = None) -> str:

@@ -6,10 +6,10 @@ from settings_local import (
     CLOUDCIX_API_PASSWORD,
     CLOUDCIX_API_USERNAME,
     CLOUDCIX_EMAIL_USERNAME,
-    FREENAS_URL,
     HYPERV_HOST_NETWORK_DRIVE_PATH,
     IN_PRODUCTION,
     KVM_HOST_NETWORK_DRIVE_PATH,
+    NETWORK_DRIVE_URL,
     REGION_NAME,
 )
 
@@ -22,19 +22,22 @@ __all__ = [
     'CLOUDCIX_API_VERSION',
     'CLOUDCIX_API_V2_URL',
     'CLOUDCIX_EMAIL_USERNAME',
-    'FREENAS_URL',
+    'CLOUDCIX_LOGSTASH_URL',
     'HYPERV_HOST_NETWORK_DRIVE_PATH',
     'HYPERV_ROBOT_NETWORK_DRIVE_PATH',
+    'HYPERV_VMS_PATH',
     'IN_PRODUCTION',
     'KVM_HOST_NETWORK_DRIVE_PATH',
     'KVM_ROBOT_NETWORK_DRIVE_PATH',
-    'CLOUDCIX_LOGSTASH_URL',
+    'KVM_VMS_PATH',
+    'NETWORK_DRIVE_URL',
     'NETWORK_PASSWORD',
+    'NOT_FOUND_STATUS_CODE',
     'REGION_NAME',
     'ROBOT_ENV',
-    'VRFS_ENABLED',
-    'KVM_VMS_PATH',
-    'HYPERV_VMS_PATH',
+    'SUCCESS_STATUS_CODE',
+    'UPDATE_STATUS_CODE',
+    'VRS_ENABLED',
 ]
 
 # Member ID
@@ -56,8 +59,8 @@ CLOUDCIX_LOGSTASH_URL = 'logstash.cloudcix.com'
 NETWORK_PASSWORD = 'C1xacc355'
 # Env (used in log messages and other things)
 ROBOT_ENV = os.environ.get('ROBOT_ENV', 'dev')
-# Flag to state whether VRFs are enabled or not
-VRFS_ENABLED = True
+# Flag to state whether VRs are enabled or not
+VRS_ENABLED = True
 # Configuration settings
 # KVM path
 KVM_ROBOT_NETWORK_DRIVE_PATH = '/mnt/images/KVM'
@@ -67,3 +70,7 @@ KVM_VMS_PATH = '/var/lib/libvirt/images/'
 HYPERV_ROBOT_NETWORK_DRIVE_PATH = '/mnt/images/HyperV'
 # HyperV vms path
 HYPERV_VMS_PATH = 'D:\HyperV\\'
+# Api response code
+NOT_FOUND_STATUS_CODE = 404
+SUCCESS_STATUS_CODE = 200
+UPDATE_STATUS_CODE = 204

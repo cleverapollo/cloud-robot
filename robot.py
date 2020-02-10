@@ -33,8 +33,8 @@ class Robot:
     sigterm_recv: bool = False
     # vm dispatcher
     vm_dispatcher: dispatchers.Vm
-    # vrf dispatcher
-    vrf_dispatcher: Union[dispatchers.PhantomVrf, dispatchers.Vrf]
+    # vr dispatcher
+    vr_dispatcher: Union[dispatchers.PhantomVr, dispatchers.Vr]
     # instance
     __instance = None
 
@@ -46,10 +46,10 @@ class Robot:
         self.logger = logging.getLogger('robot.mainloop')
         # Instantiate the dispatchers
         self.vm_dispatcher = dispatchers.Vm(settings.NETWORK_PASSWORD)
-        if settings.VRFS_ENABLED:
-            self.vrf_dispatcher = dispatchers.Vrf(settings.NETWORK_PASSWORD)
+        if settings.VRS_ENABLED:
+            self.vr_dispatcher = dispatchers.Vr(settings.NETWORK_PASSWORD)
         else:
-            self.vrf_dispatcher = dispatchers.PhantomVrf()
+            self.vr_dispatcher = dispatchers.PhantomVr()
         # Save the instance
         Robot.__instance = self
 
@@ -73,25 +73,25 @@ class Robot:
         # ############################################################## #
         #                              BUILD                             #
         # ############################################################## #
-        self._vrf_build()
+        self._vr_build()
         self._vm_build()
 
         # ############################################################## #
         #                             QUIESCE                            #
         # ############################################################## #
-        self._vrf_quiesce()
+        self._vr_quiesce()
         self._vm_quiesce()
 
         # ############################################################## #
         #                             UPDATE                             #
         # ############################################################## #
-        self._vrf_update()
+        self._vr_update()
         self._vm_update()
 
         # ############################################################## #
         #                             RESTART                            #
         # ############################################################## #
-        self._vrf_restart()
+        self._vr_restart()
         self._vm_restart()
 
         # Flush the loggers
@@ -101,20 +101,20 @@ class Robot:
     #                              BUILD                             #
     # ############################################################## #
 
-    def _vrf_build(self):
+    def _vr_build(self):
         """
-        Check the API for VRFs to build, and asyncronously build them
+        Check the API for VRs to build, and asyncronously build them
         """
-        # Retrive the VRFs from the API
+        # Retrive the VRs from the API
         to_build = utils.api_list(Compute.virtual_router, BUILD_FILTERS)
         if len(to_build) == 0:
-            self.logger.debug('No VRFs found in the "Requested" state')
+            self.logger.debug('No VRs found in the "Requested" state')
             return
-        for vrf in to_build:
+        for vr in to_build:
             # check if Router is busy.
             busy = utils.api_list(Compute.virtual_router, ROUTER_BUSY_FILTERS)
             if len(busy) == 0:
-                self.vrf_dispatcher.build(vrf['id'])
+                self.vr_dispatcher.build(vr['id'])
             else:
                 break
 
@@ -129,29 +129,29 @@ class Robot:
             return
         for vm in to_build:
             # check if vr is ready.
-            vrf_request_data = {'project_id': vm['project']['id']}
-            vm_vrf = utils.api_list(Compute.virtual_router, vrf_request_data)[0]
-            if vm_vrf['state'] == 4:
+            vr_request_data = {'project_id': vm['project']['id']}
+            vm_vr = utils.api_list(Compute.virtual_router, vr_request_data)[0]
+            if vm_vr['state'] == 4:
                 self.vm_dispatcher.build(vm['id'])
 
     # ############################################################## #
     #                             QUIESCE                            #
     # ############################################################## #
 
-    def _vrf_quiesce(self):
+    def _vr_quiesce(self):
         """
-        Check the API for VRFs to quiesce, and asyncronously quiesce them
+        Check the API for VRs to quiesce, and asyncronously quiesce them
         """
-        # Retrive the VRFs from the API
+        # Retrive the VRs from the API
         to_quiesce = utils.api_list(Compute.virtual_router, QUIESCE_FILTERS)
         if len(to_quiesce) == 0:
-            self.logger.debug('No VRFs found in the "Quiesce" state')
+            self.logger.debug('No VRs found in the "Quiesce" state')
             return
-        for vrf in to_quiesce:
+        for vr in to_quiesce:
             # check if Router is busy.
             busy = utils.api_list(Compute.virtual_router, ROUTER_BUSY_FILTERS)
             if len(busy) == 0:
-                self.vrf_dispatcher.quiesce(vrf['id'])
+                self.vr_dispatcher.quiesce(vr['id'])
             else:
                 break
 
@@ -171,20 +171,20 @@ class Robot:
     #                             RESTART                            #
     # ############################################################## #
 
-    def _vrf_restart(self):
+    def _vr_restart(self):
         """
-        Check the API for VRFs to restart, and asyncronously restart them
+        Check the API for VRs to restart, and asyncronously restart them
         """
-        # Retrive the VRFs from the API
+        # Retrive the VRs from the API
         to_restart = utils.api_list(Compute.virtual_router, RESTART_FILTERS)
         if len(to_restart) == 0:
-            self.logger.debug('No VRFs found in the "Restart" state')
+            self.logger.debug('No VRs found in the "Restart" state')
             return
-        for vrf in to_restart:
+        for vr in to_restart:
             # check if Router is busy.
             busy = utils.api_list(Compute.virtual_router, ROUTER_BUSY_FILTERS)
             if len(busy) == 0:
-                self.vrf_dispatcher.restart(vrf['id'])
+                self.vr_dispatcher.restart(vr['id'])
             else:
                 break
 
@@ -211,33 +211,33 @@ class Robot:
         This gets run once a day at midnight, once we're sure it works
         """
         self.logger.info(f'Commencing scrub checks with updated__lte={timestamp}')
-        self._vrf_scrub(timestamp)
+        self._vr_scrub(timestamp)
         self._vm_scrub(timestamp)
         # Flush the loggers
         utils.flush_logstash()
 
-    def _vrf_scrub(self, timestamp: Optional[str]):
+    def _vr_scrub(self, timestamp: Optional[str]):
         """
-        Check the API for VRFs to scrub, and asyncronously scrub them
-        :param timestamp: The timestamp to use when listing VRFs to delete
+        Check the API for VRs to scrub, and asyncronously scrub them
+        :param timestamp: The timestamp to use when listing VRs to delete
         """
         params = {'state': SCRUB_QUEUE}
         if timestamp is not None:
             params['updated__lte'] = timestamp
 
-        # Retrive the VRFs from the API
+        # Retrive the VRs from the API
         to_scrub = utils.api_list(Compute.virtual_router, params)
         if len(to_scrub) == 0:
-            self.logger.debug('No VRFs found in the "Scrub" state')
+            self.logger.debug('No VRs found in the "Scrub" state')
             return
-        for vrf in to_scrub:
+        for vr in to_scrub:
             # since scrub runs only once, sending all requests.
-            self.vrf_dispatcher.scrub(vrf['id'])
+            self.vr_dispatcher.scrub(vr['id'])
 
     def _vm_scrub(self, timestamp: Optional[str]):
         """
         Check the API for VMs to scrub, and asyncronously scrub them
-        :param timestamp: The timestamp to use when listing VRFs to delete
+        :param timestamp: The timestamp to use when listing VRs to delete
         """
         params = {'state': SCRUB_QUEUE}
         if timestamp is not None:
@@ -255,20 +255,20 @@ class Robot:
     #                             UPDATE                             #
     # ############################################################## #
 
-    def _vrf_update(self):
+    def _vr_update(self):
         """
-        Check the API for VRFs to update, and asyncronously update them
+        Check the API for VRs to update, and asyncronously update them
         """
-        # Retrive the VRFs from the API
+        # Retrive the VRs from the API
         to_update = utils.api_list(Compute.virtual_router, UPDATE_FILTERS)
         if len(to_update) == 0:
-            self.logger.debug('No VRFs found in the "Update" state')
+            self.logger.debug('No VRs found in the "Update" state')
             return
-        for vrf in to_update:
+        for vr in to_update:
             # check if Router is busy.
             busy = utils.api_list(Compute.virtual_router, ROUTER_BUSY_FILTERS)
             if len(busy) == 0:
-                self.vrf_dispatcher.update(vrf['id'])
+                self.vr_dispatcher.update(vr['id'])
             else:
                 break
 
