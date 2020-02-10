@@ -159,7 +159,7 @@ KVM_VMS_PATH = '/var/lib/libvirt/images/'
 HYPERV_ROBOT_NETWORK_DRIVE_PATH = '/mnt/images/HyperV'
 HYPERV_HOST_NETWORK_DRIVE_PATH = HYPERV_ROBOT_NETWORK_DRIVE_PATH
 # HyperV vms path
-HYPERV_VMS_PATH = 'D:\HyperV\\'
+HYPERV_VMS_PATH = r'D:\HyperV\\'
 # Nas drive mount url
 NETWORK_DRIVE_URL = f'\\\\{REGION_NAME}-freenas.cloudcix.com\\mnt\\volume\\{REGION_NAME}'
 # Api response code

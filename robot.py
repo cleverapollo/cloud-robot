@@ -216,7 +216,7 @@ class Robot:
         # Flush the loggers
         utils.flush_logstash()
 
-    def _vr_scrub(self, timestamp: Optional[str]):
+    def _vr_scrub(self, timestamp: Optional[int]):
         """
         Check the API for VRs to scrub, and asyncronously scrub them
         :param timestamp: The timestamp to use when listing VRs to delete
@@ -234,7 +234,7 @@ class Robot:
             # since scrub runs only once, sending all requests.
             self.vr_dispatcher.scrub(vr['id'])
 
-    def _vm_scrub(self, timestamp: Optional[str]):
+    def _vm_scrub(self, timestamp: Optional[int]):
         """
         Check the API for VMs to scrub, and asyncronously scrub them
         :param timestamp: The timestamp to use when listing VRs to delete

@@ -161,7 +161,7 @@ KVM_VMS_PATH = '/var/lib/libvirt/images/'
 HYPERV_ROBOT_NETWORK_DRIVE_PATH = '/mnt/images/HyperV'
 HYPERV_HOST_NETWORK_DRIVE_PATH = '/var/lib/libvirt/ISOs/HyperV'
 # HyperV vms path
-HYPERV_VMS_PATH = 'D:\HyperV\\'
+HYPERV_VMS_PATH = r'"D:\HyperV\"'
 
 # Nas drive mount url
 NETWORK_DRIVE_URL = f'\\\\{REGION_NAME}-robothost.cloudcix.com\\var\\lib\\libvirt\\robot-drive'

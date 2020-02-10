@@ -191,8 +191,8 @@ class Vr(VrMixin):
         # data['public_port'] = router_data['public_port']
 
         # Firewall rules
-        data['inbound_firewall']: bool = False
-        data['outbound_firewall']: bool = False
+        data['inbound_firewall'] = False
+        data['outbound_firewall'] = False
         firewalls: Deque[Dict[str, Any]] = deque()
         vr_address_book_name = f'vrf-{project_id}-address-book'
         vr_zone_name = f'vrf-{project_id}'
