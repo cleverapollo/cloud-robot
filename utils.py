@@ -17,8 +17,14 @@ from jaeger_client import Span
 from logstash_async.formatter import LogstashFormatter
 from logstash_async.handler import AsynchronousLogstashHandler
 # local
-import settings
 from cloudcix_token import Token
+from settings import (
+    LOGSTASH_URL,
+    NETWORK_PASSWORD,
+    REGION_NAME,
+    SUCCESS_STATUS_CODE,
+    UPDATE_STATUS_CODE,
+)
 
 
 __all__ = [
@@ -62,7 +68,7 @@ def _redact_logs(record: logging.LogRecord) -> bool:
     """
     Filter out the logs to redact passwords and other sensitive information
     """
-    record.msg = record.msg.replace(settings.NETWORK_PASSWORD, '*' * 16)
+    record.msg = record.msg.replace(NETWORK_PASSWORD, '*' * 16)
     return True
 
 
@@ -82,8 +88,9 @@ def setup_root_logger():
     logger.setLevel(logging.DEBUG)
 
     # Logstash Handler
-    logstash_fmt = LogstashFormatter(extra={'application': 'robot', 'region': settings.REGION_NAME})
-    logstash_handler = AsynchronousLogstashHandler(settings.CLOUDCIX_LOGSTASH_URL, 5959, 'log.db')
+    logstash_fmt = LogstashFormatter(extra={'application': 'robot', 'region': REGION_NAME})
+    logstash_handler = AsynchronousLogstashHandler(LOGSTASH_URL, 5959, 'log.db')
+
     logstash_handler.setFormatter(logstash_fmt)
     logger.addHandler(logstash_handler)
 
@@ -129,7 +136,7 @@ def project_delete(project_id: int, span: Span):
     if active_vms == 0 and active_vrs == 0:
         logger.debug(f'Project #{project_id} is empty. Sending delete request.')
         response = Compute.project.delete(token=Token.get_instance().token, pk=project_id, span=span)
-        if response.status_code == settings.UPDATE_STATUS_CODE:
+        if response.status_code == UPDATE_STATUS_CODE:
             logger.info(f'Successfully deleted Project #{project_id} from the CMDB')
         else:
             logger.error(
@@ -169,7 +176,7 @@ def api_list(client: Client, params: Dict[str, Any], **kwargs) -> Deque[Dict[str
         params=params,
         **kwargs,
     )
-    if response.status_code != settings.SUCCESS_STATUS_CODE:
+    if response.status_code != SUCCESS_STATUS_CODE:
         logger.error(
             f'HTTP {response.status_code} error occurred when attempting to fetch {client_name} instances with '
             f'filters {params};\nResponse Text: {response.content.decode()}',
@@ -196,7 +203,7 @@ def api_list(client: Client, params: Dict[str, Any], **kwargs) -> Deque[Dict[str
             params=params,
             **kwargs,
         )
-        if response.status_code != settings.SUCCESS_STATUS_CODE:
+        if response.status_code != SUCCESS_STATUS_CODE:
             logger.error(
                 f'HTTP {response.status_code} error occurred when attempting to fetch {client_name} instances with '
                 f'filters {params};\nResponse Text: {response.content.decode()}',
@@ -223,7 +230,7 @@ def api_read(client: Client, pk: int, **kwargs) -> Optional[Dict[str, Any]]:
         pk=pk,
         **kwargs,
     )
-    if response.status_code != settings.SUCCESS_STATUS_CODE:
+    if response.status_code != SUCCESS_STATUS_CODE:
         logger.error(
             f'HTTP {response.status_code} error occurred when attempting to fetch {client_name} #{pk};\n'
             f'Response Text: {response.content.decode()}',
