@@ -116,6 +116,20 @@ def _build_vr(vr_id: int, span: Span):
                 child_span = opentracing.tracer.start_span('send_email', child_of=span)
                 try:
                     EmailNotifier.vpn_build_success(vpn)
+                    # update the send_email to False.
+                    child_span = opentracing.tracer.start_span('update_to_send_email', child_of=span)
+                    response = Compute.vpn.partial_update(
+                        token=Token.get_instance().token,
+                        pk=vpn['id'],
+                        data={'send_email': False},
+                        span=child_span,
+                    )
+                    child_span.finish()
+                    if response.status_code != UPDATE_STATUS_CODE:
+                        logger.error(
+                            f'Could not update VPN #{vpn["id"]} to reset send_email. '
+                            f'Response: {response.content.decode()}.',
+                        )
                 except Exception:
                     logger.error(
                         f'Failed to send build success email for VPN #{vpn["id"]}',
