@@ -7,22 +7,14 @@ methods included;
 # stdlib
 import logging
 from time import asctime, sleep
-from typing import Dict, Optional, Union
 # lib
-from cloudcix.api.compute import Compute
-from jaeger_client import Span
 from jnpr.junos import Device
 from jnpr.junos.exception import CommitError, ConfigLoadError, ConnectError, LockError
 from jnpr.junos.utils.config import Config
-from netaddr import IPAddress
-# local
-import utils
 
 __all__ = [
     'VrMixin',
 ]
-PortData = Optional[Dict[str, Union[list, dict]]]
-RouterData = Optional[Dict[str, Optional[str]]]
 MAX_ATTEMPTS = 10
 
 
@@ -114,109 +106,3 @@ class VrMixin:
                 cls.logger.error(f'Unable to commit changes onto Router {management_ip}', exc_info=True)
                 return False
             return True
-
-    @classmethod
-    def _get_router_data(cls, router_id: int, vr_ip_subnet_id: int, span: Span) -> RouterData:
-        """
-        Collects the data such as private port name, public port name and address family of
-        given vr_ip_subnet_id
-        :param router_id:
-        :param vr_ip_subnet_id :type int subnet id of vr ip
-        :param span:
-        :return:
-        """
-        port_data = cls._get_port_data(router_id=router_id, span=span)
-        if port_data is not None:
-            ports = port_data['ports']
-            port_rmpf_pfs = port_data['port_rmpf_pfs']
-        else:
-            return None
-
-        private = None
-        public = None
-        address_family = None
-
-        # collecting required data
-        for port in ports:
-
-            # Private port name
-            if port_rmpf_pfs[port][1] == 'Private':
-                private = port_rmpf_pfs[port][0]
-
-            # public_port and address_family
-            elif port_rmpf_pfs[port][1] == 'Floating':
-                public = port_rmpf_pfs[port][0]
-
-                port_configs = utils.api_list(IAAS.port_config, {}, port_id=port, span=span)
-                for port_config in port_configs:
-                    # Get the ip address details
-                    ip = utils.api_read(IAAS.ipaddress, pk=port_config['port_ip_id'], span=span)
-                    if ip is None:
-                        return None
-                    if str(ip['idSubnet']) == str(vr_ip_subnet_id):
-                        address_family = 'inet'
-                        if IPAddress(ip['address']).version == 6:
-                            address_family = 'inet6'
-                        break
-            if private is not None and public is not None and address_family is not None:
-                break
-
-        if private is not None and public is not None and address_family is not None:
-            return {
-                'private_port': private,
-                'public_port': public,
-                'address_family': address_family,
-            }
-        else:
-            cls.logger.error(
-                f'Failed to get VR"s router details for Router #{router_id} and Subnet #{vr_ip_subnet_id}',
-            )
-            return None
-
-    @staticmethod
-    def _get_port_data(router_id: int, span: Span) -> PortData:
-        """
-        Collects Port data for given router_id
-        :param router_id: id of router to deal with
-        :param span:
-        :return: port_data: dict of port details like port name, port function
-        """
-        ports = None
-        # listing ports
-        ports = utils.api_list(IAAS.port, {}, router_id=router_id, span=span)
-        if len(ports) == 0:
-            # utils method does the logging for us
-            return None
-
-        # listing rmpfs
-        rmpfs_params = {
-            'model_port_id__in': [port['model_port_id'] for port in ports],
-        }
-        rmpfs = utils.api_list(IAAS.router_model_port_function, rmpfs_params, span=span)
-        if len(rmpfs) == 0:
-            return None
-
-        # listing port_functions
-        pfs_params = {
-            'port_function_id__in': [rmpf['port_function_id'] for rmpf in rmpfs],
-        }
-        port_funcs = utils.api_list(IAAS.port_function, pfs_params, span=span)
-        if len(port_funcs) == 0:
-            return None
-
-        # link port_id with [port name(ie 'xe-0/0/0' etc) and port_function(ie 'Private' etc)]
-        port_rmpf_pfs = {}  # type: dict
-        for port in ports:
-            for rmpf in rmpfs:
-                for port_func in port_funcs:
-                    if port['model_port_id'] == rmpf['model_port_id'] and \
-                            rmpf['port_function_id'] == port_func['port_function_id']:
-                        port_rmpf_pfs[port['port_id']] = [rmpf['port_name'], port_func['function']]
-                        break
-        if ports is not None and port_rmpf_pfs is not None:
-            return {
-                'ports': [port['port_id'] for port in ports],
-                'port_rmpf_pfs': port_rmpf_pfs,
-            }
-        else:
-            return None

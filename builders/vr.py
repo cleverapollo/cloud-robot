@@ -20,6 +20,7 @@ from netaddr import IPAddress, IPNetwork
 # local
 import utils
 from mixins import VrMixin
+from settings import PRIVATE_PORT, PUBLIC_PORT
 
 __all__ = [
     'Vr',
@@ -46,14 +47,12 @@ class Vr(VrMixin):
         'nats',
         # if outbound firewall exists or not
         'outbound_firewall',
-        # The address family for the firewall port
-#        'port_address_family',
         # The private port of the firewall
-#        'private_port',
+        'private_port',
         # The id of the Project that owns the VR being built
         'project_id',
         # The public port of the Router
-#        'public_port',
+        'public_port',
         # A list of vLans to be built in the VR
         'vlans',
         # A list of VPNs to be built in the VR
@@ -179,16 +178,9 @@ class Vr(VrMixin):
             return None
         data['management_ip'] = management_ip
 
-        # Get the ports data to determine the vr's interface and public interface
-        # child_span = opentracing.tracer.start_span('get_router_data', child_of=span)
-        # router_data = Vr._get_router_data(vr_data['idRouter'], vr_ip['idSubnet'], child_span)
-        # child_span.finish()
-        #
-        # if router_data is None:
-        #     return None
-        # data['port_address_family'] = router_data['address_family']
-        # data['private_port'] = router_data['private_port']
-        # data['public_port'] = router_data['public_port']
+        # Router port information
+        data['private_port'] = PRIVATE_PORT
+        data['public_port'] = PUBLIC_PORT
 
         # Firewall rules
         data['inbound_firewall'] = False
@@ -233,7 +225,11 @@ class Vr(VrMixin):
 
         # Finally, get the VPNs for the Project
         vpns: Deque[Dict[str, Any]] = deque()
-        for vpn in vr_data['vpns']:
+        params = {'virtual_router_id': vr_id}
+        child_span = opentracing.tracer.start_span('listing_vpns', child_of=span)
+        vr_vpns = utils.api_list(Compute.vpn, params, span=child_span)
+        child_span.finish()
+        for vpn in vr_vpns:
             vpn['cloud_proxy_id'] = str(IPNetwork(vpn['cloud_subnet']['address_range']).cidr)
             vpn['customer_proxy_id'] = str(IPNetwork(vpn['customer_subnets'][0]).cidr)
             vpn['customer_subnets'] = [str(IPNetwork(cus_subnet).cidr) for cus_subnet in vpn['customer_subnets']]

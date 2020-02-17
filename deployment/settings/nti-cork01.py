@@ -30,6 +30,8 @@ __all__ = [
     'NETWORK_DRIVE_URL',
     'NETWORK_PASSWORD',
     'NOT_FOUND_STATUS_CODE',
+    'PRIVATE_PORT',
+    'PUBLIC_PORT',
     'REGION_NAME',
     'ROBOT_ENV',
     'SEND_TO_FAIL',
@@ -169,3 +171,11 @@ NETWORK_DRIVE_URL = f'\\\\{REGION_NAME}-robothost.cloudcix.com\\var\\lib\\libvir
 NOT_FOUND_STATUS_CODE = 404
 SUCCESS_STATUS_CODE = 200
 UPDATE_STATUS_CODE = 204
+
+"""
+Router settings, are required if VRS_ENABLED is True
+"""
+# Public port e.g 'ge-0/0/0'
+PUBLIC_PORT = 'ge-0/0/8'
+# Private port e.g 'ge-0/0/0'
+PRIVATE_PORT = 'ge-0/0/9'

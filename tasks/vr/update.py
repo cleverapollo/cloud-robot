@@ -109,6 +109,18 @@ def _update_vr(vr_id: int, span: Span):
             logger.error(
                 f'Could not update VR #{vr_id} to state RUNNING. Response: {response.content.decode()}.',
             )
+
+        # Check if they built any VPNs and if so, send an email
+        if len(vr.get('vpns', [])) > 0:
+            child_span = opentracing.tracer.start_span('send_email', child_of=span)
+            try:
+                EmailNotifier.vr_build_success(vr)
+            except Exception:
+                logger.error(
+                    f'Failed to send build success email for VR #{vr_id}',
+                    exc_info=True,
+                )
+            child_span.finish()
     else:
         logger.error(f'Failed to update VR #{vr_id}')
         metrics.vr_update_failure()
