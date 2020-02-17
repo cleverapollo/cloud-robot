@@ -167,6 +167,11 @@ class Vr(VrMixin):
         child_span = opentracing.tracer.start_span('reading_router', child_of=span)
         router = utils.api_read(Compute.router, vr_data['router_id'], span=child_span)
         child_span.finish()
+        if 'ip_addresses' not in router.keys():
+            Vr.logger.error(
+                f'Invalid router data fot the Router # {router["id"]}',
+            )
+            return None
         for ip in router['ip_addresses']:
             if IPAddress(ip['address']).version == 6 and ip['name'] == 'Gateway':
                 management_ip = ip['address']
@@ -234,6 +239,11 @@ class Vr(VrMixin):
             vpn['customer_proxy_id'] = str(IPNetwork(vpn['customer_subnets'][0]).cidr)
             vpn['customer_subnets'] = [str(IPNetwork(cus_subnet).cidr) for cus_subnet in vpn['customer_subnets']]
             vpn['vlan'] = vpn['cloud_subnet']['vlan']
+            # if send_email is true then read VPN for email addresses
+            if vpn['send_email']:
+                child_span = opentracing.tracer.start_span('reading_vpn', child_of=span)
+                vpn['emails'] = utils.api_read(Compute.vpn, pk=vpn['id'])['email']
+                child_span.finish()
             vpns.append(vpn)
         data['vpns'] = vpns
 

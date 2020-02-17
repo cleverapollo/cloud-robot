@@ -7,7 +7,7 @@ import logging
 import subprocess
 from collections import deque
 from json import JSONEncoder
-from typing import Any, Deque, Dict, Iterable, Optional
+from typing import Any, Deque, Dict, Iterable
 # lib
 import jinja2
 import netaddr
@@ -214,7 +214,7 @@ def api_list(client: Client, params: Dict[str, Any], **kwargs) -> Deque[Dict[str
     return objects
 
 
-def api_read(client: Client, pk: int, **kwargs) -> Optional[Dict[str, Any]]:
+def api_read(client: Client, pk: int, **kwargs) -> Dict[str, Any]:
     """
     Calls the read command on the supplied client, using the supplied pk to make the request
     :param client: The client to call the read method on
@@ -222,6 +222,7 @@ def api_read(client: Client, pk: int, **kwargs) -> Optional[Dict[str, Any]]:
     :param kwargs: Any extra kwargs to pass to the request (ie spans)
     :returns: The read instance, or None if an error occurs
     """
+    obj: Dict[str, Any] = {}
     logger = logging.getLogger('robot.utils.api_read')
     client_name = f'{client.application}.{client.service_uri}'
     logger.debug(f'Attempting to read {client_name} #{pk}')
@@ -230,10 +231,11 @@ def api_read(client: Client, pk: int, **kwargs) -> Optional[Dict[str, Any]]:
         pk=pk,
         **kwargs,
     )
-    if response.status_code != SUCCESS_STATUS_CODE:
+    if response.status_code == SUCCESS_STATUS_CODE:
+        obj = response.json()['content']
+    else:
         logger.error(
             f'HTTP {response.status_code} error occurred when attempting to fetch {client_name} #{pk};\n'
             f'Response Text: {response.content.decode()}',
         )
-        return None
-    return response.json()['content']
+    return obj

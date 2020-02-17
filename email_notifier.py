@@ -91,25 +91,52 @@ class EmailNotifier:
         EmailNotifier._compose_email(email, subject, body)
 
     @staticmethod
-    def vr_build_success(vr_data: Dict[str, Any]):
+    def vpn_build_success(vpn_data: Dict[str, Any]):
         """
-        Given a VR's details, render and send a build success email
+        Given a VPN's details, render and send a build success email
         """
-        logger = logging.getLogger('robot.email_notifier.vr_build_success')
-        logger.debug(f'Sending build success email for VR #{vr_data["id"]}')
+        vpn_id = vpn_data["id"]
+        logger = logging.getLogger('robot.email_notifier.vpn_build_success')
+        logger.debug(f'Sending build success email for VPN #{vpn_id}')
         # Check that the data contains an email
-        email = vr_data.get('email', None)
-        if email is None:
-            logger.error(f'No email found for VR #{vr_data["id"]}. Sending to {settings.SEND_TO_FAIL} instead.')
-            email = settings.SEND_TO_FAIL
+        emails = vpn_data.get('emails', None)
+        if emails is None:
+            logger.error(f'No email found for VPN #{vpn_id}. Sending to {settings.SEND_TO_FAIL} instead.')
+            emails = [settings.SEND_TO_FAIL]
         # Render the email body
-        body = utils.JINJA_ENV.get_template('emails/vr_build_success.j2').render(
+        body = utils.JINJA_ENV.get_template('emails/vpn_success.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
-            **vr_data,
+            build=True,
+            **vpn_data,
         )
         # Format the subject
-        subject = settings.SUBJECT_VPN_SUCCESS
-        EmailNotifier._compose_email(email, subject, body)
+        subject = settings.SUBJECT_VPN_BUILD_SUCCESS
+        for email in emails:
+            EmailNotifier._compose_email(email, subject, body)
+
+    @staticmethod
+    def vpn_update_success(vpn_data: Dict[str, Any]):
+        """
+        Given a VPN's details, render and send a update success email
+        """
+        vpn_id = vpn_data['id']
+        logger = logging.getLogger('robot.email_notifier.vpn_update_success')
+        logger.debug(f'Sending update success email for VPN #{vpn_id}')
+        # Check that the data contains an email
+        emails = vpn_data.get('emails', None)
+        if emails is None:
+            logger.error(f'No email found for VPN #{vpn_id}. Sending to {settings.SEND_TO_FAIL} instead.')
+            emails = [settings.SEND_TO_FAIL]
+        # Render the email body
+        body = utils.JINJA_ENV.get_template('emails/vpn_success.j2').render(
+            compute_url=settings.COMPUTE_UI_URL,
+            build=False,
+            **vpn_data,
+        )
+        # Format the subject
+        subject = settings.SUBJECT_VPN_UPDATE_SUCCESS
+        for email in emails:
+            EmailNotifier._compose_email(email, subject, body)
 
     @staticmethod
     def vm_build_failure(vm_data: Dict[str, Any]):

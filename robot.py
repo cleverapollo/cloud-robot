@@ -205,7 +205,7 @@ class Robot:
     # Scrub methods are not run every loop, they are run at midnight #
     # ############################################################## #
 
-    def scrub(self, timestamp: Optional[str]):
+    def scrub(self, timestamp: Optional[int]):
         """
         Handle the scrub part of Robot by checking for infrastructure that needs to be scrubbed.
         This gets run once a day at midnight, once we're sure it works

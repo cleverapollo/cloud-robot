@@ -107,6 +107,11 @@ class Vr(VrMixin):
         child_span = opentracing.tracer.start_span('reading_router', child_of=span)
         router = utils.api_read(Compute.router, vr_data['router_id'], span=child_span)
         child_span.finish()
+        if 'ip_addresses' not in router.keys():
+            Vr.logger.error(
+                f'Invalid router data fot the Router # {router["id"]}',
+            )
+            return None
         for ip in router['ip_addresses']:
             if IPAddress(ip['address']).version == 6 and ip['name'] == 'Gateway':
                 management_ip = ip['address']

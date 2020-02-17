@@ -39,7 +39,8 @@ __all__ = [
     'SUBJECT_VM_FAIL',
     'SUBJECT_VM_SCHEDULE_DELETE',
     'SUBJECT_VM_SUCCESS',
-    'SUBJECT_VPN_SUCCESS',
+    'SUBJECT_VPN_BUILD_SUCCESS',
+    'SUBJECT_VPN_UPDATE_SUCCESS',
     'SUBJECT_VR_FAIL',
     'SUCCESS_STATUS_CODE',
     'UPDATE_STATUS_CODE',
@@ -121,7 +122,10 @@ SUBJECT_VM_SCHEDULE_DELETE = ''
 SUBJECT_VM_SUCCESS = ''
 
 # Subject for VPN tunnel build success Emails
-SUBJECT_VPN_SUCCESS = ''
+SUBJECT_VPN_BUILD_SUCCESS = ''
+
+# Subject for VPN tunnel update success Emails
+SUBJECT_VPN_UPDATE_SUCCESS = ''
 
 # Subject for VR build fail Emails
 SUBJECT_VR_FAIL = ''
