@@ -95,7 +95,7 @@ class EmailNotifier:
         """
         Given a VPN's details, render and send a build success email
         """
-        vpn_id = vpn_data["id"]
+        vpn_id = vpn_data['id']
         logger = logging.getLogger('robot.email_notifier.vpn_build_success')
         logger.debug(f'Sending build success email for VPN #{vpn_id}')
         # Check that the data contains an email
