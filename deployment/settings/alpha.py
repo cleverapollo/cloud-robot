@@ -29,7 +29,6 @@ __all__ = [
     'LOGSTASH_URL',
     'NETWORK_DRIVE_URL',
     'NETWORK_PASSWORD',
-    'NOT_FOUND_STATUS_CODE',
     'PRIVATE_PORT',
     'PUBLIC_PORT',
     'REGION_NAME',
@@ -41,10 +40,8 @@ __all__ = [
     'SUBJECT_VM_SUCCESS',
     'SUBJECT_VPN_BUILD_SUCCESS',
     'SUBJECT_VPN_UPDATE_SUCCESS',
-    'SUBJECT_VR_FAIL',
-    'SUCCESS_STATUS_CODE',
-    'UPDATE_STATUS_CODE',
-    'VRS_ENABLED',
+    'SUBJECT_VIRTUAL_ROUTER_FAIL',
+    'VIRTUAL_ROUTERS_ENABLED',
 ]
 
 """
@@ -123,8 +120,8 @@ SUBJECT_VPN_BUILD_SUCCESS = '[CloudCIX] Your VPN Tunnel has been built successfu
 # Subject for VPN tunnel update success Emails
 SUBJECT_VPN_UPDATE_SUCCESS = '[CloudCIX] Your VPN Tunnel has been updated successfully!'
 
-# Subject for VR build fail Emails
-SUBJECT_VR_FAIL = '[CloudCIX] VR Failure Occurred!'
+# Subject for VIRTUAL_ROUTER build fail Emails
+SUBJECT_VIRTUAL_ROUTER_FAIL = '[CloudCIX] Virtual Router Failure Occurred!'
 
 """
 Logging Settings
@@ -144,8 +141,8 @@ ROBOT_ENV = os.environ.get('ROBOT_ENV', 'dev')
 # Database in influx to send to
 INFLUX_DATABASE = 'robot'
 
-# Flag to state whether VRs are enabled or not
-VRS_ENABLED = True
+# Flag to state whether VIRTUAL_ROUTERs are enabled or not
+VIRTUAL_ROUTERS_ENABLED = True
 
 # Port of influx endpoint
 INFLUX_PORT = 443
@@ -168,13 +165,9 @@ HYPERV_HOST_NETWORK_DRIVE_PATH = HYPERV_ROBOT_NETWORK_DRIVE_PATH
 HYPERV_VMS_PATH = r'D:\HyperV\\'
 # Nas drive mount url
 NETWORK_DRIVE_URL = f'\\\\{REGION_NAME}-freenas.cloudcix.com\\mnt\\volume\\{REGION_NAME}'
-# Api response code
-NOT_FOUND_STATUS_CODE = 404
-SUCCESS_STATUS_CODE = 200
-UPDATE_STATUS_CODE = 204
 
 """
-Router settings, are required if VRS_ENABLED is True
+Router settings, are required if VIRTUAL_ROUTERS_ENABLED is True
 """
 # Public port e.g 'ge-0/0/0'
 PUBLIC_PORT = 'xe-0/0/0'

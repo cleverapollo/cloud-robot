@@ -1,8 +1,8 @@
-from .vr import Vr
+from .virtual_router import VirtualRouter
 from .vm import Linux, Windows
 
 __all__ = [
-    'Vr',
+    'VirtualRouter',
     'Linux',
     'Windows',
 ]

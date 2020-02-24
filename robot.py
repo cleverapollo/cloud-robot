@@ -15,7 +15,7 @@ from state import (
     BUILD_FILTERS,
     QUIESCE_FILTERS,
     RESTART_FILTERS,
-    ROUTER_BUSY_FILTERS,
+    IN_PROGRESS_FILTERS,
     SCRUB_QUEUE,
     UPDATE_FILTERS,
 )
@@ -33,8 +33,8 @@ class Robot:
     sigterm_recv: bool = False
     # vm dispatcher
     vm_dispatcher: dispatchers.Vm
-    # vr dispatcher
-    vr_dispatcher: Union[dispatchers.PhantomVr, dispatchers.Vr]
+    # virtual_router dispatcher
+    virtual_router_dispatcher: Union[dispatchers.PhantomVirtualRouter, dispatchers.VirtualRouter]
     # instance
     __instance = None
 
@@ -46,10 +46,10 @@ class Robot:
         self.logger = logging.getLogger('robot.mainloop')
         # Instantiate the dispatchers
         self.vm_dispatcher = dispatchers.Vm(settings.NETWORK_PASSWORD)
-        if settings.VRS_ENABLED:
-            self.vr_dispatcher = dispatchers.Vr(settings.NETWORK_PASSWORD)
+        if settings.VIRTUAL_ROUTERS_ENABLED:
+            self.virtual_router_dispatcher = dispatchers.VirtualRouter(settings.NETWORK_PASSWORD)
         else:
-            self.vr_dispatcher = dispatchers.PhantomVr()
+            self.virtual_router_dispatcher = dispatchers.PhantomVirtualRouter()
         # Save the instance
         Robot.__instance = self
 
@@ -73,25 +73,25 @@ class Robot:
         # ############################################################## #
         #                              BUILD                             #
         # ############################################################## #
-        self._vr_build()
+        self._virtual_router_build()
         self._vm_build()
 
         # ############################################################## #
         #                             QUIESCE                            #
         # ############################################################## #
-        self._vr_quiesce()
+        self._virtual_router_quiesce()
         self._vm_quiesce()
 
         # ############################################################## #
         #                             UPDATE                             #
         # ############################################################## #
-        self._vr_update()
+        self._virtual_router_update()
         self._vm_update()
 
         # ############################################################## #
         #                             RESTART                            #
         # ############################################################## #
-        self._vr_restart()
+        self._virtual_router_restart()
         self._vm_restart()
 
         # Flush the loggers
@@ -101,20 +101,20 @@ class Robot:
     #                              BUILD                             #
     # ############################################################## #
 
-    def _vr_build(self):
+    def _virtual_router_build(self):
         """
-        Check the API for VRs to build, and asyncronously build them
+        Check the API for virtual_routers to build, and asyncronously build them
         """
-        # Retrive the VRs from the API
+        # Retrive the virtual_routers from the API
         to_build = utils.api_list(Compute.virtual_router, BUILD_FILTERS)
         if len(to_build) == 0:
-            self.logger.debug('No VRs found in the "Requested" state')
+            self.logger.debug('No virtual_routers found in the "Requested" state')
             return
-        for vr in to_build:
+        for virtual_router in to_build:
             # check if Router is busy.
-            busy = utils.api_list(Compute.virtual_router, ROUTER_BUSY_FILTERS)
+            busy = utils.api_list(Compute.virtual_router, IN_PROGRESS_FILTERS)
             if len(busy) == 0:
-                self.vr_dispatcher.build(vr['id'])
+                self.virtual_router_dispatcher.build(virtual_router['id'])
             else:
                 break
 
@@ -128,30 +128,30 @@ class Robot:
             self.logger.debug('No VMs found in the "Requested" state')
             return
         for vm in to_build:
-            # check if vr is ready.
-            vr_request_data = {'project_id': vm['project']['id']}
-            vm_vr = utils.api_list(Compute.virtual_router, vr_request_data)[0]
-            if vm_vr['state'] == 4:
+            # check if virtual_router is ready.
+            virtual_router_request_data = {'project_id': vm['project']['id']}
+            vm_virtual_router = utils.api_list(Compute.virtual_router, virtual_router_request_data)[0]
+            if vm_virtual_router['state'] == 4:
                 self.vm_dispatcher.build(vm['id'])
 
     # ############################################################## #
     #                             QUIESCE                            #
     # ############################################################## #
 
-    def _vr_quiesce(self):
+    def _virtual_router_quiesce(self):
         """
-        Check the API for VRs to quiesce, and asyncronously quiesce them
+        Check the API for virtual_routers to quiesce, and asyncronously quiesce them
         """
-        # Retrive the VRs from the API
+        # Retrive the virtual_routers from the API
         to_quiesce = utils.api_list(Compute.virtual_router, QUIESCE_FILTERS)
         if len(to_quiesce) == 0:
-            self.logger.debug('No VRs found in the "Quiesce" state')
+            self.logger.debug('No virtual_routers found in the "Quiesce" state')
             return
-        for vr in to_quiesce:
+        for virtual_router in to_quiesce:
             # check if Router is busy.
-            busy = utils.api_list(Compute.virtual_router, ROUTER_BUSY_FILTERS)
+            busy = utils.api_list(Compute.virtual_router, IN_PROGRESS_FILTERS)
             if len(busy) == 0:
-                self.vr_dispatcher.quiesce(vr['id'])
+                self.virtual_router_dispatcher.quiesce(virtual_router['id'])
             else:
                 break
 
@@ -171,20 +171,20 @@ class Robot:
     #                             RESTART                            #
     # ############################################################## #
 
-    def _vr_restart(self):
+    def _virtual_router_restart(self):
         """
-        Check the API for VRs to restart, and asyncronously restart them
+        Check the API for virtual_routers to restart, and asyncronously restart them
         """
-        # Retrive the VRs from the API
+        # Retrive the virtual_routers from the API
         to_restart = utils.api_list(Compute.virtual_router, RESTART_FILTERS)
         if len(to_restart) == 0:
-            self.logger.debug('No VRs found in the "Restart" state')
+            self.logger.debug('No virtual_routers found in the "Restart" state')
             return
-        for vr in to_restart:
+        for virtual_router in to_restart:
             # check if Router is busy.
-            busy = utils.api_list(Compute.virtual_router, ROUTER_BUSY_FILTERS)
+            busy = utils.api_list(Compute.virtual_router, IN_PROGRESS_FILTERS)
             if len(busy) == 0:
-                self.vr_dispatcher.restart(vr['id'])
+                self.virtual_router_dispatcher.restart(virtual_router['id'])
             else:
                 break
 
@@ -211,33 +211,33 @@ class Robot:
         This gets run once a day at midnight, once we're sure it works
         """
         self.logger.info(f'Commencing scrub checks with updated__lte={timestamp}')
-        self._vr_scrub(timestamp)
+        self._virtual_router_scrub(timestamp)
         self._vm_scrub(timestamp)
         # Flush the loggers
         utils.flush_logstash()
 
-    def _vr_scrub(self, timestamp: Optional[int]):
+    def _virtual_router_scrub(self, timestamp: Optional[int]):
         """
-        Check the API for VRs to scrub, and asyncronously scrub them
-        :param timestamp: The timestamp to use when listing VRs to delete
+        Check the API for virtual_routers to scrub, and asyncronously scrub them
+        :param timestamp: The timestamp to use when listing virtual_routers to delete
         """
         params = {'state': SCRUB_QUEUE}
         if timestamp is not None:
             params['updated__lte'] = timestamp
 
-        # Retrive the VRs from the API
+        # Retrive the virtual_routers from the API
         to_scrub = utils.api_list(Compute.virtual_router, params)
         if len(to_scrub) == 0:
-            self.logger.debug('No VRs found in the "Scrub" state')
+            self.logger.debug('No virtual_routers found in the "Scrub" state')
             return
-        for vr in to_scrub:
+        for virtual_router in to_scrub:
             # since scrub runs only once, sending all requests.
-            self.vr_dispatcher.scrub(vr['id'])
+            self.virtual_router_dispatcher.scrub(virtual_router['id'])
 
     def _vm_scrub(self, timestamp: Optional[int]):
         """
         Check the API for VMs to scrub, and asyncronously scrub them
-        :param timestamp: The timestamp to use when listing VRs to delete
+        :param timestamp: The timestamp to use when listing virtual_routers to delete
         """
         params = {'state': SCRUB_QUEUE}
         if timestamp is not None:
@@ -255,20 +255,20 @@ class Robot:
     #                             UPDATE                             #
     # ############################################################## #
 
-    def _vr_update(self):
+    def _virtual_router_update(self):
         """
-        Check the API for VRs to update, and asyncronously update them
+        Check the API for virtual_routers to update, and asyncronously update them
         """
-        # Retrive the VRs from the API
+        # Retrive the virtual_routers from the API
         to_update = utils.api_list(Compute.virtual_router, UPDATE_FILTERS)
         if len(to_update) == 0:
-            self.logger.debug('No VRs found in the "Update" state')
+            self.logger.debug('No virtual_routers found in the "Update" state')
             return
-        for vr in to_update:
+        for virtual_router in to_update:
             # check if Router is busy.
-            busy = utils.api_list(Compute.virtual_router, ROUTER_BUSY_FILTERS)
+            busy = utils.api_list(Compute.virtual_router, IN_PROGRESS_FILTERS)
             if len(busy) == 0:
-                self.vr_dispatcher.update(vr['id'])
+                self.virtual_router_dispatcher.update(virtual_router['id'])
             else:
                 break
 

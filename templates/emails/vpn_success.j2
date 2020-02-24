@@ -8,7 +8,7 @@
 <hr />
 <h3>Step 1</h3>
 <p>Before connecting to a VPN Tunnel, ensure that your Project is reachable.</p>
-<p>You can check this by pinging the Virtual Router of the Project at <b>{{ vr_ip_address }}</b>.</p>
+<p>You can check this by pinging the Virtual Router of the Project at <b>{{ virtual_router_ip }}</b>.</p>
 <hr />
 <h3>Step 2</h3>
 <p>After ensuring the Project is accessible, configure the VPN settings on your local router with the settings in the table below.</p>
@@ -21,7 +21,7 @@
   {# Addresses #}
   <tr><th colspan="2" class="align-center" style="font-size:1.5em;">Address Details</th></tr>
   <tr><th>Local Router Address</th><td>{{ ike_public_ip }}</td></tr>
-  <tr><th>Remote Router Address</th><td>{{ vr_ip_address'] }}</td></tr>
+  <tr><th>Remote Router Address</th><td>{{ virtual_router_ip'] }}</td></tr>
   <tr><th>Local Proxy ID</th><td>{{ customer_proxy_id }}</td></tr>
   <tr><th>Remote Proxy ID</th><td>{{ cloud_proxy_id }}</td></tr>
   {# IKE Settings #}

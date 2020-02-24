@@ -99,7 +99,7 @@ def _build_vm(vm_id: int, span: Span):
     # Also ensure that the VR is built for the VM
     child_span = opentracing.tracer.start_span('read_project_vr', child_of=span)
     vr_id = vm['project']['virtual_router_id']
-    # need to read so to get the current state of vr
+    # need to read so to get the current state of virtual_router
     vm_vr = utils.api_read(Compute.virtual_router, pk=vr_id, span=child_span)
     child_span.finish()
 

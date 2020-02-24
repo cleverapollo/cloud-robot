@@ -46,8 +46,8 @@ app.conf.task_routes = {
     # Send heartbeat tasks to their own queue
     'tasks.mainloop': {'queue': 'heartbeat'},
     'tasks.scrub': {'queue': 'heartbeat'},
-    # Also send VRF tasks to a separate queue
-    'tasks.vr.*': {'queue': 'vr'},
+    # Also send virtual router tasks to a separate queue
+    'tasks.virtual_router.*': {'queue': 'virtual_router'},
     # All other tasks will be sent to the default queue named 'celery'
 }
 

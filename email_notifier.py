@@ -47,22 +47,22 @@ class EmailNotifier:
         EmailNotifier._compose_email(settings.SEND_TO_FAIL, subject, body)
 
     @staticmethod
-    def vr_failure(vr_data: Dict[str, Any], task: str):
+    def virtual_router_failure(virtual_router_data: Dict[str, Any], task: str):
         """
         Report any kind of failure to the NOC and developers emails
         """
-        logger = logging.getLogger('robot.email_notifier.vr_failure')
-        logger.debug(f'Sending failure email for VR #{vr_data["id"]}')
-        # Add the pretty printed data blob to the VR
-        vr_data['data'] = dumps(vr_data, indent=2, cls=utils.DequeEncoder)
+        logger = logging.getLogger('robot.email_notifier.virtual_router_failure')
+        logger.debug(f'Sending failure email for virtual_router #{virtual_router_data["id"]}')
+        # Add the pretty printed data blob to the virtual_router
+        virtual_router_data['data'] = dumps(virtual_router_data, indent=2, cls=utils.DequeEncoder)
         # Render the email body
-        body = utils.JINJA_ENV.get_template('emails/vr_failure.j2').render(
+        body = utils.JINJA_ENV.get_template('emails/virtual_router_failure.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
             task=task,
-            **vr_data,
+            **virtual_router_data,
         )
         # Format the subject
-        subject = settings.SUBJECT_VR_FAIL
+        subject = settings.SUBJECT_VIRTUAL_ROUTER_FAIL
         EmailNotifier._compose_email(settings.SEND_TO_FAIL, subject, body)
 
     # ############################################################## #

@@ -1,5 +1,5 @@
 """
-builder class for vm vms
+builder class for kvm vms
 
 - gathers template data
 - generates necessary files

@@ -130,10 +130,10 @@ def project_delete(project_id: int, span: Span):
     :param span: The span currently tracing the job. Just passed into the API calls this function makes
     """
     logger = logging.getLogger('robot.utils.project_delete')
-    # Check that list requests for VR and VM both are empty, and if so, delete the project
-    active_vrs = len(api_list(Compute.virtual_router, {'project_id': project_id}, span=span))
+    # Check that list requests for virtual_router and VM both are empty, and if so, delete the project
+    active_virtual_routers = len(api_list(Compute.virtual_router, {'project_id': project_id}, span=span))
     active_vms = len(api_list(Compute.vm, {'project_id': project_id}, span=span))
-    if active_vms == 0 and active_vrs == 0:
+    if active_vms == 0 and active_virtual_routers == 0:
         logger.debug(f'Project #{project_id} is empty. Sending delete request.')
         response = Compute.project.delete(token=Token.get_instance().token, pk=project_id, span=span)
         if response.status_code == UPDATE_STATUS_CODE:
@@ -144,7 +144,10 @@ def project_delete(project_id: int, span: Span):
                 f'Response Text: {response.content.decode()}',
             )
     else:
-        logger.debug(f'Cannot delete Project #{project_id}. {active_vrs} VRFs and {active_vms} VMs remain active.')
+        logger.debug(
+            f'Cannot delete Project #{project_id}. {active_virtual_routers} virtual_routers '
+            f'and {active_vms} VMs remain active.',
+        )
 
 
 # Methods that wrap cloudcix clients to abstract retrieval and checking

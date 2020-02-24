@@ -29,7 +29,6 @@ __all__ = [
     'LOGSTASH_URL',
     'NETWORK_DRIVE_URL',
     'NETWORK_PASSWORD',
-    'NOT_FOUND_STATUS_CODE',
     'PRIVATE_PORT',
     'PUBLIC_PORT',
     'REGION_NAME',
@@ -41,10 +40,8 @@ __all__ = [
     'SUBJECT_VM_SUCCESS',
     'SUBJECT_VPN_BUILD_SUCCESS',
     'SUBJECT_VPN_UPDATE_SUCCESS',
-    'SUBJECT_VR_FAIL',
-    'SUCCESS_STATUS_CODE',
-    'UPDATE_STATUS_CODE',
-    'VRS_ENABLED',
+    'SUBJECT_VIRTUAL_ROUTER_FAIL',
+    'VIRTUAL_ROUTERS_ENABLED',
 ]
 
 """
@@ -59,8 +56,8 @@ IN_PRODUCTION = False
 # Password for connecting to routers and servers
 NETWORK_PASSWORD = ''
 
-# Flag to state whether VRs are enabled or not
-VRS_ENABLED = True
+# Flag to state whether VIRTUAL_ROUTERs are enabled or not
+VIRTUAL_ROUTERS_ENABLED = True
 
 """
 CloudCIX API Settings
@@ -127,8 +124,8 @@ SUBJECT_VPN_BUILD_SUCCESS = ''
 # Subject for VPN tunnel update success Emails
 SUBJECT_VPN_UPDATE_SUCCESS = ''
 
-# Subject for VR build fail Emails
-SUBJECT_VR_FAIL = ''
+# Subject for VIRTUAL_ROUTER build fail Emails
+SUBJECT_VIRTUAL_ROUTER_FAIL = ''
 
 """
 Logging Settings
@@ -172,13 +169,8 @@ HYPERV_VMS_PATH = ''
 # Nas drive mount url
 NETWORK_DRIVE_URL = ''
 
-# Api response code
-NOT_FOUND_STATUS_CODE = 404
-SUCCESS_STATUS_CODE = 200
-UPDATE_STATUS_CODE = 204
-
 """
-Router settings, are required if VRS_ENABLED is True
+Router settings, are required if VIRTUAL_ROUTERS_ENABLED is True
 """
 # Public port e.g 'ge-0/0/0'
 PUBLIC_PORT = ''

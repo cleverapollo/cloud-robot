@@ -1,5 +1,5 @@
 """
-mixin class containing methods that are needed by vr task classes
+mixin class containing methods that are needed by VirtualRouter task classes
 methods included;
     - method to get management ip and router model since they're not currently easy
     - method to get port data since that's not currently easy either
@@ -13,12 +13,12 @@ from jnpr.junos.exception import CommitError, ConfigLoadError, ConnectError, Loc
 from jnpr.junos.utils.config import Config
 
 __all__ = [
-    'VrMixin',
+    'VirtualRouterMixin',
 ]
 MAX_ATTEMPTS = 10
 
 
-class VrMixin:
+class VirtualRouterMixin:
     logger: logging.Logger
 
     @classmethod
