@@ -89,7 +89,8 @@ class VirtualRouter(VirtualRouterMixin):
     @staticmethod
     def _get_template_data(virtual_router_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
         """
-        Given the virtual_router data from the API, create a dictionary that contains all of the necessary keys for the template
+        Given the virtual_router data from the API, create a dictionary that contains all of the necessary keys
+        for the template.
         The keys will be checked in the scrub method and not here, this method is only concerned with fetching the data
         that it can.
         :param virtual_router_data: The data on the virtual_router that was retrieved from the API
