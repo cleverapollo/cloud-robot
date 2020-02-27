@@ -1,16 +1,23 @@
 # Kickstart file for VM #{{ vm_identifier }}
 
-{# Install OS instead of upgrade #}
-install
+{# System Authorization Information #}
+auth --enableshadow --passalgo=sha512
+
+{# System Bootloader information #}
+bootloader --location=mbr
 
 {# Installation media #}
 cdrom
 
-{# System Language #}
-lang {{ language }}.UTF-8
+{# Partition Clearing Information #}
+clearpart --all --initlabel
 
-{# System Keyboard #}
-keyboard {{ keyboard }}
+{# LVM Disk Partitioning #}
+part pv.vda --fstype="lvmpv" --ondisk=vda --size=1 --grow
+volgroup vg.vda --pesize=4096 pv.vda
+logvol / fstype="ext4" --name=root --vgname=vg.vda --size=5024 --grow
+logvol swap --fstype="swap" --name=swap --vgname=vg.vda --size=1024
+part /boot --fstype="ext4" --size=500
 
 {# Firewall configuration #}
 firewall --disabled
@@ -18,20 +25,14 @@ firewall --disabled
 {# Run the setup agent on the first boot #}
 firstboot --disabled
 
-{# System Timezone #}
-timezone --utc {{ timezone }}
+{# Install OS instead of upgrade #}
+install
 
-{# Use text mode install #}
-text
+{# System Keyboard #}
+keyboard {{ keyboard }}
 
-{# System Authorization Information #}
-auth --enableshadow --passalgo=sha512
-
-{# Clear the MBR #}
-zerombr
-
-{# Partition Clearing Information #}
-clearpart --all --initlabel
+{# System Language #}
+lang {{ language }}.UTF-8
 
 {# Installation log level #}
 logging --level=info
@@ -39,18 +40,11 @@ logging --level=info
 {# Network Information #}
 network --bootproto=static --ip={{ ip_address }} --netmask={{ netmask }} --gateway={{ gateway }} --nameserver={{ dns }}
 
-{# System Bootloader information #}
-bootloader --location=mbr
-
-{# Disk Partioning #}
-clearpart --all --initlabel
-autopart --type=lvm
+{# Reboot after installation #}
+reboot --eject
 
 {# Root password #}
 rootpw --iscrypted {{ crypted_root_password }}
-
-{# Username / Password #}
-user --name "administrator" --password={{ crypted_admin_password }} --groups=wheel --iscrypted
 
 {# SELinux configuration #}
 selinux --disabled
@@ -58,8 +52,17 @@ selinux --disabled
 {# Do not configure the X Window System #}
 skipx
 
-{# Reboot after installation #}
-reboot --eject
+{# Use text mode install #}
+text
+
+{# System Timezone #}
+timezone --utc {{ timezone }}
+
+{# Username / Password #}
+user --name "administrator" --password={{ crypted_admin_password }} --groups=wheel --iscrypted
+
+{# Clear the MBR #}
+zerombr
 
 {# Install packages #}
 %packages
