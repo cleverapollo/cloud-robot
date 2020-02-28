@@ -6,7 +6,6 @@ from cloudcix.api.compute import Compute
 from jaeger_client import Span
 # local
 import metrics
-import settings
 import state
 import utils
 from celery_app import app
@@ -52,13 +51,13 @@ def _scrub_vm(vm_id: int, span: Span):
     )
     child_span.finish()
 
-    if response.status_code == settings.NOT_FOUND_STATUS_CODE:
+    if response.status_code == 404:
         logger.info(
             f'Received scrub task for VM #{vm_id} but it was already deleted from the API',
         )
         span.set_tag('return_reason', 'already_deleted')
         return
-    elif response.status_code != settings.SUCCESS_STATUS_CODE:
+    elif response.status_code != 200:
         logger.error(
             f'HTTP {response.status_code} error occurred when attempting to fetch VM #{vm_id};\n'
             f'Response Text: {response.content.decode()}',
@@ -127,7 +126,7 @@ def _scrub_vm(vm_id: int, span: Span):
         response = Compute.vm.delete(token=Token.get_instance().token, pk=vm_id, span=child_span)
         child_span.finish()
 
-        if response.status_code != settings.UPDATE_STATUS_CODE:
+        if response.status_code != 204:
             logger.error(
                 f'HTTP {response.status_code} error occurred when attempting to delete VM #{vm_id};\n'
                 f'Response Text: {response.content.decode()}',
