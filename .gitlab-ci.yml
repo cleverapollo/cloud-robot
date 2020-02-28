@@ -46,7 +46,6 @@ build_alpha:
     - docker-build
   script:
     - docker build -f deployment/dockerfiles/alpha.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/alpha:latest --no-cache .
-    - docker run gitlab.cloudcix.com:5005/cloudcix/robot/alpha:latest sh -c "pip3 install -U git+https://cloudadmin:C1xacc355@gitlab.cloudcix.com/CloudCIX/SDKs/Python@ipam-compute"
     - docker push gitlab.cloudcix.com:5005/cloudcix/robot/alpha:latest
   only:
   - master
