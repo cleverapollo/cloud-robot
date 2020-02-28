@@ -22,8 +22,6 @@ from settings import (
     LOGSTASH_URL,
     NETWORK_PASSWORD,
     REGION_NAME,
-    SUCCESS_STATUS_CODE,
-    UPDATE_STATUS_CODE,
 )
 
 
@@ -136,7 +134,7 @@ def project_delete(project_id: int, span: Span):
     if active_vms == 0 and active_virtual_routers == 0:
         logger.debug(f'Project #{project_id} is empty. Sending delete request.')
         response = Compute.project.delete(token=Token.get_instance().token, pk=project_id, span=span)
-        if response.status_code == UPDATE_STATUS_CODE:
+        if response.status_code == 204:
             logger.info(f'Successfully deleted Project #{project_id} from the CMDB')
         else:
             logger.error(
@@ -179,7 +177,7 @@ def api_list(client: Client, params: Dict[str, Any], **kwargs) -> Deque[Dict[str
         params=params,
         **kwargs,
     )
-    if response.status_code != SUCCESS_STATUS_CODE:
+    if response.status_code != 200:
         logger.error(
             f'HTTP {response.status_code} error occurred when attempting to fetch {client_name} instances with '
             f'filters {params};\nResponse Text: {response.content.decode()}',
@@ -206,7 +204,7 @@ def api_list(client: Client, params: Dict[str, Any], **kwargs) -> Deque[Dict[str
             params=params,
             **kwargs,
         )
-        if response.status_code != SUCCESS_STATUS_CODE:
+        if response.status_code != 200:
             logger.error(
                 f'HTTP {response.status_code} error occurred when attempting to fetch {client_name} instances with '
                 f'filters {params};\nResponse Text: {response.content.decode()}',
@@ -234,7 +232,7 @@ def api_read(client: Client, pk: int, **kwargs) -> Dict[str, Any]:
         pk=pk,
         **kwargs,
     )
-    if response.status_code == SUCCESS_STATUS_CODE:
+    if response.status_code == 200:
         obj = response.json()['content']
     else:
         logger.error(
