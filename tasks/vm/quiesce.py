@@ -13,7 +13,6 @@ import utils
 from celery_app import app
 from cloudcix_token import Token
 from email_notifier import EmailNotifier
-from settings import UPDATE_STATUS_CODE
 from quiescers.vm import (
     Linux as LinuxVmQuiescer,
     Windows as WindowsVmQuiescer,
@@ -43,7 +42,7 @@ def _unresource(vm: Dict[str, Any], span: Span):
     )
     child_span.finish()
 
-    if response.status_code != UPDATE_STATUS_CODE:
+    if response.status_code != 204:
         logger.error(
             f'Could not update VM #{vm_id} to state UNRESOURCED. Response: {response.content.decode()}.',
         )
@@ -114,7 +113,7 @@ def _quiesce_vm(vm_id: int, span: Span):
         child_span.finish()
 
         # Ensure the update was successful
-        if response.status_code != UPDATE_STATUS_CODE:
+        if response.status_code != 204:
             logger.error(
                 f'Could not update VM #{vm_id} to QUIESCING. Response: {response.content.decode()}.',
             )
@@ -132,7 +131,7 @@ def _quiesce_vm(vm_id: int, span: Span):
         )
         child_span.finish()
         # Ensure the update was successful
-        if response.status_code != UPDATE_STATUS_CODE:
+        if response.status_code != 204:
             logger.error(
                 f'Could not update VM #{vm_id} to SCRUB_PREP. Response: {response.content.decode()}.',
             )
@@ -201,7 +200,7 @@ def _quiesce_vm(vm_id: int, span: Span):
             )
             child_span.finish()
 
-            if response.status_code != UPDATE_STATUS_CODE:
+            if response.status_code != 204:
                 logger.error(
                     f'Could not update VM #{vm_id} to state QUIESCED. Response: {response.content.decode()}.',
                 )
@@ -217,7 +216,7 @@ def _quiesce_vm(vm_id: int, span: Span):
             )
             child_span.finish()
 
-            if response.status_code != UPDATE_STATUS_CODE:
+            if response.status_code != 204:
                 logger.error(
                     f'Could not update VM #{vm_id} to state SCRUB_QUEUE. Response: {response.content.decode()}.',
                 )
