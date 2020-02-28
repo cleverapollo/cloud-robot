@@ -55,7 +55,7 @@
     - name: Deploy latest Robot worker for {{ env }} region
       docker_container:
         name: "robot-worker"
-        image: "gitlab.cloudcix.com:5005/cloudcix/robot/{{ env }}:latest"
+        image: "gitlab.cloudcix.com:5005/cloudcix/robot/{{ env }}"
         state: started
         pull: true
         network_mode: host
