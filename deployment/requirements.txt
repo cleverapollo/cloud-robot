@@ -1,5 +1,6 @@
 Celery>=4,<5
-cloudcix
+# cloudcix
+git+https://gitlab.cloudcix.com/CloudCIX/SDKs/Python@ipam-compute
 git+https://github.com/CloudCIX/python-logstash-async.git
 git+https://github.com/diyan/pywinrm.git@3bf4ab094761a861563fc1df1d4b44134147c206
 influxdb
