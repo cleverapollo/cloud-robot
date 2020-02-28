@@ -190,7 +190,7 @@ def api_list(client: Client, params: Dict[str, Any], **kwargs) -> Deque[Dict[str
     total_records: int
     total_records = response_data['_metadata'].get(
         'total_records',
-        response_data['_metadata']['totalRecords'],
+        response_data['_metadata']['total_records'],
     )
     logger.debug(
         f'{client_name}.list retrieved {total_records} records with the following filters: {params}',
