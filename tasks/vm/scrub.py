@@ -126,7 +126,7 @@ def _scrub_vm(vm_id: int, span: Span):
         response = Compute.vm.delete(token=Token.get_instance().token, pk=vm_id, span=child_span)
         child_span.finish()
 
-        if response.status_code != 204:
+        if response.status_code != 200:
             logger.error(
                 f'HTTP {response.status_code} error occurred when attempting to delete VM #{vm_id};\n'
                 f'Response Text: {response.content.decode()}',
