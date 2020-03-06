@@ -42,7 +42,7 @@ def _unresource(vm: Dict[str, Any], span: Span):
     )
     child_span.finish()
 
-    if response.status_code != 204:
+    if response.status_code != 200:
         logger.error(
             f'Could not update VM #{vm_id} to state UNRESOURCED. Response: {response.content.decode()}.',
         )
@@ -113,7 +113,7 @@ def _quiesce_vm(vm_id: int, span: Span):
         child_span.finish()
 
         # Ensure the update was successful
-        if response.status_code != 204:
+        if response.status_code != 200:
             logger.error(
                 f'Could not update VM #{vm_id} to QUIESCING. Response: {response.content.decode()}.',
             )
@@ -131,7 +131,7 @@ def _quiesce_vm(vm_id: int, span: Span):
         )
         child_span.finish()
         # Ensure the update was successful
-        if response.status_code != 204:
+        if response.status_code != 200:
             logger.error(
                 f'Could not update VM #{vm_id} to SCRUB_PREP. Response: {response.content.decode()}.',
             )
@@ -200,7 +200,7 @@ def _quiesce_vm(vm_id: int, span: Span):
             )
             child_span.finish()
 
-            if response.status_code != 204:
+            if response.status_code != 200:
                 logger.error(
                     f'Could not update VM #{vm_id} to state QUIESCED. Response: {response.content.decode()}.',
                 )
@@ -216,7 +216,7 @@ def _quiesce_vm(vm_id: int, span: Span):
             )
             child_span.finish()
 
-            if response.status_code != 204:
+            if response.status_code != 200:
                 logger.error(
                     f'Could not update VM #{vm_id} to state SCRUB_QUEUE. Response: {response.content.decode()}.',
                 )

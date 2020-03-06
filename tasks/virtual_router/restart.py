@@ -72,7 +72,7 @@ def _restart_virtual_router(virtual_router_id: int, span: Span):
     child_span.finish()
 
     # Ensure the update was successful
-    if response.status_code != 204:
+    if response.status_code != 200:
         logger.error(
             f'Could not update VM #{virtual_router_id} to the necessary RESTARTING. '
             f'Response: {response.content.decode()}.',
@@ -110,7 +110,7 @@ def _restart_virtual_router(virtual_router_id: int, span: Span):
         )
         child_span.finish()
 
-        if response.status_code != 204:
+        if response.status_code != 200:
             logger.error(
                 f'Could not update virtual_router #{virtual_router_id} to state RUNNING. '
                 f'Response: {response.content.decode()}.',
@@ -129,7 +129,7 @@ def _restart_virtual_router(virtual_router_id: int, span: Span):
         )
         child_span.finish()
 
-        if response.status_code != 204:
+        if response.status_code != 200:
             logger.error(
                 f'Could not update virtual_router #{virtual_router_id} to state UNRESOURCED. '
                 f'Response: {response.content.decode()}.',

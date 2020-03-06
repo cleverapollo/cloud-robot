@@ -71,10 +71,10 @@ def _build_virtual_router(virtual_router_id: int, span: Span):
     )
     child_span.finish()
 
-    if response.status_code != 204:
+    if response.status_code != 200:
         logger.error(
             f'Could not update virtual_router #{virtual_router_id} to state BUILDING. '
-            f'With error code {response.status_code} , Response: {response.content.decode()}.',
+            f'Response: {response.content.decode()}.',
         )
         metrics.virtual_router_build_failure()
         span.set_tag('return_reason', 'could_not_update_state')
@@ -107,7 +107,7 @@ def _build_virtual_router(virtual_router_id: int, span: Span):
         )
         child_span.finish()
 
-        if response.status_code != 204:
+        if response.status_code != 200:
             logger.error(
                 f'Could not update virtual_router #{virtual_router_id} to state RUNNING. '
                 f'Response: {response.content.decode()}.',
@@ -130,7 +130,7 @@ def _build_virtual_router(virtual_router_id: int, span: Span):
                         span=child_span,
                     )
                     child_span.finish()
-                    if response.status_code != 204:
+                    if response.status_code != 200:
                         logger.error(
                             f'Could not update VPN #{vpn["id"]} to reset send_email. '
                             f'Response: {response.content.decode()}.',
@@ -155,7 +155,7 @@ def _build_virtual_router(virtual_router_id: int, span: Span):
         )
         child_span.finish()
 
-        if response.status_code != 204:
+        if response.status_code != 200:
             logger.error(
                 f'Could not update virtual_router #{virtual_router_id} to state UNRESOURCED. '
                 f'Response: {response.content.decode()}.',

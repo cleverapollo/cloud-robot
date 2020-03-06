@@ -41,7 +41,7 @@ def _unresource(vm: Dict[str, Any], span: Span):
     )
     child_span.finish()
 
-    if response.status_code != 204:
+    if response.status_code != 200:
         logger.error(
             f'Could not update VM #{vm_id} to state UNRESOURCED. Response: {response.content.decode()}.',
         )
@@ -109,7 +109,7 @@ def _restart_vm(vm_id: int, span: Span):
     child_span.finish()
 
     # Ensure the update was successful
-    if response.status_code != 204:
+    if response.status_code != 200:
         logger.error(
             f'Could not update VM #{vm_id} to RESTARTING. Response: {response.content.decode()}.',
         )
@@ -171,7 +171,7 @@ def _restart_vm(vm_id: int, span: Span):
             data={'state': state.RUNNING},
             span=child_span,
         )
-        if response.status_code != 204:
+        if response.status_code != 200:
             logger.error(
                 f'Could not update VM #{vm_id} to state RUNNING. Response: {response.content.decode()}.',
             )
