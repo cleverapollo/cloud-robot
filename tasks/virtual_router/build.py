@@ -74,7 +74,7 @@ def _build_virtual_router(virtual_router_id: int, span: Span):
     if response.status_code != 204:
         logger.error(
             f'Could not update virtual_router #{virtual_router_id} to state BUILDING. '
-            f'Response: {response.content.decode()}.',
+            f'With error code {response.status_code} , Response: {response.content.decode()}.',
         )
         metrics.virtual_router_build_failure()
         span.set_tag('return_reason', 'could_not_update_state')
