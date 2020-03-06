@@ -74,7 +74,7 @@ def _quiesce_virtual_router(virtual_router_id: int, span: Span):
         child_span.finish()
 
         # Ensure the update was successful
-        if response.status_code != 204:
+        if response.status_code != 200:
             logger.error(
                 f'Could not update VM #{virtual_router_id} to the necessary QUIESCING. '
                 f'Response: {response.content.decode()}.',
@@ -94,7 +94,7 @@ def _quiesce_virtual_router(virtual_router_id: int, span: Span):
         )
         child_span.finish()
         # Ensure the update was successful
-        if response.status_code != 204:
+        if response.status_code != 200:
             logger.error(
                 f'Could not update VM #{virtual_router_id} to the necessary SCRUB_PREP. '
                 f'Response: {response.content.decode()}.',
@@ -133,7 +133,7 @@ def _quiesce_virtual_router(virtual_router_id: int, span: Span):
             )
             child_span.finish()
 
-            if response.status_code != 204:
+            if response.status_code != 200:
                 logger.error(
                     f'Could not update virtual_router #{virtual_router_id} to state QUIESCED. '
                     f'Response: {response.content.decode()}.',
@@ -148,7 +148,7 @@ def _quiesce_virtual_router(virtual_router_id: int, span: Span):
             )
             child_span.finish()
 
-            if response.status_code != 204:
+            if response.status_code != 200:
                 logger.error(
                     f'Could not update virtual_router #{virtual_router_id} to state SCRUB_QUEUE. '
                     f'Response: {response.content.decode()}.',
@@ -172,7 +172,7 @@ def _quiesce_virtual_router(virtual_router_id: int, span: Span):
         )
         child_span.finish()
 
-        if response.status_code != 204:
+        if response.status_code != 200:
             logger.error(
                 f'Could not update virtual_router #{virtual_router_id} to state UNRESOURCED. '
                 f'Response: {response.content.decode()}.',

@@ -40,7 +40,7 @@ def _unresource(vm: Dict[str, Any], span: Span):
     )
     child_span.finish()
 
-    if response.status_code != 204:
+    if response.status_code != 200:
         logging.getLogger('robot.tasks.vm.build').error(
             f'Could not update VM #{vm_id} to state UNRESOURCED. Response: {response.content.decode()}.',
         )
@@ -129,7 +129,7 @@ def _build_vm(vm_id: int, span: Span):
     )
     child_span.finish()
 
-    if response.status_code != 204:
+    if response.status_code != 200:
         logger.error(
             f'Could not update VM #{vm_id} to state BUILDING. Response: {response.content.decode()}.',
         )
@@ -194,7 +194,7 @@ def _build_vm(vm_id: int, span: Span):
         )
         child_span.finish()
 
-        if response.status_code != 204:
+        if response.status_code != 200:
             logger.error(
                 f'Could not update VM #{vm_id} to state RUNNING. Response: {response.content.decode()}.',
             )

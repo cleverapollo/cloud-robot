@@ -134,7 +134,7 @@ def project_delete(project_id: int, span: Span):
     if active_vms == 0 and active_virtual_routers == 0:
         logger.debug(f'Project #{project_id} is empty. Sending delete request.')
         response = Compute.project.delete(token=Token.get_instance().token, pk=project_id, span=span)
-        if response.status_code == 204:
+        if response.status_code == 200:
             logger.info(f'Successfully deleted Project #{project_id} from the CMDB')
         else:
             logger.error(

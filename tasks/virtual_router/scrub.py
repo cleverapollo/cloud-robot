@@ -100,7 +100,7 @@ def _scrub_virtual_router(virtual_router_id: int, span: Span):
         )
         child_span.finish()
 
-        if response.status_code == 204:
+        if response.status_code == 200:
             logger.info(f'virtual_router #{virtual_router_id} successfully deleted from the API')
         else:
             logger.error(
