@@ -13,7 +13,6 @@ from typing import Any, Dict, Optional
 import opentracing
 from cloudcix.api.compute import Compute
 from jaeger_client import Span
-from netaddr import IPAddress
 # local
 import utils
 from mixins import VirtualRouterMixin

@@ -16,7 +16,7 @@ import opentracing
 from cloudcix.api.compute import Compute
 from cloudcix.api.ipam import IPAM
 from jaeger_client import Span
-from netaddr import IPAddress, IPNetwork
+from netaddr import IPNetwork
 # local
 import utils
 from mixins import VirtualRouterMixin
