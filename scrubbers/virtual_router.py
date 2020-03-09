@@ -13,7 +13,6 @@ from typing import Any, Dict, Optional
 import opentracing
 from cloudcix.api.compute import Compute
 from jaeger_client import Span
-from netaddr import IPAddress
 # local
 import utils
 from mixins import VirtualRouterMixin
@@ -103,25 +102,10 @@ class VirtualRouter(VirtualRouterMixin):
 
         data['project_id'] = virtual_router_data['project']['id']
 
-        # Get the management ip address which is IPv6 and Gateway as name of Router ips
-        management_ip = None
+        # Get the management ip address from the Router.
         child_span = opentracing.tracer.start_span('reading_router', child_of=span)
         router = utils.api_read(Compute.router, virtual_router_data['router_id'], span=child_span)
         child_span.finish()
-        if 'ip_addresses' not in router.keys():
-            VirtualRouter.logger.error(
-                f'Invalid router data fot the Router # {router["id"]}',
-            )
-            return None
-        for ip in router['ip_addresses']:
-            if IPAddress(ip['address']).version == 6 and ip['name'] == 'Gateway':
-                management_ip = ip['address']
-                break
-        if management_ip is None:
-            VirtualRouter.logger.error(
-                f'Mangement ip address not found for the Router # {router["id"]}',
-            )
-            return None
-        data['management_ip'] = management_ip
+        data['management_ip'] = router['management_ip']
 
         return data
