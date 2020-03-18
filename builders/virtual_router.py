@@ -155,11 +155,11 @@ class VirtualRouter(VirtualRouterMixin):
         subnet_ips = utils.api_list(IPAM.ip_address, params, span=child_span)
         child_span.finish()
         for ip in subnet_ips:
-            if len(ip['private_ip']) != 0 and len(ip['public_ip']) != 0:
+            if len(ip['public_ip']) != 0:
                 nats.append({
-                    'private_address': ip['private_ip']['address'],
+                    'private_address': ip['address'],
                     'public_address': ip['public_ip']['address'],
-                    'vlan': ip['private_ip']['subnet']['vlan'],
+                    'vlan': ip['subnet']['vlan'],
                 })
         data['nats'] = nats
 
