@@ -61,7 +61,7 @@ class Windows(WindowsMixin):
         # the amount of RAM in the VM
         'ram',
         # storage type (HDD/SSD)
-        'storage_type'
+        'storage_type',
         # storages of the vm
         'storages',
         # the timezone of the vm
