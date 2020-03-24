@@ -81,7 +81,7 @@ class EmailNotifier:
         emails = vm_data.get('emails', None)
         if emails is None:
             logger.error(f'No email found for VM #{vm_data["id"]}. Sending to {settings.SEND_TO_FAIL} instead.')
-            email = settings.SEND_TO_FAIL
+            emails = [settings.SEND_TO_FAIL]
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/vm_build_success.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
@@ -151,7 +151,7 @@ class EmailNotifier:
         emails = vm_data.get('emails', None)
         if emails is None:
             logger.error(f'No email found for VM #{vm_data["id"]}. Sending to {settings.SEND_TO_FAIL} instead.')
-            email = settings.SEND_TO_FAIL
+            emails = [settings.SEND_TO_FAIL]
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/vm_build_failure.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
@@ -180,7 +180,7 @@ class EmailNotifier:
         emails = vm_data.get('emails', None)
         if emails is None:
             logger.error(f'No email found for VM #{vm_data["id"]}. Sending to {settings.SEND_TO_FAIL} instead.')
-            email = settings.SEND_TO_FAIL
+            emails = [settings.SEND_TO_FAIL]
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/scheduled_delete_success.j2').render(
             compute_url=settings.COMPUTE_URL,
