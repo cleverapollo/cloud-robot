@@ -55,7 +55,7 @@ class Windows(WindowsMixin):
         # the language of the vm
         'language',
         # the subnet mask in integer form (/24)
-        'netmask',
+        'netmask_int',
         # the nas drive url for the region
         'network_drive_url',
         # the amount of RAM in the VM
@@ -200,7 +200,7 @@ class Windows(WindowsMixin):
         # Get the Networking details
         data['ip_address'] = vm_data['ip_address']['address']
         net = IPNetwork(vm_data['ip_address']['subnet']['address_range'])
-        data['gateway'], data['netmask'] = str(net.ip), str(net.netmask)
+        data['gateway'], data['netmask_int'] = str(net.ip), str(net.prefixlen)
         data['vlan'] = vm_data['ip_address']['subnet']['vlan']
 
         # Add locale data to the VM
