@@ -42,8 +42,6 @@ class Windows(WindowsMixin):
         'cpu',
         # the dns servers for the vm (in list form, not string form)
         'dns',
-        # the nas drive url for the region
-        'nas_drive_url',
         # the subnet gateway
         'gateway',
         # the DNS hostname for the host machine, as WinRM cannot use IPv6
@@ -57,7 +55,9 @@ class Windows(WindowsMixin):
         # the language of the vm
         'language',
         # the subnet mask in integer form (/24)
-        'netmask_int',
+        'netmask',
+        # the nas drive url for the region
+        'network_drive_url',
         # the amount of RAM in the VM
         'ram',
         # storage type (HDD/SSD)
