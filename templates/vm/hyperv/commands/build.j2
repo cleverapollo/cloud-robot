@@ -62,7 +62,7 @@ try {
 {# Setting Network Adapter #}
     Set-VMNetworkAdapterVlan -VMName {{ vm_identifier }} -Access -VlanId {{ vlan }}
 {# Adding Additional Storages #}
-{% for for storage in storages %}
+{% for storage in storages %}
 {% if not storage["primary"] %}
     $driveSize = [int64]{{ storage["gb"] }}*1GB
 {% set drive_path = [[[[vms_path, vm_identifier]|join(), vm_identifier]|join("\\"), storage_type, storage["id"]]|join("_"), ".vhdx"]|join() %}
