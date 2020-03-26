@@ -119,7 +119,7 @@ class Windows(WindowsMixin):
         Windows.logger.debug(f'Compiling template data for VM #{vm_id}')
         data: Dict[str, Any] = {key: None for key in Windows.template_keys}
 
-        data['vm_identifier'] = f'{vm_data["project"]}_{vm_id}'
+        data['vm_identifier'] = f'{vm_data["project"]["id"]}_{vm_id}'
 
         # Get the host name of the server
         host_name = None
