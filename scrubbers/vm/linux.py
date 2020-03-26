@@ -216,9 +216,9 @@ class Linux(LinuxMixin):
         vm_id = vm_data['id']
         # Get the list of VMs with following params
         params = {
-            'exclude__id': vm_id,
-            'project_id': vm_data['project']['id'],
-            'server_id': vm_data['server_id'],
+            'search[exclude__id]': vm_id,
+            'search[project_id]': vm_data['project']['id'],
+            'search[server_id]': vm_data['server_id'],
         }
         vms = utils.api_list(Compute.vm, params, span=span)
 

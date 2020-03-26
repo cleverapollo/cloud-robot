@@ -221,9 +221,9 @@ class Robot:
         Check the API for virtual_routers to scrub, and asyncronously scrub them
         :param timestamp: The timestamp to use when listing virtual_routers to delete
         """
-        params = {'state': SCRUB_QUEUE}
+        params = {'search[state]': SCRUB_QUEUE}
         if timestamp is not None:
-            params['updated__lte'] = timestamp
+            params['search[updated__lte]'] = timestamp
 
         # Retrive the virtual_routers from the API
         to_scrub = utils.api_list(Compute.virtual_router, params)
@@ -239,9 +239,9 @@ class Robot:
         Check the API for VMs to scrub, and asyncronously scrub them
         :param timestamp: The timestamp to use when listing virtual_routers to delete
         """
-        params = {'state': SCRUB_QUEUE}
+        params = {'search[state]': SCRUB_QUEUE}
         if timestamp is not None:
-            params['updated__lte'] = timestamp
+            params['search[updated__lte]'] = timestamp
 
         # Retrive the VMs from the API
         to_scrub = utils.api_list(Compute.vm, params)
