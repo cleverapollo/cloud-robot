@@ -189,7 +189,7 @@ class Windows(WindowsMixin, VmUpdateMixin):
         # Get the host name of the server
         host_name = None
         for interface in vm_data['server_data']['interfaces']:
-            if interface['enabled'] is True and interface['hostname'] is not None:
+            if interface['enabled'] is True and interface['ip_address'] is not None:
                 if IPAddress(str(interface['ip_address'])).version == 6:
                     host_name = interface['hostname']
                     break
