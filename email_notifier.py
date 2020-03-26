@@ -34,7 +34,7 @@ class EmailNotifier:
         """
         logger = logging.getLogger('robot.email_notifier.failure')
         logger.debug(f'Sending failure email for VM #{vm_data["id"]}')
-        vm_data.pop('admin_password')
+        vm_data.pop('admin_password', None)
         # Add the pretty printed data blob to the VM
         vm_data['data'] = dumps(vm_data, indent=2, cls=utils.DequeEncoder)
         # Render the email body
