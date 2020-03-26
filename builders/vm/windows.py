@@ -246,7 +246,7 @@ class Windows(WindowsMixin):
             # Attempt to write
             answer_file_path = f'{network_drive_path}/answer_files/{template_data["vm_identifier"]}.xml'
             with open(answer_file_path, 'w') as f:
-                f.write(answer_file_path)
+                f.write(answer_file_data)
             Windows.logger.debug(f'Successfully wrote answer file for VM #{vm_id} to {answer_file_data}')
         except IOError:
             Windows.logger.error(

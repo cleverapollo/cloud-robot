@@ -150,7 +150,7 @@ class VirtualRouter(VirtualRouterMixin):
         data['vlans'] = vlans
 
         # Check if there are any NAT rules needed in this subnet
-        params = {'subnet_id__in': [subnet['id'] for subnet in subnets]}
+        params = {'search[subnet_id__in]': [subnet['id'] for subnet in subnets]}
         child_span = opentracing.tracer.start_span('listing_ip_addresses', child_of=span)
         subnet_ips = utils.api_list(IPAM.ip_address, params, span=child_span)
         child_span.finish()
@@ -217,7 +217,7 @@ class VirtualRouter(VirtualRouterMixin):
 
         # Finally, get the VPNs for the Project
         vpns: Deque[Dict[str, Any]] = deque()
-        params = {'virtual_router_id': virtual_router_id}
+        params = {'search[virtual_router_id]': virtual_router_id}
         child_span = opentracing.tracer.start_span('listing_vpns', child_of=span)
         virtual_router_vpns = utils.api_list(Compute.vpn, params, span=child_span)
         child_span.finish()
