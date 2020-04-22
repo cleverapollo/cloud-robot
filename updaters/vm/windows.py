@@ -161,10 +161,10 @@ class Windows(WindowsMixin, VmUpdateMixin):
             'cpu': False,
             'storages': False,
         }
-        if 'ram' in vm_data['changes_this_month'][0]['details'].keys():
+        if vm_data['changes_this_month'][0]['ram_quantity']:
             # RAM is needed in MB for the updater but we take it in in GB (1024, not 1000)
             changes['ram'] = vm_data['ram'] * 1024
-        if 'cpu' in vm_data['changes_this_month'][0]['details'].keys():
+        if vm_data['changes_this_month'][0]['cpu_quantity']:
             changes['cpu'] = vm_data['cpu']
 
         data['dns'] = vm_data['dns'].replace(',', '", "')
@@ -191,7 +191,7 @@ class Windows(WindowsMixin, VmUpdateMixin):
                 break
 
         # Fetch the drive information for the update
-        if 'storages' in vm_data['changes_this_month'][0]['details'].keys():
+        if len(vm_data['changes_this_month'][0]['storage_histories']) != 0:
             Windows.logger.debug(f'Fetching drives for VM #{vm_id}')
             hdd, ssd, drives = Windows.fetch_drive_updates(vm_data, span)
             changes['storages'] = {
@@ -203,5 +203,5 @@ class Windows(WindowsMixin, VmUpdateMixin):
         data['changes'] = changes
         # Determine whether or not we should turn the VM back on after the update finishes
         Windows.logger.debug(f'Determining if VM #{vm_id} should be powered on after update')
-        data['restart'] = Windows.determine_should_restart(vm_data)
+        data['restart'] = Windows.determine_should_restart(vm_data, span=span)
         return data
