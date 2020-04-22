@@ -22,7 +22,7 @@ class VmUpdateMixin:
     logger: logging.Logger
 
     @classmethod
-    def fetch_drive_updates(cls, vm_data: Dict[str, Any], span: Span) -> Tuple[str, str, Deque[Dict[str, str]]]:
+    def fetch_drive_updates(cls, vm_data: Dict[str, Any], span: Span) -> Tuple[str, str, Deque[Dict[str, int]]]:
         """
         Given a VM's data, generate the data for drives that need to be updated in this update request
         :param vm_data: The data of the VM being updated
@@ -32,41 +32,52 @@ class VmUpdateMixin:
         vm_id = vm_data['idVM']
         hdd = ''
         ssd = ''
-        drives: Deque[Dict[str, str]] = deque()
+        drives: Deque[Dict[str, int]] = deque()
 
         # Check through the VM's latest batch of changes and determine if any drives have been changed
         if len(vm_data['changes_this_month']) == 0:
             # Unusual to be here, just return
             return hdd, ssd, drives
 
-        # If there has been a change, grab the storage changes and use them to update the values
-        storage_changes = vm_data['changes_this_month'][0]['details'].get('storages', {})
-        if len(storage_changes) == 0:
-            # No storages were changed, return the defaults
+        # Check if the latest change had any drives changed
+        if len(vm_data['changes_this_month'][0]['storage_histories']) == 0:
             return hdd, ssd, drives
 
-        # Read the updated storages to determine the changes that were made
-        storage_ids = [storage_id for storage_id in storage_changes]
-        storages = {
-            storage['idStorage']: storage
-            for storage in utils.api_list(IAAS.storage, {'idStorage__in': storage_ids}, vm_id=vm_id, span=span)
-        }
-        for storage_id, storage_changes in storage_changes.items():
-            # Read the storage from the API
-            storage = storages.get(storage_id, None)
-            if storage is None:
+        storages = vm_data['vm_storage']
+
+        for history in vm_data['changes_this_month'][0]['storage_histories']:
+            # List vm_histories by storage_id to calcualate the change
+            storage_id = history['storage_id']
+            params = {
+                'order': '-created',
+                'limit': 2,
+                'storage_histories__storage_id': storage_id,
+                'vm_id': vm_id,
+            }
+            storage_changes = utils.api_list(IAAS.vm_history, params, span=span)
+
+            # Get storage details from vm_data
+            storage = [i for i in storages if i['idStorage'] == storage_id]
+
+            if len(storage) == 0:
                 cls.logger.error(f'Error fetching Storage #{storage_id} for VM #{vm_id}')
                 return hdd, ssd, drives
+
+            new_value = storage_changes[0]['gb_quantity']
+            old_value = 0
+            if len(storage_changes) > 1:
+                old_value = storage_changes[1]['gb_quantity']
+
             # Check if the storage is primary
-            if storage['primary']:
+            if storage[0]['primary']:
                 # Determine which field (hdd or ssd) to populate with this storage information
-                if storage['storage_type'] == 'HDD':
-                    hdd = f'{storage["idStorage"]}:{storage_changes["new_value"]}:{storage_changes["old_value"]}'
-                elif storage['storage_type'] == 'SSD':
-                    ssd = f'{storage["idStorage"]}:{storage_changes["new_value"]}:{storage_changes["old_value"]}'
+                if storage[0]['storage_type'] == 'HDD':
+                    hdd = f'{storage_id}:{new_value}:{old_value}'
+                elif storage[0]['storage_type'] == 'SSD':
+                    ssd = f'{storage_id}:{new_value}:{old_value}'
                 else:
                     cls.logger.error(
-                        f'Invalid primary drive storage type {storage["storage_type"]} for VM #{vm_id}. '
+                        f'Invalid primary drive storage type {storage[0]["storage_type"]} for VM #{vm_id}. '
                         'Expected either "HDD" or "SSD"',
                     )
                     return hdd, ssd, drives
@@ -74,16 +85,16 @@ class VmUpdateMixin:
                 # Append the drive to the deque
                 drives.append({
                     'id': storage_id,
-                    'type': storage['storage_type'],
-                    'new_size': storage_changes['new_value'],
-                    'old_size': storage_changes['old_value'],
+                    'type': storage[0]['storage_type'],
+                    'new_size': new_value,
+                    'old_size': old_value,
                 })
 
         # Finally, return the generated information
         return hdd, ssd, drives
 
     @classmethod
-    def determine_should_restart(cls, vm_data: Dict[str, Any]) -> Optional[bool]:
+    def determine_should_restart(cls, vm_data: Dict[str, Any], span) -> Optional[bool]:
         """
         Check through the VM changes to see if the VM should be turned back on after the update is finished
         """
@@ -91,12 +102,19 @@ class VmUpdateMixin:
         if len(vm_data['changes_this_month']) == 0:
             # This is wrong, state update should always be there regardless
             return None
-        state_change = vm_data['changes_this_month'][0]['details'].get('state', {})
-        if len(state_change) == 0:
-            # This is also as bug
-            return None
+        params = {
+            'order': '-created',
+            'limit': 2,
+            'state__gt': 0,
+            'vm_id': vm_data['idVM'],
+        }
+        # Get the last two histories where state was changed, the first item returned will be the current request for
+        # change and the second item will be the current status of the VM
+        state_changes = utils.api_list(IAAS.vm_history, params, span=span)
+
         # Update the vm_data to retain the state to go back to
-        vm_data['return_state'] = state_change['old_value']
-        # We restart the VM iff the VM was in state 4 before this update
-        cls.logger.debug(f'VM #{vm_data["idVM"]} will be returned to state {state_change["old_value"]} after update')
-        return state_change['old_value'] == 4
+        vm_data['return_state'] = state_changes[1]['state']
+
+        # We restart the VM if the VM was in state 4 before this update
+        cls.logger.debug(f'VM #{vm_data["idVM"]} will be returned to state {vm_data["return_state"]} after update')
+        return vm_data['return_state'] == 4

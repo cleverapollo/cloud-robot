@@ -157,10 +157,10 @@ class Linux(LinuxMixin, VmUpdateMixin):
             'cpu': False,
             'storages': False,
         }
-        if 'ram' in vm_data['changes_this_month'][0]['details'].keys():
+        if vm_data['changes_this_month'][0]['ram_quantity']:
             # RAM is needed in MB for the updater but we take it in in GB (1024, not 1000)
             changes['ram'] = vm_data['ram'] * 1024
-        if 'cpu' in vm_data['changes_this_month'][0]['details'].keys():
+        if vm_data['changes_this_month'][0]['cpu_quantity']:
             changes['cpu'] = vm_data['cpu']
 
         # Get the ip address of the host
@@ -174,7 +174,7 @@ class Linux(LinuxMixin, VmUpdateMixin):
         data['host_sudo_passwd'] = settings.NETWORK_PASSWORD
 
         # Fetch the drive information for the update
-        if 'storages' in vm_data['changes_this_month'][0]['details'].keys():
+        if len(vm_data['changes_this_month'][0]['storage_histories']) != 0:
             Linux.logger.debug(f'Fetching drives for VM #{vm_id}')
             hdd, ssd, drives = Linux.fetch_drive_updates(vm_data, span)
             changes['storages'] = {
@@ -186,5 +186,5 @@ class Linux(LinuxMixin, VmUpdateMixin):
         data['changes'] = changes
         # Determine whether or not we should turn the VM back on after the update finishes
         Linux.logger.debug(f'Determining if VM #{vm_id} should be powered on after update')
-        data['restart'] = Linux.determine_should_restart(vm_data)
+        data['restart'] = Linux.determine_should_restart(vm_data, span=span)
         return data
