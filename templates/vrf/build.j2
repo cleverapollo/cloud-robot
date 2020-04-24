@@ -40,7 +40,8 @@ set groups vrf-{{ project_id }} security nat static rule-set all-inbound-static-
 set groups vrf-{{ project_id }} security nat proxy-arp interface {{ public_port }}.0 address {{ nat['public_address'] }}
 {% endfor %}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
-{% for i, vpn in enumerate(vpns) %}
+{% set i = 0 %}
+{% for vpn in vpns %}
 {# add the appropriate interfaces to it #}
 set groups vrf-{{ project_id }} interfaces st0 unit {{ vpn['vlan'] }} family inet
 {# set up some VPN parameters #}
@@ -72,6 +73,7 @@ set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-vpn-{{ v
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-vpn-{{ vpn['vlan'] }}-ipsec-vpn-{{ i }} ike proxy-identity remote {{ vpn['remote_subnet'] }}
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-vpn-{{ vpn['vlan'] }}-ipsec-vpn-{{ i }} bind-interface st0.{{ vpn['vlan'] }}
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-vpn-{{ vpn['vlan'] }}-ipsec-vpn-{{ i }} establish-tunnels {{ vpn['ipsec']['establish_tunnel'] }}
+{% set i = i + 1 %}
 {# anchor the relevant interfaces in their own routing instance and security zone #}
 set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} interface st0.{{ vpn['vlan'] }}
 set groups vrf-{{ project_id }} security zones security-zone vrf-{{ project_id }} interfaces st0.{{ vpn['vlan'] }}
