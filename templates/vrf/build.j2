@@ -40,40 +40,38 @@ set groups vrf-{{ project_id }} security nat static rule-set all-inbound-static-
 set groups vrf-{{ project_id }} security nat proxy-arp interface {{ public_port }}.0 address {{ nat['public_address'] }}
 {% endfor %}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
-{% set i = 0 %}
 {% for vpn in vpns %}
 {# add the appropriate interfaces to it #}
 set groups vrf-{{ project_id }} interfaces st0 unit {{ vpn['vlan'] }} family inet
 {# set up some VPN parameters #}
 {# Phase 1 #}
-set groups vrf-{{ project_id }} security ike proposal vrf-{{ project_id }}-{{ vpn['vlan'] }}-ike-proposal-{{ i }} authentication-method pre-shared-keys
-set groups vrf-{{ project_id }} security ike proposal vrf-{{ project_id }}-{{ vpn['vlan'] }}-ike-proposal-{{ i }} dh-group {{ vpn['ike']['dh_group'] }}
-set groups vrf-{{ project_id }} security ike proposal vrf-{{ project_id }}-{{ vpn['vlan'] }}-ike-proposal-{{ i }} authentication-algorithm {{ vpn['ike']['authentication'] }}
-set groups vrf-{{ project_id }} security ike proposal vrf-{{ project_id }}-{{ vpn['vlan'] }}-ike-proposal-{{ i }} encryption-algorithm {{ vpn['ike']['encryption'] }}
-set groups vrf-{{ project_id }} security ike proposal vrf-{{ project_id }}-{{ vpn['vlan'] }}-ike-proposal-{{ i }} lifetime-seconds {{ vpn['ike']['life_seconds'] }}
-set groups vrf-{{ project_id }} security ike policy vrf-{{ project_id }}-{{ vpn['vlan'] }}-ike-policy-{{ i }} mode {{ vpn['ike']['mode'] }}
-set groups vrf-{{ project_id }} security ike policy vrf-{{ project_id }}-{{ vpn['vlan'] }}-ike-policy-{{ i }} proposals vrf-{{ project_id }}-{{ vpn['vlan'] }}-ike-proposal-{{ i }}
-set groups vrf-{{ project_id }} security ike policy vrf-{{ project_id }}-{{ vpn['vlan'] }}-ike-policy-{{ i }} pre-shared-key ascii-text {{ vpn['ike']['pre_shared_key'] }}
-set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['vlan'] }}-gateway-{{ i }} ike-policy vrf-{{ project_id }}-{{ vpn['vlan'] }}-ike-policy-{{ i }}
-set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['vlan'] }}-gateway-{{ i }} address {{ vpn['ike']['remote_fip'] }}
-set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['vlan'] }}-gateway-{{ i }} external-interface {{ public_port }}.0
-set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['vlan'] }}-gateway-{{ i }} local-address {{ vrf_ip }}
-set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['vlan'] }}-gateway-{{ i }} version {{ vpn['ike']['version'] }}
+set groups vrf-{{ project_id }} security ike proposal vrf-{{ project_id }}-{{ vpn['vlan'] }}-ike-proposal-{{ loop.index0 }} authentication-method pre-shared-keys
+set groups vrf-{{ project_id }} security ike proposal vrf-{{ project_id }}-{{ vpn['vlan'] }}-ike-proposal-{{ loop.index0 }} dh-group {{ vpn['ike']['dh_group'] }}
+set groups vrf-{{ project_id }} security ike proposal vrf-{{ project_id }}-{{ vpn['vlan'] }}-ike-proposal-{{ loop.index0 }} authentication-algorithm {{ vpn['ike']['authentication'] }}
+set groups vrf-{{ project_id }} security ike proposal vrf-{{ project_id }}-{{ vpn['vlan'] }}-ike-proposal-{{ loop.index0 }} encryption-algorithm {{ vpn['ike']['encryption'] }}
+set groups vrf-{{ project_id }} security ike proposal vrf-{{ project_id }}-{{ vpn['vlan'] }}-ike-proposal-{{ loop.index0 }} lifetime-seconds {{ vpn['ike']['life_seconds'] }}
+set groups vrf-{{ project_id }} security ike policy vrf-{{ project_id }}-{{ vpn['vlan'] }}-ike-policy-{{ loop.index0 }} mode {{ vpn['ike']['mode'] }}
+set groups vrf-{{ project_id }} security ike policy vrf-{{ project_id }}-{{ vpn['vlan'] }}-ike-policy-{{ loop.index0 }} proposals vrf-{{ project_id }}-{{ vpn['vlan'] }}-ike-proposal-{{ loop.index0 }}
+set groups vrf-{{ project_id }} security ike policy vrf-{{ project_id }}-{{ vpn['vlan'] }}-ike-policy-{{ loop.index0 }} pre-shared-key ascii-text {{ vpn['ike']['pre_shared_key'] }}
+set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['vlan'] }}-gateway-{{ loop.index0 }} ike-policy vrf-{{ project_id }}-{{ vpn['vlan'] }}-ike-policy-{{ loop.index0 }}
+set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['vlan'] }}-gateway-{{ loop.index0 }} address {{ vpn['ike']['remote_fip'] }}
+set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['vlan'] }}-gateway-{{ loop.index0 }} external-interface {{ public_port }}.0
+set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['vlan'] }}-gateway-{{ loop.index0 }} local-address {{ vrf_ip }}
+set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['vlan'] }}-gateway-{{ loop.index0 }} version {{ vpn['ike']['version'] }}
 {# --------------------------------------#}
 {# Phase 2 authentication and encryption #}
-set groups vrf-{{ project_id }} security ipsec proposal vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-proposal-{{ i }} protocol esp
-set groups vrf-{{ project_id }} security ipsec proposal vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-proposal-{{ i }} authentication-algorithm {{ vpn['ipsec']['authentication'] }}
-set groups vrf-{{ project_id }} security ipsec proposal vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-proposal-{{ i }} encryption-algorithm {{ vpn['ipsec']['encryption'] }}
-set groups vrf-{{ project_id }} security ipsec proposal vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-proposal-{{ i }} lifetime-seconds {{ vpn['ipsec']['life_seconds'] }}
-set groups vrf-{{ project_id }} security ipsec policy vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-policy-{{ i }} proposals vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-proposal-{{ i }}
-set groups vrf-{{ project_id }} security ipsec policy vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-policy-{{ i }} perfect-forward-secrecy keys {{ vpn['ipsec']['pfs'] }}
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-vpn-{{ i }} ike gateway vrf-{{ project_id }}-{{ vpn['vlan'] }}-gateway-{{ i }}
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-vpn-{{ i }} ike ipsec-policy vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-policy-{{ i }}
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-vpn-{{ i }} ike proxy-identity local {{ vpn['local_subnet'] }}
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-vpn-{{ i }} ike proxy-identity remote {{ vpn['remote_subnet'] }}
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-vpn-{{ i }} bind-interface st0.{{ vpn['vlan'] }}
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-vpn-{{ i }} establish-tunnels {{ vpn['ipsec']['establish_tunnel'] }}
-{% set i = i + 1 %}
+set groups vrf-{{ project_id }} security ipsec proposal vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-proposal-{{ loop.index0 }} protocol esp
+set groups vrf-{{ project_id }} security ipsec proposal vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-proposal-{{ loop.index0 }} authentication-algorithm {{ vpn['ipsec']['authentication'] }}
+set groups vrf-{{ project_id }} security ipsec proposal vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-proposal-{{ loop.index0 }} encryption-algorithm {{ vpn['ipsec']['encryption'] }}
+set groups vrf-{{ project_id }} security ipsec proposal vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-proposal-{{ loop.index0 }} lifetime-seconds {{ vpn['ipsec']['life_seconds'] }}
+set groups vrf-{{ project_id }} security ipsec policy vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-policy-{{ loop.index0 }} proposals vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-proposal-{{ loop.index0 }}
+set groups vrf-{{ project_id }} security ipsec policy vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-policy-{{ loop.index0 }} perfect-forward-secrecy keys {{ vpn['ipsec']['pfs'] }}
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-vpn-{{ loop.index0 }} ike gateway vrf-{{ project_id }}-{{ vpn['vlan'] }}-gateway-{{ loop.index0 }}
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-vpn-{{ loop.index0 }} ike ipsec-policy vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-policy-{{ loop.index0 }}
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-vpn-{{ loop.index0 }} ike proxy-identity local {{ vpn['local_subnet'] }}
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-vpn-{{ loop.index0 }} ike proxy-identity remote {{ vpn['remote_subnet'] }}
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-vpn-{{ loop.index0 }} bind-interface st0.{{ vpn['vlan'] }}
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-vpn-{{ loop.index0 }} establish-tunnels {{ vpn['ipsec']['establish_tunnel'] }}
 {# anchor the relevant interfaces in their own routing instance and security zone #}
 set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} interface st0.{{ vpn['vlan'] }}
 set groups vrf-{{ project_id }} security zones security-zone vrf-{{ project_id }} interfaces st0.{{ vpn['vlan'] }}
