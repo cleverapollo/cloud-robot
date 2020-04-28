@@ -22,14 +22,14 @@
 </ul>
 <hr />
 <h2>VPN Configuration</h2>
-{% set vpn = vpns[0] %}
+{% for vpn in vpns %}
 <table class="align-left">
   {# Addresses #}
   <tr><th colspan="2" class="align-center" style="font-size:1.5em;">Address Details</th></tr>
   <tr><th>Local Router Address</th><td>{{ vpn['ike']['remote_fip'] }}</td></tr>
   <tr><th>Remote Router Address</th><td>{{ vrf_ip }}</td></tr>
-  <tr><th>Local Subnet</th><td>{{ vpn['remote_subnet'] }}</td></tr>
-  <tr><th>Remote Subnet</th><td>{{ vpn['local_subnet'] }}</td></tr>
+  <tr><th>Local Subnet</th><td>{{ vpn['remote_proxy'] }}</td></tr>
+  <tr><th>Remote Subnet</th><td>{{ vpn['local_proxy'] }}</td></tr>
   {# IKE Settings #}
   <tr><th colspan="2" class="align-center" style="padding-top:1em;font-size:1.5em;">IKE (Phase 1) Settings</th></tr>
   <tr><th>Authentication</th><td>{{ vpn['ike']['authentication'] }}</td></tr>
