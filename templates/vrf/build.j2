@@ -68,15 +68,17 @@ set groups vrf-{{ project_id }} security ipsec policy vrf-{{ project_id }}-{{ vp
 set groups vrf-{{ project_id }} security ipsec policy vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-policy-{{ loop.index0 }} perfect-forward-secrecy keys {{ vpn['ipsec']['pfs'] }}
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-vpn-{{ loop.index0 }} ike gateway vrf-{{ project_id }}-{{ vpn['vlan'] }}-gateway-{{ loop.index0 }}
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-vpn-{{ loop.index0 }} ike ipsec-policy vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-policy-{{ loop.index0 }}
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-vpn-{{ loop.index0 }} ike proxy-identity local {{ vpn['local_subnet'] }}
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-vpn-{{ loop.index0 }} ike proxy-identity remote {{ vpn['remote_subnet'] }}
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-vpn-{{ loop.index0 }} ike proxy-identity local {{ vpn['local_proxy'] }}
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-vpn-{{ loop.index0 }} ike proxy-identity remote {{ vpn['remote_proxy'] }}
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-vpn-{{ loop.index0 }} bind-interface st0.{{ vpn['vlan'] }}
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['vlan'] }}-ipsec-vpn-{{ loop.index0 }} establish-tunnels {{ vpn['ipsec']['establish_tunnel'] }}
 {# anchor the relevant interfaces in their own routing instance and security zone #}
 set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} interface st0.{{ vpn['vlan'] }}
 set groups vrf-{{ project_id }} security zones security-zone vrf-{{ project_id }} interfaces st0.{{ vpn['vlan'] }}
 {# add a route to the other end of the IPSec tunnel with the tunnel if as the next hop #}
-set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} routing-options static route {{ vpn['remote_subnet'] }} next-hop st0.{{ vpn['vlan'] }}
+{% for customer_subnet in vpn['customer_subnets'] %}
+set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} routing-options static route {{ customer_subnet }} next-hop st0.{{ vpn['vlan'] }}
+{% endfor %}
 {% endfor %}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Firewall rules #}
