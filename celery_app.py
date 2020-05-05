@@ -46,10 +46,15 @@ app.conf.task_routes = {
     # Send heartbeat tasks to their own queue
     'tasks.mainloop': {'queue': 'heartbeat'},
     'tasks.scrub': {'queue': 'heartbeat'},
-    # Also send VRF tasks to a separate queue
-    'tasks.vrf.*': {'queue': 'vrf'},
+    # Also send VRF tasks to a separate queue vrf
+    'tasks.vrf.build': {'queue': 'vrf'},
+    'tasks.vrf.quiesce': {'queue': 'vrf'},
+    'tasks.vrf.restart': {'queue': 'vrf'},
+    'tasks.vrf.scrub': {'queue': 'vrf'},
+    'tasks.vrf.update': {'queue': 'vrf'},
+    'tasks.vrf.debug_logs': {'queue': 'vrf'},
     # Firewall logs mode changes
-    'tasks.debug_logs_task': {'queue': 'heartbeat'},
+    'tasks.vrf.debug_logs_task': {'queue': 'heartbeat'},
     # All other tasks will be sent to the default queue named 'celery'
 }
 
