@@ -35,7 +35,7 @@ def debug_logs_task(vrf_id: int):
     list_updated = [firewall_rule['updated'] for firewall_rule in firewall_rules]
     # Find the latest updated firewall
     now = datetime.now()
-    latest = max(dt for dt in list_updated)
+    latest = max(list_updated)
 
     # compare with 15 min
     delta = now - latest
