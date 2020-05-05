@@ -12,7 +12,7 @@ import settings
 import utils
 from celery_app import app
 from robot import Robot
-from tasks import debug_logs as firewall_debug_logs
+from tasks.vrf import debug_logs as firewall_debug_logs
 
 
 @app.task
