@@ -114,8 +114,10 @@ set groups vrf-{{ project_id }}-sp-{{ firewall['scope'] }} security policies fro
 {# permissions #}
 set groups vrf-{{ project_id }}-sp-{{ firewall['scope'] }} security policies from-zone {{ firewall['from_zone'] }} to-zone {{ firewall['to_zone'] }} policy vrf-{{ project_id }}-policy-{{ firewall['scope'] }}-{{ firewall['order'] }} then {{ firewall['permission'] }}
 {# logging sessions #}
+{% if firewall['log'] %}
 set groups vrf-{{ project_id }}-sp-{{ firewall['scope'] }} security policies from-zone {{ firewall['from_zone'] }} to-zone {{ firewall['to_zone'] }} policy vrf-{{ project_id }}-policy-{{ firewall['scope'] }}-{{ firewall['order'] }} then log session-init
 set groups vrf-{{ project_id }}-sp-{{ firewall['scope'] }} security policies from-zone {{ firewall['from_zone'] }} to-zone {{ firewall['to_zone'] }} policy vrf-{{ project_id }}-policy-{{ firewall['scope'] }}-{{ firewall['order'] }} then log session-close
+{% endif %}
 {% endfor %}
 {# ------------------------------------------------------------------ #}
 {# inter-zone outbound for now allow all, will remove this eventually #}

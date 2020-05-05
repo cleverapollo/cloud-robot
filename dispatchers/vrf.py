@@ -2,6 +2,7 @@
 import logging
 # local
 from tasks import vrf as vrf_tasks
+from tasks import debug_logs
 
 
 class Vrf:
@@ -25,6 +26,8 @@ class Vrf:
             f'Passing VRF #{vrf_id} to the build task queue',
         )
         vrf_tasks.build_vrf.delay(vrf_id)
+        # Reset debug logs of firewall rules after 15min
+        debug_logs(vrf_id).apply_async(countdown=15 * 60)
 
     def quiesce(self, vrf_id: int):
         """
@@ -69,3 +72,5 @@ class Vrf:
             f'Passing VRF #{vrf_id} to the update task queue',
         )
         vrf_tasks.update_vrf.delay(vrf_id)
+        # Reset debug logs of firewall rules after 15min
+        debug_logs(vrf_id).apply_async(countdown=15 * 60)
