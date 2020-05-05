@@ -12,7 +12,7 @@ import settings
 import utils
 from celery_app import app
 from robot import Robot
-from tasks.vrf import debug_logs
+from .vrf import debug_logs
 
 __all__ = [
     'debug_logs_task',
