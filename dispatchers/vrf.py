@@ -2,7 +2,7 @@
 import logging
 # local
 from tasks import vrf as vrf_tasks
-from tasks import debug_logs_task
+import debug_logs_task
 
 
 class Vrf:
