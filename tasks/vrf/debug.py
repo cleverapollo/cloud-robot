@@ -14,16 +14,16 @@ from email_notifier import EmailNotifier
 from updaters import Vrf as VrfUpdater
 
 __all__ = [
-    'debug_logs_task',
+    'debug_logs',
 ]
 
 
 @app.task
-def debug_logs_task(vrf_id: int):
+def debug_logs(vrf_id: int):
     """
     Helper function that wraps the actual task in a span, meaning we don't have to remember to call .finish
     """
-    span = opentracing.tracer.start_span('tasks.debug_logs_task')
+    span = opentracing.tracer.start_span('tasks.vrf.debug_logs')
     span.set_tag('vrf_id', vrf_id)
     _debug_logs(vrf_id, span)
     span.finish()

@@ -12,7 +12,7 @@ import settings
 import utils
 from celery_app import app
 from robot import Robot
-from .vrf import debug_logs_task
+from .vrf import debug_logs
 
 
 @app.task
@@ -38,7 +38,7 @@ def scrub():
 
 
 @app.task
-def debug_logs(vrf_id: int):
+def debug(vrf_id: int):
     """
     Waits for 15 min from the time latest updated or created for Firewall rules to reset the debug_logging field
     for all firewall rules of a Virtual router
@@ -56,4 +56,4 @@ def debug_logs(vrf_id: int):
     # compare with 15 min
     delta = now - latest
     if delta >= timedelta(minutes=15):
-        debug_logs_task.delay(vrf_id)
+        debug_logs.delay(vrf_id)
