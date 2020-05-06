@@ -4,6 +4,7 @@ Module containing all of the non beat celery tasks
 In this file, we define the robot based tasks that will be run by celery beat
 """
 # stdlib
+import logging
 from datetime import datetime, timedelta
 # lib
 from cloudcix.api import IAAS
@@ -43,6 +44,9 @@ def debug(vrf_id: int):
     Waits for 15 min from the time latest updated or created for Firewall rules to reset the debug_logging field
     for all firewall rules of a Virtual router
     """
+    logging.getLogger('robot.tasks.debug').debug(
+        f'Passing VRF #{vrf_id} to the debug task queue',
+    )
     virtual_router = utils.api_read(IAAS.vrf, vrf_id)
     if virtual_router is None:
         return
@@ -55,5 +59,11 @@ def debug(vrf_id: int):
     latest = max(list_updated)
     # compare with 15 min
     delta = now - latest
+    logging.getLogger('robot.tasks.debug').debug(
+        f'latest # {latest},  now # {now}, delta # {delta}',
+    )
     if delta >= timedelta(minutes=15):
         debug_logs.delay(vrf_id)
+        logging.getLogger('robot.tasks.debug').debug(
+            f'calling debug_logs task',
+        )
