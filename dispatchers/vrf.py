@@ -2,10 +2,8 @@
 import logging
 from datetime import datetime, timedelta
 # local
-from tasks import (
-    vrf as vrf_tasks,
-    debug_logs,
-)
+from tasks import vrf as vrf_tasks
+from tasks import *
 
 
 class Vrf:
