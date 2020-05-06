@@ -2,7 +2,10 @@
 import logging
 from datetime import datetime, timedelta
 # local
-from tasks import vrf as vrf_tasks
+from tasks import (
+    vrf as vrf_tasks,
+    debug_logs,
+)
 
 
 class Vrf:
@@ -27,7 +30,10 @@ class Vrf:
         )
         vrf_tasks.build_vrf.delay(vrf_id)
         # Reset debug logs of firewall rules after 15min
-        vrf_tasks.debug_logs_task.s(vrf_id).apply_async(eta=datetime.now() + timedelta(seconds=15 * 60))
+        logging.getLogger('robot.dispatchers.vrf.debug_logging').debug(
+            f'Passing VRF #{vrf_id} to the debug_logs task queue after vrf build',
+        )
+        debug_logs.s(vrf_id).apply_async(eta=datetime.now() + timedelta(seconds=15 * 60))
 
     def quiesce(self, vrf_id: int):
         """
@@ -73,4 +79,7 @@ class Vrf:
         )
         vrf_tasks.update_vrf.delay(vrf_id)
         # Reset debug logs of firewall rules after 15min
-        vrf_tasks.debug_logs_task.s(vrf_id).apply_async(eta=datetime.now() + timedelta(seconds=15 * 60))
+        logging.getLogger('robot.dispatchers.vrf.debug_logging').debug(
+            f'Passing VRF #{vrf_id} to the debug_logs task queue after vrf update',
+        )
+        debug_logs.s(vrf_id).apply_async(eta=datetime.now() + timedelta(seconds=15 * 60))

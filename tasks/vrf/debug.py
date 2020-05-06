@@ -1,6 +1,5 @@
 # stdlib
 import logging
-from datetime import datetime, timedelta
 # lib
 import opentracing
 from cloudcix.api import IAAS
@@ -15,7 +14,6 @@ from email_notifier import EmailNotifier
 from updaters import Vrf as VrfUpdater
 
 __all__ = [
-    'debug_logs',
     'debug_logs_task',
 ]
 
@@ -23,32 +21,9 @@ __all__ = [
 @app.task
 def debug_logs_task(vrf_id: int):
     """
-    Waits for 15 min from the time latest updated or created for Firewall rules to reset the debug_logging field
-    for all firewall rules of a VRF
-    """
-    vrf = utils.api_read(IAAS.vrf, vrf_id)
-    if vrf is None:
-        return
-    firewall_rules = vrf['firewall_rules']
-    if len(firewall_rules) == 0:
-        return
-    list_updated = [firewall_rule['updated'] for firewall_rule in firewall_rules]
-    # Find the latest updated firewall
-    now = datetime.now()
-    latest = max(list_updated)
-
-    # compare with 15 min
-    delta = now - latest
-    if delta >= timedelta(minutes=15):
-        debug_logs.delay(vrf_id)
-
-
-@app.task
-def debug_logs(vrf_id: int):
-    """
     Helper function that wraps the actual task in a span, meaning we don't have to remember to call .finish
     """
-    span = opentracing.tracer.start_span('tasks.debug_logs')
+    span = opentracing.tracer.start_span('tasks.debug_logs_task')
     span.set_tag('vrf_id', vrf_id)
     _debug_logs(vrf_id, span)
     span.finish()
