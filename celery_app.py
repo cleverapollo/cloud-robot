@@ -47,14 +47,9 @@ app.conf.task_routes = {
     'tasks.mainloop': {'queue': 'heartbeat'},
     'tasks.scrub': {'queue': 'heartbeat'},
     # Also send VRF tasks to a separate queue vrf
-    'tasks.vrf.build': {'queue': 'vrf'},
-    'tasks.vrf.quiesce': {'queue': 'vrf'},
-    'tasks.vrf.restart': {'queue': 'vrf'},
-    'tasks.vrf.scrub': {'queue': 'vrf'},
-    'tasks.vrf.update': {'queue': 'vrf'},
-    'tasks.vrf.debug_logs': {'queue': 'vrf'},
+    'tasks.vrf.*': {'queue': 'vrf'},
     # Firewall logs mode changes
-    'tasks.vrf.debug_logs_task': {'queue': 'heartbeat'},
+    'tasks.debug_logs': {'queue': 'heartbeat'},
     # All other tasks will be sent to the default queue named 'celery'
 }
 
@@ -70,6 +65,7 @@ app.conf.beat_schedule = {
     },
 }
 
+
 # Ensure the loggers are set up before each task is run
 @task_prerun.connect
 def setup_logger_and_tracer(*args, **kwargs):
@@ -84,6 +80,7 @@ def setup_logger_and_tracer(*args, **kwargs):
         tracer_config.initialize_tracer()
         atexit.register(opentracing.tracer.close)
 
+
 # Sleep after each task to try and flush spans
 @task_postrun.connect
 def sleep_to_flush_spans(*args, **kwargs):
@@ -91,6 +88,7 @@ def sleep_to_flush_spans(*args, **kwargs):
     Flush spans by passing to IO loop, just to be safe
     """
     time.sleep(5)
+
 
 # Catch all uncaught errors
 @task_failure.connect
