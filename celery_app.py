@@ -48,8 +48,6 @@ app.conf.task_routes = {
     'tasks.scrub': {'queue': 'heartbeat'},
     # Also send VRF tasks to a separate queue vrf
     'tasks.vrf.*': {'queue': 'vrf'},
-    # Firewall logs mode changes
-    'tasks.debug': {'queue': 'heartbeat'},
     # All other tasks will be sent to the default queue named 'celery'
 }
 
