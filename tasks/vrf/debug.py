@@ -63,7 +63,7 @@ def _debug_logs(vrf_id: int, span: Span):
 
     # change the debug_logging to false for all firewall rules
     for firewall in vrf['firewall_rules']:
-        vrf[firewall]['debug_logging'] = False
+        firewall['debug_logging'] = False
 
     success: bool = False
     child_span = opentracing.tracer.start_span('update', child_of=span)
