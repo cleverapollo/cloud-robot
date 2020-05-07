@@ -45,7 +45,7 @@ def debug(vrf_id: int):
     for all firewall rules of a Virtual router
     """
     logging.getLogger('robot.tasks.debug').debug(
-        f'Passing VRF #{vrf_id} to the debug task queue',
+        f'Checking VRF #{vrf_id} to pass to the debug task queue',
     )
     virtual_router = utils.api_read(IAAS.vrf, vrf_id)
     if virtual_router is None:
@@ -55,15 +55,15 @@ def debug(vrf_id: int):
         return
     list_updated = [firewall_rule['updated'] for firewall_rule in firewall_rules]
     # Find the latest updated firewall
-    now = datetime.now()
     latest = max(list_updated)
-    # compare with 15 min
-    delta = now - latest
-    logging.getLogger('robot.tasks.debug').debug(
-        f'latest # {latest},  now # {now}, delta # {delta}',
-    )
+    # format latest string and convert to a datetime
+    latest = latest.split('+')[0]  # removing timezone info
+    latest_dt = datetime.strptime(latest, '%Y-%m-%d %H:%M:%S.%f')
+    # compare with 15 min from utc now time
+    utc_now = datetime.utcnow()
+    delta = utc_now - latest_dt
     if delta >= timedelta(minutes=15):
-        debug_logs.delay(vrf_id)
         logging.getLogger('robot.tasks.debug').debug(
-            f'calling debug_logs task',
+            f'Passing VRF #{vrf_id} to the debug_logs task queue',
         )
+        debug_logs.delay(vrf_id)
