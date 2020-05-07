@@ -63,7 +63,7 @@ def debug(vrf_id: int):
     # compare with 15 min from utc now time
     utc_now = datetime.utcnow()
     delta = utc_now - latest_dt
-    if delta >= timedelta(minutes=3):
+    if delta >= timedelta(minutes=15):
         logging.getLogger('robot.tasks.debug').debug(
             f'Passing VRF #{vrf_id} to the debug_logs task queue',
         )
