@@ -58,11 +58,12 @@ def debug(vrf_id: int):
     latest = max(list_updated)
     # format latest string and convert to a datetime
     latest = latest.split('+')[0]  # removing timezone info
-    latest_dt = datetime.strptime(latest, '%Y-%m-%d %H:%M:%S.%f')
+    '2020-04-30T08:51:04.454033'
+    latest_dt = datetime.strptime(latest, '%Y-%m-%dT%H:%M:%S.%f')
     # compare with 15 min from utc now time
     utc_now = datetime.utcnow()
     delta = utc_now - latest_dt
-    if delta >= timedelta(minutes=15):
+    if delta >= timedelta(minutes=3):
         logging.getLogger('robot.tasks.debug').debug(
             f'Passing VRF #{vrf_id} to the debug_logs task queue',
         )
