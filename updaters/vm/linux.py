@@ -157,11 +157,32 @@ class Linux(LinuxMixin, VmUpdateMixin):
             'cpu': False,
             'storages': False,
         }
-        if vm_data['changes_this_month'][0]['ram_quantity']:
-            # RAM is needed in MB for the updater but we take it in in GB (1024, not 1000)
-            changes['ram'] = vm_data['ram'] * 1024
-        if vm_data['changes_this_month'][0]['cpu_quantity']:
-            changes['cpu'] = vm_data['cpu']
+        changes_this_month = vm_data['changes_this_month'][0]
+        try:
+            if changes_this_month['ram_quantity']:
+                # RAM is needed in MB for the updater but we take it in in GB (1024, not 1000)
+                changes['ram'] = vm_data['ram'] * 1024
+        except KeyError:
+            pass
+        try:
+            if changes_this_month['cpu_quantity']:
+                changes['cpu'] = vm_data['cpu']
+        except KeyError:
+            pass
+        # Fetch the drive information for the update
+        try:
+            if len(changes_this_month['storage_histories']) != 0:
+                Linux.logger.debug(f'Fetching drives for VM #{vm_id}')
+                hdd, ssd, drives = Linux.fetch_drive_updates(vm_data, span)
+                changes['storages'] = {
+                    'hdd': hdd,
+                    'ssd': ssd,
+                    'drives': drives,
+                }
+        except KeyError:
+            pass
+        # Add changes to data
+        data['changes'] = changes
 
         # Get the ip address of the host
         Linux.logger.debug(f'Fetching host address for VM #{vm_id}')
@@ -173,17 +194,6 @@ class Linux(LinuxMixin, VmUpdateMixin):
         # Add the host information to the data
         data['host_sudo_passwd'] = settings.NETWORK_PASSWORD
 
-        # Fetch the drive information for the update
-        if len(vm_data['changes_this_month'][0]['storage_histories']) != 0:
-            Linux.logger.debug(f'Fetching drives for VM #{vm_id}')
-            hdd, ssd, drives = Linux.fetch_drive_updates(vm_data, span)
-            changes['storages'] = {
-                'hdd': hdd,
-                'ssd': ssd,
-                'drives': drives,
-            }
-        # Add changes to data
-        data['changes'] = changes
         # Determine whether or not we should turn the VM back on after the update finishes
         Linux.logger.debug(f'Determining if VM #{vm_id} should be powered on after update')
         data['restart'] = Linux.determine_should_restart(vm_data, span=span)

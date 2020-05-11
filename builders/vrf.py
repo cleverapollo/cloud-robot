@@ -254,6 +254,7 @@ class Vrf(VrfMixin):
                 customer_subnets.append(IPNetwork(str(customer_subnet)).cidr)
             vpns.append(
                 {
+                    'description': vpn['description'],
                     'stif_number': vpn['stif_number'],
                     'ike': vpn['ike'],
                     'ipsec': vpn['ipsec'],

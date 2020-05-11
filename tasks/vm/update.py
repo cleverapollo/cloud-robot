@@ -122,9 +122,10 @@ def _update_vm(vm_id: int, span: Span):
     # check if any changes in any of cpu, ram, storages otherwise ignore
     # the first change in changes_this_month list is the one we need to update about vm
     if len(vm['changes_this_month']) != 0:
-        last_change = vm['changes_this_month'][0]
-        if last_change['cpu_quantity'] or last_change['ram_quantity'] or len(last_change['storage_histories']) != 0:
-            changes = True
+        for item in vm['changes_this_month'][0].keys():
+            if item in ['cpu_quantity', 'ram_quantity', 'storage_histories']:
+                changes = True
+                break
 
     if changes:
         # Read the VM image to get the hypervisor id
