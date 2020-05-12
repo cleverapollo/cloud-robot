@@ -23,7 +23,7 @@
 <hr />
 <h2>VPN Configuration</h2>
 {% for vpn in vpns %}
-<h3>{{ vpn['description'] }}</h3>
+<h3><u>{{ vpn['description'] }}</u></h3>
 <table class="align-left">
   {# Addresses #}
   <tr><th colspan="2" class="align-center" style="font-size:1.2em;">Address Details</th></tr>
@@ -50,5 +50,6 @@
   <tr><th>PFS Group</th><td>{{ vpn['ipsec']['pfs'] }}</td></tr>
   <tr><th>Protocol</th><td>esp</td></tr>
 </table>
+<br /><br /> 
 {% endfor %}
 {% endblock %}
