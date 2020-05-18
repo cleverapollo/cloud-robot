@@ -104,7 +104,7 @@ class VmUpdateMixin:
             return None
         params = {
             'order': '-created',
-            'limit': 2,
+            'limit': 3,
             'state__gt': 0,
             'vm_id': vm_data['idVM'],
         }
@@ -113,7 +113,7 @@ class VmUpdateMixin:
         state_changes = utils.api_list(IAAS.vm_history, params, span=span)
 
         # Update the vm_data to retain the state to go back to
-        vm_data['return_state'] = state_changes[1]['state']
+        vm_data['return_state'] = state_changes[2]['state']
 
         # We restart the VM if the VM was in state 4 before this update
         cls.logger.debug(f'VM #{vm_data["idVM"]} will be returned to state {vm_data["return_state"]} after update')
