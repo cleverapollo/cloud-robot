@@ -122,18 +122,19 @@ def _update_vm(vm_id: int, span: Span):
     # check if any changes in any of cpu, ram, storages otherwise ignore
     # the first change in changes_this_month list is the one we need to update about vm
     if len(vm['changes_this_month']) != 0:
-        for detail in vm['changes_this_month'][0]['details'].keys():
-            if detail in ['cpu', 'ram', 'storages']:
+        for item in vm['changes_this_month'][0].keys():
+            if item in ['cpu_quantity', 'ram_quantity', 'storage_histories']:
                 changes = True
                 break
 
     if changes:
         # Read the VM image to get the hypervisor id
         child_span = opentracing.tracer.start_span('read_vm_image', child_of=span)
-        image = utils.api_read(IAAS.image, vm['idImage'], span=child_span)
-        child_span.finish()
+        try:
+            image = vm['image']
+            child_span.finish()
 
-        if image is None:
+        except KeyError:
             logger.error(
                 f'Could not update VM #{vm_id} as its Image was not readable',
             )

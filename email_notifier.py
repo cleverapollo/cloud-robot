@@ -18,12 +18,10 @@ __all__ = [
     'EmailNotifier',
 ]
 
-STAGE = settings.REGION_NAME == 'alpha'
-
 
 class EmailNotifier:
     # A list of image files that need to be attached to the emails
-    message_images = ['cloudcix_logo.bmp', 'twitter.png', 'website.png']
+    message_images = ['logo.png', 'twitter.png', 'website.png']
 
     # ############################################################## #
     #                               NOC                              #
@@ -39,10 +37,14 @@ class EmailNotifier:
         # Add the pretty printed data blob to the VM
         vm_data['data'] = dumps(vm_data, indent=2, cls=utils.DequeEncoder)
         # Render the email body
-        body = utils.JINJA_ENV.get_template('emails/failure.j2').render(stage=STAGE, task=task, **vm_data)
+        body = utils.JINJA_ENV.get_template('emails/failure.j2').render(
+            compute_url=settings.COMPUTE_UI_URL,
+            task=task,
+            **vm_data,
+        )
         # Format the subject
-        subject = f'[CloudCIX] VM Failure Occurred!'
-        EmailNotifier._compose_email('developers@cloudcix.com', subject, body)
+        subject = settings.SUBJECT_PROJECT_FAIL
+        EmailNotifier._compose_email(settings.SEND_TO_FAIL, subject, body)
 
     @staticmethod
     def vrf_failure(vrf_data: Dict[str, Any], task: str):
@@ -54,10 +56,14 @@ class EmailNotifier:
         # Add the pretty printed data blob to the VRF
         vrf_data['data'] = dumps(vrf_data, indent=2, cls=utils.DequeEncoder)
         # Render the email body
-        body = utils.JINJA_ENV.get_template('emails/vrf_failure.j2').render(stage=STAGE, task=task, **vrf_data)
+        body = utils.JINJA_ENV.get_template('emails/vrf_failure.j2').render(
+            compute_url=settings.COMPUTE_UI_URL,
+            task=task,
+            **vrf_data,
+        )
         # Format the subject
-        subject = f'[CloudCIX] VRF Failure Occurred!'
-        EmailNotifier._compose_email('developers@cloudcix.com', subject, body)
+        subject = settings.SUBJECT_VRF_FAIL
+        EmailNotifier._compose_email(settings.SEND_TO_FAIL, subject, body)
 
     # ############################################################## #
     #                              BUILD                             #
@@ -70,16 +76,18 @@ class EmailNotifier:
         """
         logger = logging.getLogger('robot.email_notifier.build_success')
         logger.debug(f'Sending build success email for VM #{vm_data["idVM"]}')
-        name = vm_data['name']
         # Check that the data contains an email
         email = vm_data.get('email', None)
         if email is None:
-            logger.error(f'No email found for VM #{vm_data["idVM"]}. Sending to developers@cloudcix.com instead.')
-            email = 'developers@cloudcix.com'
+            logger.error(f'No email found for VM #{vm_data["idVM"]}. Sending to {settings.SEND_TO_FAIL} instead.')
+            email = settings.SEND_TO_FAIL
         # Render the email body
-        body = utils.JINJA_ENV.get_template('emails/build_success.j2').render(stage=STAGE, **vm_data)
+        body = utils.JINJA_ENV.get_template('emails/build_success.j2').render(
+            compute_url=settings.COMPUTE_UI_URL,
+            **vm_data,
+        )
         # Format the subject
-        subject = f'[CloudCIX] Your VM "{name}" has been built successfully!'
+        subject = settings.SUBJECT_VM_SUCCESS
         EmailNotifier._compose_email(email, subject, body)
 
     @staticmethod
@@ -92,12 +100,15 @@ class EmailNotifier:
         # Check that the data contains an email
         email = vrf_data.get('email', None)
         if email is None:
-            logger.error(f'No email found for VRF #{vrf_data["idVRF"]}. Sending to developers@cloudcix.com instead.')
-            email = 'developers@cloudcix.com'
+            logger.error(f'No email found for VRF #{vrf_data["idVRF"]}. Sending to {settings.SEND_TO_FAIL} instead.')
+            email = settings.SEND_TO_FAIL
         # Render the email body
-        body = utils.JINJA_ENV.get_template('emails/vrf_build_success.j2').render(stage=STAGE, **vrf_data)
+        body = utils.JINJA_ENV.get_template('emails/vrf_build_success.j2').render(
+            compute_url=settings.COMPUTE_UI_URL,
+            **vrf_data,
+        )
         # Format the subject
-        subject = '[CloudCIX] Your VPN Tunnel has been built successfully!'
+        subject = settings.SUBJECT_VPN_SUCCESS
         EmailNotifier._compose_email(email, subject, body)
 
     @staticmethod
@@ -107,16 +118,18 @@ class EmailNotifier:
         """
         logger = logging.getLogger('robot.email_notifier.build_failure')
         logger.debug(f'Sending build failure email for VM #{vm_data["idVM"]}')
-        name = vm_data['name']
         # Check that the data contains an email
         email = vm_data.get('email', None)
         if email is None:
-            logger.error(f'No email found for VM #{vm_data["idVM"]}. Sending to developers@cloudcix.com instead.')
-            email = 'developers@cloudcix.com'
+            logger.error(f'No email found for VM #{vm_data["idVM"]}. Sending to {settings.SEND_TO_FAIL} instead.')
+            email = settings.SEND_TO_FAIL
         # Render the email body
-        body = utils.JINJA_ENV.get_template('emails/build_failure.j2').render(stage=STAGE, **vm_data)
+        body = utils.JINJA_ENV.get_template('emails/build_failure.j2').render(
+            compute_url=settings.COMPUTE_UI_URL,
+            **vm_data,
+        )
         # Format the subject
-        subject = f'[CloudCIX] Your VM "{name}" has failed to build.'
+        subject = settings.SUBJECT_VM_FAIL
         EmailNotifier._compose_email(email, subject, body)
 
         # Also run the generic failure method to pass failures to us
@@ -133,16 +146,18 @@ class EmailNotifier:
         """
         logger = logging.getLogger('robot.email_notifier.delete_schedule_success')
         logger.debug(f'Sending delete scheduled email for VM #{vm_data["idVM"]}')
-        name = vm_data['name']
         # Check that the data contains an email
         email = vm_data.get('email', None)
         if email is None:
-            logger.error(f'No email found for VM #{vm_data["idVM"]}. Sending to developers@cloudcix.com instead.')
-            email = 'developers@cloudcix.com'
+            logger.error(f'No email found for VM #{vm_data["idVM"]}. Sending to {settings.SEND_TO_FAIL} instead.')
+            email = settings.SEND_TO_FAIL
         # Render the email body
-        body = utils.JINJA_ENV.get_template('emails/scheduled_delete_success.j2').render(stage=STAGE, **vm_data)
+        body = utils.JINJA_ENV.get_template('emails/scheduled_delete_success.j2').render(
+            compute_url=settings.COMPUTE_UI_URL,
+            **vm_data,
+        )
         # Format the subject
-        subject = f'[CloudCIX] Your VM "{name}" has been scheduled for deletion!'
+        subject = settings.SUBJECT_VM_SCHEDULE_DELETE
         EmailNotifier._compose_email(email, subject, body)
 
     # ############################################################## #
@@ -159,8 +174,8 @@ class EmailNotifier:
         # Populate the headers
         message['subject'] = subject
         message['To'] = email
-        message['From'] = settings.CLOUDCIX_EMAIL_USERNAME
-        message['Reply-To'] = 'CloudCIX <no-reply@cloudcix.net>'
+        message['From'] = settings.EMAIL_USERNAME
+        message['Reply-To'] = settings.EMAIL_REPLY_TO
 
         # Attach the body of the email
         message.attach(MIMEText(body, 'html'))
@@ -183,11 +198,11 @@ class EmailNotifier:
         """
         logger = logging.getLogger('robot.email_notifier.send_email')
         try:
-            server = smtplib.SMTP('mail.cloudcix.net', timeout=10)
+            server = smtplib.SMTP(settings.EMAIL_HOST, timeout=10)
             # Log in to the server
             server.starttls()
-            server.login('notification@cloudcix.net', 'C1xacc355')
-            server.sendmail(settings.CLOUDCIX_EMAIL_USERNAME, [email], message.as_string())
+            server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
+            server.sendmail(settings.EMAIL_USERNAME, [email], message.as_string())
             server.quit()
             logger.debug(f'Successfully sent notification to {email}')
             return True
