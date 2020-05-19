@@ -49,15 +49,15 @@ def _get_influx_client() -> influxdb.InfluxDBClient:
     :return: An InfluxDBClient that can log metrics to our instance of Influx
     """
     global INFLUX_CLIENT
-    if INFLUX_CLIENT is None and settings.CLOUDCIX_INFLUX_DATABASE is not None:
+    if INFLUX_CLIENT is None and settings.INFLUX_DATABASE is not None:
         INFLUX_CLIENT = influxdb.InfluxDBClient(
-            host=settings.CLOUDCIX_INFLUX_URL,
-            port=settings.CLOUDCIX_INFLUX_PORT,
-            database=settings.CLOUDCIX_INFLUX_DATABASE,
-            ssl=settings.CLOUDCIX_INFLUX_PORT == 443,
+            host=settings.INFLUX_URL,
+            port=settings.INFLUX_PORT,
+            database=settings.INFLUX_DATABASE,
+            ssl=settings.INFLUX_PORT == 443,
         )
         # Ensure the database exists
-        INFLUX_CLIENT.create_database(settings.CLOUDCIX_INFLUX_DATABASE)
+        INFLUX_CLIENT.create_database(settings.INFLUX_DATABASE)
     return INFLUX_CLIENT
 
 

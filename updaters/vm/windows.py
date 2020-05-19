@@ -155,19 +155,41 @@ class Windows(WindowsMixin, VmUpdateMixin):
         data: Dict[str, Any] = {key: None for key in Windows.template_keys}
 
         data['vm_identifier'] = f'{vm_data["idProject"]}_{vm_data["idVM"]}'
+        data['dns'] = vm_data['dns'].replace(',', '", "')
+
         # changes
         changes: Dict[str, Any] = {
             'ram': False,
             'cpu': False,
             'storages': False,
         }
-        if 'ram' in vm_data['changes_this_month'][0]['details'].keys():
-            # RAM is needed in MB for the updater but we take it in in GB (1024, not 1000)
-            changes['ram'] = vm_data['ram'] * 1024
-        if 'cpu' in vm_data['changes_this_month'][0]['details'].keys():
-            changes['cpu'] = vm_data['cpu']
+        changes_this_month = vm_data['changes_this_month'][0]
+        try:
+            if changes_this_month['ram_quantity']:
+                # RAM is needed in MB for the updater but we take it in in GB (1024, not 1000)
+                changes['ram'] = vm_data['ram'] * 1024
+        except KeyError:
+            pass
+        try:
+            if changes_this_month['cpu_quantity']:
+                changes['cpu'] = vm_data['cpu']
+        except KeyError:
+            pass
 
-        data['dns'] = vm_data['dns'].replace(',', '", "')
+        # Fetch the drive information for the update
+        try:
+            if len(changes_this_month['storage_histories']) != 0:
+                Windows.logger.debug(f'Fetching drives for VM #{vm_id}')
+                hdd, ssd, drives = Windows.fetch_drive_updates(vm_data, span)
+                changes['storages'] = {
+                    'hdd': hdd,
+                    'ssd': ssd,
+                    'drives': drives,
+                }
+        except KeyError:
+            pass
+        # Add changes to data
+        data['changes'] = changes
 
         # Get the Networking details
         Windows.logger.debug(f'Fetching networking information for VM #{vm_id}')
@@ -190,18 +212,7 @@ class Windows(WindowsMixin, VmUpdateMixin):
                 data['host_name'] = mac['dnsName']
                 break
 
-        # Fetch the drive information for the update
-        if 'storages' in vm_data['changes_this_month'][0]['details'].keys():
-            Windows.logger.debug(f'Fetching drives for VM #{vm_id}')
-            hdd, ssd, drives = Windows.fetch_drive_updates(vm_data, span)
-            changes['storages'] = {
-                'hdd': hdd,
-                'ssd': ssd,
-                'drives': drives,
-            }
-        # Add changes to data
-        data['changes'] = changes
         # Determine whether or not we should turn the VM back on after the update finishes
         Windows.logger.debug(f'Determining if VM #{vm_id} should be powered on after update')
-        data['restart'] = Windows.determine_should_restart(vm_data)
+        data['restart'] = Windows.determine_should_restart(vm_data, span=span)
         return data

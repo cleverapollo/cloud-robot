@@ -10,7 +10,7 @@ builder class for vrfs
 import logging
 import re
 from collections import deque
-from typing import Any, Deque, Dict, Optional
+from typing import Any, Deque, Dict, List, Optional
 # lib
 import opentracing
 from cloudcix.api import IAAS
@@ -235,6 +235,9 @@ class Vrf(VrfMixin):
             # Determine what permission string to include in the firewall rule
             firewall['permission'] = 'permit' if firewall['allow'] else 'deny'
 
+            # logging
+            firewall['log'] = True if firewall['pci_logging'] else firewall['debug_logging']
+
             # Check port and protocol to allow any port for a specific protocol
             if firewall['port'] == '-1' and firewall['protocol'] != 'any':
                 firewall['port'] = '0-65535'
@@ -246,13 +249,18 @@ class Vrf(VrfMixin):
         # Finally, get the VPNs for the Project
         vpns: Deque[Dict[str, Any]] = deque()
         for vpn in utils.api_list(IAAS.vpn_tunnel, {'vrf': vrf_id}, span=span):
+            customer_subnets: List[str] = []
+            for customer_subnet in vpn['customer_subnets']:
+                customer_subnets.append(IPNetwork(str(customer_subnet)).cidr)
             vpns.append(
                 {
-                    'vlan': vpn['vpnLocalSubnetDict']['vLAN'],
-                    'local_subnet': IPNetwork(vpn['vpnLocalSubnetDict']['addressRange']).cidr,
+                    'description': vpn['description'],
+                    'stif_number': vpn['stif_number'],
                     'ike': vpn['ike'],
                     'ipsec': vpn['ipsec'],
-                    'remote_subnet': IPNetwork(f'{vpn["vpnRemoteSubnetIP"]}/{vpn["vpnRemoteSubnetMask"]}').cidr,
+                    'customer_subnets': customer_subnets,
+                    'local_proxy': IPNetwork(vpn['vpnLocalSubnetDict']['addressRange']).cidr,
+                    'remote_proxy': customer_subnets[0],  # taking first subnet for remote proxy
                 },
             )
         data['vpns'] = vpns
