@@ -22,7 +22,7 @@ def mainloop():
     """
     Run one instance of the Robot mainloop if any changes in any Project of the region.
     """
-    logger = logging.getLogger('tasks.mainloop')
+    logger = logging.getLogger('robot.tasks.mainloop')
     logger.debug(
         f'Fetching the status of run_robot from api.',
     )
