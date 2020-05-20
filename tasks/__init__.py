@@ -23,9 +23,15 @@ def mainloop():
     Run one instance of the Robot mainloop if any changes in any Project of the region.
     """
     logger = logging.getLogger('tasks.mainloop')
+    logger.debug(
+        f'Fetching the status of run_robot from api.',
+    )
     response = IAAS.run_robot.head(token=Token.get_instance().token)
     if response.status_code == 404:
-        # 404, run_robot is False
+        logger.debug(
+            f'HTTP {response.status_code}, No Project has changed in region so Robot is sleeping.',
+        )
+        # 404, run_robot is False so nothing to do.
         return None
     if response.status_code != 200:
         logger.error(
@@ -34,6 +40,9 @@ def mainloop():
         )
         return None
     # 200, run_robot is True
+    logger.debug(
+        f'HTTP {response.status_code}, There are changes in the region so calling Robot instance.',
+    )
     robot = Robot.get_instance()
     robot()
 
