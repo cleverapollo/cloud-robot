@@ -12,6 +12,7 @@ from cloudcix.api import IAAS
 import settings
 import utils
 from celery_app import app
+from cloudcix_token import Token
 from robot import Robot
 from .vrf import debug_logs
 
@@ -19,10 +20,20 @@ from .vrf import debug_logs
 @app.task
 def mainloop():
     """
-    Run one instance of the Robot mainloop
+    Run one instance of the Robot mainloop if any changes in any Project of the region.
     """
-    robot = Robot.get_instance()
-    robot()
+    logger = logging.getLogger('tasks.mainloop')
+    response = IAAS.run_robot.head(token=Token.get_instance().token)
+    if response.status_code != 200:
+        logger.error(
+            f'HTTP {response.status_code} error occurred when attempting to fetch run_robot _metadata;\n'
+            f'Response Text: {response.content.decode()}',
+        )
+        return None
+    run_robot = response.json()['_metadata']['run_robot']
+    if run_robot:
+        robot = Robot.get_instance()
+        robot()
 
 
 @app.task
