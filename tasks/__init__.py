@@ -24,16 +24,18 @@ def mainloop():
     """
     logger = logging.getLogger('tasks.mainloop')
     response = IAAS.run_robot.head(token=Token.get_instance().token)
+    if response.status_code == 404:
+        # 404, run_robot is False
+        return None
     if response.status_code != 200:
         logger.error(
             f'HTTP {response.status_code} error occurred when attempting to fetch run_robot _metadata;\n'
             f'Response Text: {response.content.decode()}',
         )
         return None
-    run_robot = response.json()['_metadata']['run_robot']
-    if run_robot:
-        robot = Robot.get_instance()
-        robot()
+    # 200, run_robot is True
+    robot = Robot.get_instance()
+    robot()
 
 
 @app.task
