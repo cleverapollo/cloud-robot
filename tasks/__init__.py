@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 # lib
 from cloudcix.api import IAAS
 # local
+import metrics
 import settings
 import utils
 from celery_app import app
@@ -22,6 +23,8 @@ def mainloop():
     """
     Run one instance of the Robot mainloop if any changes in any Project of the region.
     """
+    # Send info about uptime
+    metrics.heartbeat()
     logger = logging.getLogger('robot.tasks.mainloop')
     logger.info('Mainloop task check')
     logger.debug(
