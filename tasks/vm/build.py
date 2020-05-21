@@ -1,6 +1,6 @@
 # stdlib
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict
 # lib
 import opentracing
@@ -114,8 +114,9 @@ def _build_vm(vm_id: int, span: Span):
             f'VRF #{vm_vrf["idVRF"]} is not yet built, postponing build of VM #{vm_id}. '
             f'VRF is currently in state {vm_vrf["state"]}',
         )
-        # Return without changing the state
-        span.set_tag('return_reason', 'vrf_not_read')
+
+        # since vrf is not ready yet so wait for 10 sec and try again.
+        build_vm.s(vm_id).apply_async(eta=datetime.now() + timedelta(seconds=10))
         return
 
     # If all is well and good here, update the VM state to BUILDING and pass the data to the builder
