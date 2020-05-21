@@ -8,7 +8,6 @@ from typing import cast, Optional, Union
 from cloudcix.api import IAAS
 # local
 import dispatchers
-import metrics
 import settings
 import utils
 
@@ -63,8 +62,6 @@ class Robot:
         This is the main looping part of the robot.
         This method will loop until an exception occurs or a sigterm is received
         """
-        # Send info about uptime
-        metrics.heartbeat()
         self.logger.info('Commencing loop.')
         # Handle loop events in separate functions
 
