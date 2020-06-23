@@ -1,4 +1,4 @@
-# CloudCIX Cork01 Robot Settings
+# CloudCIX Vmotion-Cork01 Robot Settings
 import os
 
 __all__ = [
