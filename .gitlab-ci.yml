@@ -117,7 +117,7 @@ deploy_nti-cork01:
     - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
   stage: deploy
   script:
-    # Deploy Heartbear
+    # Deploy Heartbeat
     - ansible-playbook -i deployment/hosts/nti-cork01.yml deployment/playbook.yml --extra-vars="deployment_host=nti-cork01"
     # Deploy workers
     - ansible-playbook -i deployment/hosts/nti-cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=nti-cork01-worker0"
@@ -142,7 +142,7 @@ deploy_netsoc-cork01:
     - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
   stage: deploy
   script:
-    # Deploy Heartbear
+    # Deploy Heartbeat
     - ansible-playbook -i deployment/hosts/netsoc-cork01.yml deployment/playbook.yml --extra-vars="deployment_host=netsoc-cork01"
     # Deploy workers
     - ansible-playbook -i deployment/hosts/netsoc-cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=netsoc-cork01-worker0"
@@ -167,10 +167,35 @@ deploy_vodafone-cork01:
     - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
   stage: deploy
   script:
-    # Deploy Heartbear
+    # Deploy Heartbeat
     - ansible-playbook -i deployment/hosts/vodafone-cork01.yml deployment/playbook.yml --extra-vars="deployment_host=vodafone-cork01"
     # Deploy workers
     - ansible-playbook -i deployment/hosts/vodafone-cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=vodafone-cork01-worker0"
+  only:
+    - stable
+
+
+build_vmotion-cork01:
+  stage: build
+  tags:
+  - docker-build
+  script:
+  - docker build -f deployment/dockerfiles/vmotion-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/vmotion-cork01:latest --no-cache .
+  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/vmotion-cork01:latest
+  only:
+  - stable
+
+deploy_vmotion-cork01:
+  image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
+  before_script:
+    - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
+    - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
+  stage: deploy
+  script:
+    # Deploy Heartbeat
+    - ansible-playbook -i deployment/hosts/vmotion-cork01.yml deployment/playbook.yml --extra-vars="deployment_host=vmotion-cork01"
+    # Deploy workers
+    - ansible-playbook -i deployment/hosts/vmotion-cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=vmotion-cork01-worker0"
   only:
     - stable
 
