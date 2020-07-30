@@ -36,9 +36,6 @@ clearpart --all --initlabel
 {# Installation log level #}
 logging --level=info
 
-{# Network Information #}
-network --bootproto=static --ip={{ ip_address }} --netmask={{ netmask }} --gateway={{ gateway }} --nameserver={{ dns }}
-
 {# System Bootloader information #}
 bootloader --location=mbr
 

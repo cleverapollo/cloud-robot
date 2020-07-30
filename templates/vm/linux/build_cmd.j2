@@ -24,7 +24,17 @@
   --graphics vnc \
   --location {{ network_drive_path }}/ISOs/{{ image_filename }} \
   --os-variant rhel6 \
-  --initrd-inject={{ network_drive_path }}/kickstarts/{{ vm_identifier }}.cfg -x "ks=file:/{{ vm_identifier }}.cfg" \
-  --network bridge=br{{ vlan }} \
+  --initrd-inject={{ network_drive_path }}/VMs/{{ vm_identifier }}/{{ vm_identifier }}.cfg -x "ks=file:/{{ vm_identifier }}.cfg" \
+  {% if osname == 'centos' %}
+  --network bridge=br{{ default_vlan }} --extra-args="netcfg/choose_interface=eth0" \
+  {% for ip in ip_addresses %}
+  --network bridge=br{{ ip["vlan"] }} --extra-args="ip={{ ip["ip"] }}::{{ ip["gateway"] }}:{{ ip["netmask"] }}::eth{{ loop.index }}:none" \
+  {% endfor %}
+  {% elseif osname == 'ubuntu' %}
+  --network bridge=br{{ default_vlan }} --extra-args="netcfg/choose_interface=ens3" \
+  {% for ip in ip_addresses %}
+  --network bridge=br{{ ip["vlan"] }} \
+  {% endfor %}
+  {% endif %}
   --autostart
 }

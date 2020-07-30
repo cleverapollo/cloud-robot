@@ -7,7 +7,9 @@ builder class for windows vms
 """
 # stdlib
 import logging
+import os
 import random
+import shutil
 import string
 from collections import deque
 from typing import Any, Deque, Dict, Optional
@@ -41,14 +43,20 @@ class Windows(WindowsMixin):
         'admin_password',
         # the number of cpus in the vm
         'cpu',
+        # the default subnet gateway
+        'default_gateway',
+        # default ip address of the VM
+        'default_ip',
+        # the default subnet mask in integer form (/24)
+        'default_netmask_int',
+        # the default vlan that the vm is a part of
+        'default_vlan',
         # the dns servers for the vm (in list form, not string form)
         'dns',
         # the drives in the vm
         'drives',
         # the freenas url for the region
         'freenas_url',
-        # the subnet gateway
-        'gateway',
         # the hdd primary drive of the VM 'id:size'
         'hdd',
         # the DNS hostname for the host machine, as WinRM cannot use IPv6
@@ -57,20 +65,16 @@ class Windows(WindowsMixin):
         'image_name',
         # the id of the image used to build the VM
         'image_id',
-        # the ip address of the vm in its subnet
-        'ip_address',
+        # the non default ip addresses of the vm
+        'ip_addresses',
         # the language of the vm
         'language',
-        # the subnet mask in integer form (/24)
-        'netmask_int',
         # the amount of RAM in the VM
         'ram',
         # the ssd primary drive of the VM 'id:size'
         'ssd',
         # the timezone of the vm
         'timezone',
-        # the vlan that the vm is a part of
-        'vlan',
         # an identifier that uniquely identifies the vm
         'vm_identifier',
     }
@@ -113,11 +117,12 @@ class Windows(WindowsMixin):
 
         # If everything is okay, commence building the VM
         host_name = template_data.pop('host_name')
-        image_id = template_data.pop('image_id')
 
         # Write necessary files into the network drive
+        network_drive_path = settings.HYPERV_ROBOT_NETWORK_DRIVE_PATH
+        path = f'{network_drive_path}/VMs/{vm_data["idProject"]}_{vm_data["idVM"]}'
         child_span = opentracing.tracer.start_span('write_files_to_network_drive', child_of=span)
-        file_write_success = Windows._generate_network_drive_files(vm_id, image_id, template_data)
+        file_write_success = Windows._generate_network_drive_files(vm_id, path, template_data)
         child_span.finish()
 
         if not file_write_success:
@@ -153,6 +158,13 @@ class Windows(WindowsMixin):
             if response.std_err and '#< CLIXML\r\n' not in response.std_err:
                 msg = response.std_err.strip()
                 Windows.logger.warning(f'VM build command for VM #{vm_id} generated stderr\n{msg}')
+
+        # remove all the files created in network drive
+        try:
+            shutil.rmtree(path)
+        except OSError:
+            Windows.logger.warning(f'Failed to remove network drive files for VM #{vm_id}')
+
         return built
 
     @staticmethod
@@ -172,11 +184,10 @@ class Windows(WindowsMixin):
 
         data['vm_identifier'] = f'{vm_data["idProject"]}_{vm_data["idVM"]}'
         data['image_name'] = image_data['name']
-        data['image_id'] = image_data['idImage']
         # RAM is needed in MB for the builder but we take it in in GB (1024, not 1000)
         data['ram'] = vm_data['ram'] * 1024
         data['cpu'] = vm_data['cpu']
-        data['dns'] = [server.strip() for server in vm_data['dns'].split(',')]
+        data['dns'] = vm_data['dns']
 
         # Generate encrypted passwords
         data['admin_password'] = Windows._password_generator(size=8)
@@ -217,17 +228,34 @@ class Windows(WindowsMixin):
             data['drives'] = 0
 
         # Get the Networking details
-        for ip_address in utils.api_list(IAAS.ipaddress, {'vm': vm_id}, span=span):
-            # The private IP for the VM will be the one we need to pass to the template
+        for ip_address in data['ip_addresses']:
+            # The private IPs for the VM will be the one we need to pass to the template
             if not IPAddress(ip_address['address']).is_private():
                 continue
-            data['ip_address'] = ip_address['address']
+            ip = ip_address['address']
+
             # Read the subnet for the IPAddress to fetch information like the gateway and subnet mask
             subnet = utils.api_read(IAAS.subnet, ip_address['idSubnet'], span=span)
             if subnet is None:
                 return None
-            data['gateway'], data['netmask_int'] = subnet['addressRange'].split('/')
-            data['vlan'] = subnet['vLAN']
+            gateway, netmask_int = subnet['addressRange'].split('/')
+            vlan = str(subnet['vLAN'])
+
+            # Pick the default ip
+            if ip_address['idSubnet'] == data['gateway_subnet']['idSubnet']:
+                data['default_ip'] = ip
+                data['default_gateway'] = gateway
+                data['default_netmask_int'] = netmask_int
+                data['default_vlan'] = vlan
+                continue
+            data['ip_addresses'].append(
+                {
+                    'ip': ip,
+                    'gateway': gateway,
+                    'netmask_int': netmask_int,
+                    'vlan': vlan,
+                },
+            )
 
         # Add locale data to the VM
         data['language'] = 'en_IE'
@@ -244,31 +272,74 @@ class Windows(WindowsMixin):
         return data
 
     @staticmethod
-    def _generate_network_drive_files(vm_id: int, image_id: int, template_data: Dict[str, Any]) -> bool:
+    def _generate_network_drive_files(vm_id: int, path: str, template_data: Dict[str, Any]) -> bool:
         """
         Generate and write files into the network drive so they are on the host for the build scripts to utilise.
         Writes the following files to the drive;
-            - unattend file
+            - unattend.xml
+            - network.xml
+            - build.psm1
         :param vm_id: The id of the VM being built. Used for log messages
-        :param image_id: The id of the image used to build the VM
+        :param path: Network drive location to create above files for VM build
         :param template_data: The retrieved template data for the vm
         :returns: A flag stating whether or not the job was successful
         """
-        network_drive_path = settings.HYPERV_ROBOT_NETWORK_DRIVE_PATH
-
+        # Create a folder by vm_identifier name at network_drive_path/VMs/
+        try:
+            os.mkdir(path)
+        except OSError:
+            Windows.logger.error(
+                f'Failed to create directory for VM #{vm_id} at {path}',
+                exc_info=True,
+            )
+            return False
         # Render and attempt to write the unattend file
         template_name = f'vm/windows/unattend.j2'
         unattend = utils.JINJA_ENV.get_template(template_name).render(**template_data)
         Windows.logger.debug(f'Generated unattend file for VM #{vm_id}\n{unattend}')
         try:
             # Attempt to write
-            unattend_filename = f'{network_drive_path}/unattend_xmls/{template_data["vm_identifier"]}.xml'
-            with open(unattend_filename, 'w') as f:
+            unattend_file = f'{path}/unattend.xml'
+            with open(unattend_file, 'w') as f:
                 f.write(unattend)
-            Windows.logger.debug(f'Successfully wrote unattend file for VM #{vm_id} to {unattend_filename}')
+            Windows.logger.debug(f'Successfully wrote unattend file for VM #{vm_id} to {unattend_file}')
         except IOError:
             Windows.logger.error(
-                f'Failed to write unattend file for VM #{vm_id} to {unattend_filename}',
+                f'Failed to write unattend file for VM #{vm_id} to {unattend_file}',
+                exc_info=True,
+            )
+            return False
+
+        # Render and attempt to write the network file
+        template_name = f'vm/windows/network.j2'
+        network = utils.JINJA_ENV.get_template(template_name).render(**template_data)
+        Windows.logger.debug(f'Generated network file for VM #{vm_id}\n{network}')
+        try:
+            # Attempt to write
+            network_file = f'{path}/network.xml'
+            with open(network_file, 'w') as f:
+                f.write(network)
+            Windows.logger.debug(f'Successfully wrote network file for VM #{vm_id} to {network_file}')
+        except IOError:
+            Windows.logger.error(
+                f'Failed to write network file for VM #{vm_id} to {network_file}',
+                exc_info=True,
+            )
+            return False
+
+        # Render and attempt to write the build script file
+        template_name = f'vm/windows/build_script.j2'
+        builder = utils.JINJA_ENV.get_template(template_name).render(**template_data)
+        Windows.logger.debug(f'Generated build script file for VM #{vm_id}\n{builder}')
+        try:
+            # Attempt to write
+            script_file = f'{path}/builder.psm1'
+            with open(script_file, 'w') as f:
+                f.write(builder)
+            Windows.logger.debug(f'Successfully wrote build script file for VM #{vm_id} to {script_file}')
+        except IOError:
+            Windows.logger.error(
+                f'Failed to write build script file for VM #{vm_id} to {script_file}',
                 exc_info=True,
             )
             return False
