@@ -51,13 +51,21 @@ part /boot --fstype ext4 --size 256 --asprimary
 authconfig --passalgo=sha512 --kickstart
 
 {# Network #}
-network --bootproto=static --ip={{ ip_address }} --netmask={{ netmask }} --gateway={{ gateway }} --nameserver={{ dns.replace(',', ' ') }}
+network --bootproto=static --ip={{ default_ip }} --netmask={{ default_netmask }} --gateway={{ default_gateway }} --nameserver={{ dns.replace(',', ' ') }}
 
 {# Do not configure the X Window System #}
 skipx
 
-{# Post Install #}
+{# Packages #}
 %packages
-@ ubuntu-server
-@ openssh-server
+openssh-server
+
+{# Post Install #}
+%post --nochroot
+(
+    {% for ip in ip_addresses %}
+    echo -e 'auto ens4\niface ens{{3 + loop.index}} inet static\n    address {{ ip["ip"] }}\n    netmask {{ ip["netmask"] }}\n    gateway {{ ip["gateway"] }}\n    dns-nameservers {{ dns.replace(',', ' ') }}\n' >> /target/etc/network/interfaces;
+    {% endfor %}
+    sudo ifup -a
+) 1> /target/root/post_install.log 2>&1
 %end

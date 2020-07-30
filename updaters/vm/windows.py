@@ -35,18 +35,20 @@ class Windows(WindowsMixin, VmUpdateMixin):
     template_keys = {
         # # the admin password for the vm, unencrypted
         # 'admin_password',
+        # the default subnet gateway
+        'default_gateway',
+        # default ip address of the VM
+        'default_ip',
+        # the default subnet mask in integer form (/24)
+        'default_netmask_int',
+        # the default vlan that the vm is a part of
+        'default_vlan',
         # the dns servers for the vm
         'dns',
-        # the subnet gateway
-        'gateway',
-        # the ip address of the vm in its subnet
-        'ip_address',
-        # the subnet mask in address form (255.255.255.0)
-        'netmask',
+        # the non default ip addresses of the vm
+        'ip_addresses',
         # a flag stating whether or not the VM should be turned back on after updating it
         'restart',
-        # the vlan that the vm is a part of
-        'vlan',
         # an identifier that uniquely identifies the vm
         'vm_identifier',
         # changes of vm

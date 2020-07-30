@@ -121,9 +121,10 @@ def _update_vm(vm_id: int, span: Span):
     changes: bool = False
     # check if any changes in any of cpu, ram, storages otherwise ignore
     # the first change in changes_this_month list is the one we need to update about vm
-    if len(vm['changes_this_month']) != 0:
-        for item in vm['changes_this_month'][0].keys():
-            if item in ['cpu_quantity', 'ram_quantity', 'storage_histories']:
+    updates = vm['changes_this_month']
+    if len(updates) != 0:
+        for item in updates[0].keys():
+            if item in ['cpu_quantity', 'ram_quantity', 'storage_histories'] and updates[item] is not None:
                 changes = True
                 break
 

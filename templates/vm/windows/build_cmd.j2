@@ -1,86 +1,21 @@
-try {
 {# Set the script to stop at the first error. #}
-  $ErrorActionPreference = "Stop"
-  $mount_point = "drive_{{ vm_identifier }}"
+$ErrorActionPreference = "Stop"
+$mount_point = "drive_{{ vm_identifier }}"
+$drive_letter = $mount_point+":"
+try {
   New-PSDrive -Name $mount_point -PSProvider FileSystem `
   -Root {{ freenas_url }} -Scope Global
-  $drive_letter = $mount_point+":"
-  $file_path = "$drive_letter\HyperV\"
-  if($(Test-Path -Path $file_path) -eq $True){
-{# Define Ram #}
-    $ram = [int64]{{ ram }}*1MB
-{# Define primary drive #}
-{% if hdd %}
-    $drive_size = [int64]{{ hdd }}*1GB
-{% elif ssd %}
-    $drive_size = [int64]{{ ssd }}*1GB
-{% endif %}
-{# Path Configuration #}
-{# VM Path #}
-{% set vm_path = "D:\HyperV\\" %}
-    New-Item -ItemType directory -Path {{ vm_path }}{{ vm_identifier }}
-{# VHDX Path #}{% set vhd_path = [[[[vm_path, vm_identifier]|join(), vm_identifier]|join("\\"), drive_format, drive_id]|join("_"), ".vhdx"]|join() %}
-{# IMAGE VHDX Path #}
-{% set gen = 1 %}
-    [ValidateScript({Test-Path $_ })]
-    [string]$VHDXPath = "$drive_letter\HyperV\VHDXs\{{ image_name }} Gen {{ gen }}.vhdx"
-{# Unattend XML file path #}
-{# underscore in unattend_xmls is behaving strangely in the output, so taken into a variable #}
-{% set unattend = ["HyperV\\unattend", "xmls"]|join("_") %}
-    [ValidateScript({Test-Path $_ })]
-    $unattend = "$drive_letter\{{ unattend }}\{{ vm_identifier }}.xml"
-{# Copying VHDX to the folder #}
-    Copy-Item $VHDXPath -Destination {{ vhd_path }}
-{# Resizing the drive  #}
-    Resize-VHD -Path {{ vhd_path }} -SizeBytes $drive_size
-{# Mounting the drive #}
-    $mountedVHD = Mount-VHD -Path {{ vhd_path }} -NoDriveLetter -Passthru
-    Set-Disk -Number $mountedVHD.Number -IsOffline $false
-    $partitions = Get-Partition -DiskNumber $mountedVHD.Number
-    $mount_path = "D:\HyperV\{{ vm_identifier }}\mount"
-    mkdir $mount_path
-    Add-PartitionAccessPath -InputObject $partitions[0] -AccessPath $mount_path
-{# Copying unattend xml file into mounded drive #}
-    Copy-Item $unattend "$mount_path\unattend.xml"
-    Remove-PSDrive $mount_point
-{# Expanding the VHDx drive to its requested size #}
-    $size = Get-PartitionSupportedSize -DiskNumber $mountedVHD.Number
-    Resize-Partition -DiskNumber $mountedVHD.Number -PartitionNumber $partitions[0].PartitionNumber -Size $size.SizeMax
-    Remove-Item -Path $mount_path -Recurse -Force
-    Dismount-VHD -Path {{ vhd_path }}
-{# VM Creation and Configuration #}
-{# Creation of VM #}
-    New-VM -Name {{ vm_identifier }} -Path {{ vm_path }} `
-    -Generation {{ gen }} `
-    -SwitchName "Virtual Switch" `
-    -VHDPath {{ vhd_path }}
-{# Changing the number of processor and the memory #}
-    Set-VMProcessor {{ vm_identifier }} -Count {{ cpu }}
-{# Setting the RAM #}
-    Set-VMMemory {{ vm_identifier }} -DynamicMemoryEnabled $false -StartupBytes $ram
-{# Setting Network Adapter #}
-    Set-VMNetworkAdapterVlan -VMName {{ vm_identifier }} -Access -VlanId {{ vlan }}
-{# Adding Additional Drives #}
-{% if drives %}
-{% for drive in drives %}
-    $driveSize = [int64]{{ drive["drive_size"] }}*1GB
-{% set drive_path = [[[[vm_path, vm_identifier]|join(), vm_identifier]|join("\\"), drive_format, drive["drive_id"]]|join("_"), ".vhdx"]|join() %}
-{# Create new drive #}
-    New-VHD -Path {{ drive_path }} -SizeBytes $driveSize -Dynamic
-{# Attach the VHD(x) to the Vm #}
-    Add-VMHardDiskDrive -VMName {{ vm_identifier }} -Path {{ drive_path }}
-{% endfor %}
-{% endif %}
-{# Start the VM #}
-    Start-VM -Name {{ vm_identifier }}
-    Wait-VM -Name {{ vm_identifier }} -For IPAddress
-    Write-Host "VM Successfully Created and Hosted"
-  }else{Write-Error "$_.Exception.Message"}
-}catch{
-  if($(Test-Path -Path D:\HyperV\{{ vm_identifier }}\mount\Windows)){
-  Dismount-VHD -Path {{ vhd_path }}}
-  if($(Test-Path -Path D:\HyperV\{{ vm_identifier }}) -eq $True){
-  Remove-Item -Path D:\HyperV\{{ vm_identifier }} -Recurse}
-  if($(Test-Path -Path $drive_letter) -eq $True){Remove-PSDrive $mount_point}
-  Write-Error "$_.Exception.Message "
 }
+catch {
+  Write-Error "Failed to mount Network drive while running vm build cmd. Details: $_"
+}
+try {
+  [ValidateScript({Test-Path $_ })]
+  $build = "$drive_letter\HyperV\VMs\{{ vm_identifier }}\builder.psm1"
+}
+catch {
+  Write-Error "builder.psm1 file not found for vm {{ vm_identifier }}, exiting the VM Build. Details: $_"
+}
+{# Import and call builder script #}
+Import-Module $build
+VMBuilder -drive_letter $drive_letter
