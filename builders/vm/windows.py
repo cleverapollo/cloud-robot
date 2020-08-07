@@ -63,8 +63,6 @@ class Windows(WindowsMixin):
         'host_name',
         # the name of the image used to build the vm
         'image_name',
-        # the id of the image used to build the VM
-        'image_id',
         # the non default ip addresses of the vm
         'ip_addresses',
         # the language of the vm

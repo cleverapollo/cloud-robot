@@ -71,8 +71,6 @@ class Linux(LinuxMixin):
         'host_sudo_passwd',
         # the filename of the image used to build the vm
         'image_filename',
-        # the id of the image used to build the VM
-        'image_id',
         # the non default ip addresses of the vm
         'ip_addresses',
         # the keyboard layout to use for the vm
@@ -306,7 +304,18 @@ class Linux(LinuxMixin):
         # Add the host information to the data
         data['host_sudo_passwd'] = settings.NETWORK_PASSWORD
         data['network_drive_path'] = settings.KVM_HOST_NETWORK_DRIVE_PATH
-        data['osname'] = KICKSTART_TEMPLATE_MAP.get(image_data['idImage'], None)
+
+        # Determine the kickstart template to use for the VM
+        os_name = KICKSTART_TEMPLATE_MAP.get(image_data['idImage'], None)
+        if os_name is None:
+            valid_ids = ', '.join(f'`{map_id}`' for map_id in KICKSTART_TEMPLATE_MAP.keys())
+            Linux.logger.error(
+                f'Invalid Linux Image ID for VM #{vm_id}. '
+                f'Received {image_data["idImage"]}, valid choices are {valid_ids}.',
+            )
+            return None
+        data['osname'] = os_name
+
         return data
 
     @staticmethod
@@ -331,18 +340,8 @@ class Linux(LinuxMixin):
             )
             return False
 
-        # Determine the kickstart template to use for the VM
-        os_name = template_data['osname']
-        if os_name is None:
-            valid_ids = ', '.join(f'`{map_id}`' for map_id in KICKSTART_TEMPLATE_MAP.keys())
-            Linux.logger.error(
-                f'Invalid Linux Image ID for VM #{vm_id}. '
-                f'Received {template_data["image_id"]}, valid choices are {valid_ids}.',
-            )
-            return False
-
         # Render and attempt to write the kickstart file
-        template_name = f'vm/linux/kickstarts/{os_name}.j2'
+        template_name = f'vm/linux/kickstarts/{template_data["osname"]}.j2'
         kickstart = utils.JINJA_ENV.get_template(template_name).render(**template_data)
         Linux.logger.debug(f'Generated kickstart file for VM #{vm_id}\n{kickstart}')
         try:
