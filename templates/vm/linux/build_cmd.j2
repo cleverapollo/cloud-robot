@@ -1,40 +1,40 @@
 {
   {#----------------------- Drives creations------------------------- #}
-  {% if hdd %}
+{% if hdd %}
   echo {{ host_sudo_passwd }} | sudo -S qemu-img create -f qcow2 /var/lib/libvirt/images/{{ vm_identifier }}_HDD_{{ hdd.split(':')[0] }}.img {{ hdd.split(':')[1] }}G
-  {% elif ssd %}
+{% elif ssd %}
   echo {{ host_sudo_passwd }} | sudo -S qemu-img create -f qcow2 /var/lib/libvirt/images/{{ vm_identifier }}_SSD_{{ ssd.split(':')[0] }}.img {{ ssd.split(':')[1] }}G
-  {% endif %}
-  {% for drive in drives %}
+{% endif %}
+{% for drive in drives %}
   echo {{ host_sudo_passwd }} | sudo -S qemu-img create -f qcow2 /var/lib/libvirt/images/{{ vm_identifier }}_{{ drive["type"] }}_{{ drive["id"] }}.img {{ drive["size"] }}G
-  {% endfor %}
+{% endfor %}
 
   {#----------------------- VM creation------------------------- #}
   echo {{ host_sudo_passwd }} | sudo -S virt-install --name {{ vm_identifier }} \
   --memory {{ ram }} \
   --vcpus {{ cpu }} \
-  {% if hdd %}
+{% if hdd %}
   --disk path="/var/lib/libvirt/images/{{ vm_identifier }}_HDD_{{ hdd.split(':')[0] }}.img,device=disk,bus=virtio" \
-  {% elif ssd %}
+{% elif ssd %}
   --disk path="/var/lib/libvirt/images/{{ vm_identifier }}_SSD_{{ ssd.split(':')[0] }}.img,device=disk,bus=virtio" \
-  {% endif %}
-  {% for drive in drives %}
+{% endif %}
+{% for drive in drives %}
   --disk path="/var/lib/libvirt/images/{{ vm_identifier }}_{{ drive["type"] }}_{{ drive["id"] }}.img,device=disk,bus=virtio" \
-  {% endfor %}
+{% endfor %}
   --graphics vnc \
   --location {{ network_drive_path }}/ISOs/{{ image_filename }} \
   --os-variant rhel6 \
   --initrd-inject={{ network_drive_path }}/VMs/{{ vm_identifier }}/{{ vm_identifier }}.cfg -x "ks=file:/{{ vm_identifier }}.cfg" \
-  {% if osname == 'centos' %}
+{% if osname == 'centos' %}
   --network bridge=br{{ default_vlan }} --extra-args="netcfg/choose_interface=eth0" \
   {% for ip in ip_addresses %}
   --network bridge=br{{ ip["vlan"] }} --extra-args="ip={{ ip["ip"] }}::{{ ip["gateway"] }}:{{ ip["netmask"] }}::eth{{ loop.index }}:none" \
-  {% endfor %}
-  {% elif osname == 'ubuntu' %}
+{% endfor %}
+{% elif osname == 'ubuntu' %}
   --network bridge=br{{ default_vlan }} --extra-args="netcfg/choose_interface=ens3" \
-  {% for ip in ip_addresses %}
+{% for ip in ip_addresses %}
   --network bridge=br{{ ip["vlan"] }} \
-  {% endfor %}
-  {% endif %}
+{% endfor %}
+{% endif %}
   --autostart
 }

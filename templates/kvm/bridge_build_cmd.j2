@@ -1,5 +1,5 @@
 {
-  {% for vlan in vlans %}
+{% for vlan in vlans %}
   {# 1. Define the bridge using the definition file we generated #}
   echo {{ host_sudo_passwd }} | sudo -S virsh iface-define --file {{ network_drive_path }}/VMs/{{ vm_identifier }}/br{{ vlan }}.xml
 
@@ -8,5 +8,5 @@
 
   {# 3. Start the interface #}
   echo {{ host_sudo_passwd }} | sudo -S virsh iface-start br{{ vlan }}
-  {% endfor %}
+{% endfor %}
 }
