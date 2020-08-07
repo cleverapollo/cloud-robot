@@ -30,7 +30,7 @@
   {% for ip in ip_addresses %}
   --network bridge=br{{ ip["vlan"] }} --extra-args="ip={{ ip["ip"] }}::{{ ip["gateway"] }}:{{ ip["netmask"] }}::eth{{ loop.index }}:none" \
   {% endfor %}
-  {% elseif osname == 'ubuntu' %}
+  {% elif osname == 'ubuntu' %}
   --network bridge=br{{ default_vlan }} --extra-args="netcfg/choose_interface=ens3" \
   {% for ip in ip_addresses %}
   --network bridge=br{{ ip["vlan"] }} \
