@@ -277,7 +277,7 @@ class Linux(LinuxMixin):
             data['vlans'].append(vlan)
 
             # Pick the default ip
-            if ip_address['idSubnet'] == data['gateway_subnet']['idSubnet']:
+            if ip_address['idSubnet'] == vm_data['gateway_subnet']['idSubnet']:
                 data['default_ip'] = ip
                 data['default_gateway'] = gateway
                 data['default_netmask'] = netmask
