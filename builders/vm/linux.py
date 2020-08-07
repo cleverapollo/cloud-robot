@@ -259,7 +259,7 @@ class Linux(LinuxMixin):
         data['drives'] = drives
 
         # Get the Networking details
-        for ip_address in data['ip_addresses']:
+        for ip_address in vm_data['ip_addresses']:
             # The private IPs for the VM will be the one we need to pass to the template
             if not IPAddress(ip_address['address']).is_private():
                 continue
