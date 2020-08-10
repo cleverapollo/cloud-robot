@@ -24,8 +24,8 @@ function VMBuilder {
     [string]$VHDXPath = "$drive_letter\HyperV\VHDXs\{{ image_name }} Gen 2.vhdx"
 {# Unattend XML file path #}
     [ValidateScript({Test-Path $_ })]
-    $unattend = "$drive_letter\VMs\{{ vm_identifier }}\unattend.xml"
-    $network = "$drive_letter\VMs\{{ vm_identifier }}\network.xml"
+    $unattend = "$drive_letter\HyperV\VMs\{{ vm_identifier }}\unattend.xml"
+    $network = "$drive_letter\HyperV\VMs\{{ vm_identifier }}\network.xml"
 {# Copying VHDX to the folder #}
     Copy-Item $VHDXPath -Destination {{ vhd_path }}
 {# Resizing the drive  #}
