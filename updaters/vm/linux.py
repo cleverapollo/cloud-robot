@@ -157,21 +157,22 @@ class Linux(LinuxMixin, VmUpdateMixin):
             'cpu': False,
             'storages': False,
         }
-        changes_this_month = vm_data['changes_this_month'][0]
+        updates = vm_data['history'][0]
         try:
-            if changes_this_month['ram_quantity']:
+            if updates['ram_quantity'] is not None:
                 # RAM is needed in MB for the updater but we take it in in GB (1024, not 1000)
                 changes['ram'] = vm_data['ram'] * 1024
         except KeyError:
             pass
         try:
-            if changes_this_month['cpu_quantity']:
+            if updates['cpu_quantity'] is not None:
                 changes['cpu'] = vm_data['cpu']
         except KeyError:
             pass
+
         # Fetch the drive information for the update
         try:
-            if len(changes_this_month['storage_histories']) != 0:
+            if len(updates['storage_histories']) != 0:
                 Linux.logger.debug(f'Fetching drives for VM #{vm_id}')
                 hdd, ssd, drives = Linux.fetch_drive_updates(vm_data, span)
                 changes['storages'] = {
