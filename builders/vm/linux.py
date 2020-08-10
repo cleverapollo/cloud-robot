@@ -359,7 +359,7 @@ class Linux(LinuxMixin):
         # Render and attempt to write the bridge definition file
         for vlan in template_data['vlans']:
             template_name = 'kvm/bridge_definition.j2'
-            bridge_def = utils.JINJA_ENV.get_template(template_name).render(**template_data)
+            bridge_def = utils.JINJA_ENV.get_template(template_name).render(vlan=vlan)
             Linux.logger.debug(f'Generated bridge definition file for VM #{vm_id}\n{bridge_def}')
             try:
                 # Attempt to write
