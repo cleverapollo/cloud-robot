@@ -264,7 +264,10 @@ class Linux(LinuxMixin):
             if not IPAddress(ip_address['address']).is_private():
                 continue
             ip = ip_address['address']
-            subnet = ip_address['subnet']
+            # Read the subnet for the IPAddress to fetch information like the gateway and subnet mask
+            subnet = utils.api_read(IAAS.subnet, ip_address['idSubnet'], span=span)
+            if subnet is None:
+                return None
             net = IPNetwork(subnet['addressRange'])
             gateway, netmask = str(net.ip), str(net.netmask)
             vlan = str(subnet['vLAN'])
