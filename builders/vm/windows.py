@@ -295,7 +295,9 @@ class Windows(WindowsMixin):
         # Render and attempt to write the unattend file
         template_name = f'vm/windows/unattend.j2'
         unattend = utils.JINJA_ENV.get_template(template_name).render(**template_data)
-        Windows.logger.debug(f'Generated unattend file for VM #{vm_id}\n{unattend}')
+        template_data.pop('admin_password')
+        unattend_log = utils.JINJA_ENV.get_template(template_name).render(**template_data)
+        Windows.logger.debug(f'Generated unattend file for VM #{vm_id}\n{unattend_log}')
         try:
             # Attempt to write
             unattend_file = f'{path}/unattend.xml'
