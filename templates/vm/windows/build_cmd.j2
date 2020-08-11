@@ -19,3 +19,6 @@ catch {
 {# Import and call builder script #}
 Import-Module $build
 VMBuilder -drive_letter $drive_letter -mount_point $mount_point
+if($(Test-Path -Path $drive_letter) -eq $True){
+Remove-PSDrive $mount_point
+}
