@@ -1,7 +1,8 @@
 function VMBuilder {
   [cmdletbinding()]
   Param(
-    [string]$drive_letter
+    [string]$drive_letter,
+    [string]$mount_point
   )
   try {
     $file_path = "$drive_letter\HyperV\"
