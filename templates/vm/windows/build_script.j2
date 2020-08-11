@@ -9,17 +9,17 @@ function VMBuilder {
 {# Define Ram #}
     $ram = [int64]{{ ram }}*1MB
 {# Define primary drive #}
-    {% if hdd %}
-      $drive_size = [int64]{{ hdd }}*1GB
-    {% elif ssd %}
-      $drive_size = [int64]{{ ssd }}*1GB
-    {% endif %}
+{% if hdd %}
+    $drive_size = [int64]{{ hdd }}*1GB
+{% elif ssd %}
+    $drive_size = [int64]{{ ssd }}*1GB
+{% endif %}
 {# Path Configuration #}
 {# VM Path #}
-    {% set vm_path = "D:\HyperV\\" %}
+{% set vm_path = "D:\HyperV\\" %}
     New-Item -ItemType directory -Path {{ vm_path }}{{ vm_identifier }}
 {# VHDX Path #}
-    {% set vhd_path = [[[[vm_path, vm_identifier]|join(), vm_identifier]|join("\\"), drive_format, drive_id]|join("_"), ".vhdx"]|join() %}
+{% set vhd_path = [[[[vm_path, vm_identifier]|join(), vm_identifier]|join("\\"), drive_format, drive_id]|join("_"), ".vhdx"]|join() %}
 {# IMAGE VHDX Path #}
     [ValidateScript({Test-Path $_ })]
     [string]$VHDXPath = "$drive_letter\HyperV\VHDXs\{{ image_name }} Gen 2.vhdx"
@@ -62,21 +62,21 @@ function VMBuilder {
     Set-VMNetworkAdapter -VMName {{ vm_identifier }} -DeviceNaming On
     Rename-VMNetworkAdapter -VMName {{ vm_identifier }} -NewName "vNIC-0"
     Set-VMNetworkAdapterVlan -VMName {{ vm_identifier }} -VMNetworkAdapterName "vNIC-0" -Access -VlanId {{ default_vlan }}
-    {% for ip in ip_addresses %}
-      Add-VMNetworkAdapter -VMName {{ vm_identifier }} -Name "vNIC-{{ loop.index }}" -SwitchName "Virtual Switch" -DeviceNaming On
-      Set-VMNetworkAdapterVlan -VMName {{ vm_identifier }} -VMNetworkAdapterName "vNIC-{{ loop.index }}" -Access -VlanId {{ ip['vlan'] }}
-    {% endfor %}
+{% for ip in ip_addresses %}
+    Add-VMNetworkAdapter -VMName {{ vm_identifier }} -Name "vNIC-{{ loop.index }}" -SwitchName "Virtual Switch" -DeviceNaming On
+    Set-VMNetworkAdapterVlan -VMName {{ vm_identifier }} -VMNetworkAdapterName "vNIC-{{ loop.index }}" -Access -VlanId {{ ip['vlan'] }}
+{% endfor %}
 {# Adding Additional Drives #}
-    {% if drives %}
-      {% for drive in drives %}
-        $driveSize = [int64]{{ drive["drive_size"] }}*1GB
-        {% set drive_path = [[[[vm_path, vm_identifier]|join(), vm_identifier]|join("\\"), drive_format, drive["drive_id"]]|join("_"), ".vhdx"]|join() %}
+{% if drives %}
+{% for drive in drives %}
+    $driveSize = [int64]{{ drive["drive_size"] }}*1GB
+    {% set drive_path = [[[[vm_path, vm_identifier]|join(), vm_identifier]|join("\\"), drive_format, drive["drive_id"]]|join("_"), ".vhdx"]|join() %}
 {# Create new drive #}
-        New-VHD -Path {{ drive_path }} -SizeBytes $driveSize -Dynamic
+    New-VHD -Path {{ drive_path }} -SizeBytes $driveSize -Dynamic
 {# Attach the VHD(x) to the Vm #}
-        Add-VMHardDiskDrive -VMName {{ vm_identifier }} -Path {{ drive_path }}
-      {% endfor %}
-    {% endif %}
+    Add-VMHardDiskDrive -VMName {{ vm_identifier }} -Path {{ drive_path }}
+{% endfor %}
+{% endif %}
 {# Start the VM #}
     Start-VM -Name {{ vm_identifier }}
     Wait-VM -Name {{ vm_identifier }} -For IPAddress
@@ -88,10 +88,12 @@ function VMBuilder {
   }
   catch {
     if($(Test-Path -Path D:\HyperV\{{ vm_identifier }}\mount\Windows)){
-      Dismount-VHD -Path {{ vhd_path }}}
+    Dismount-VHD -Path {{ vhd_path }}}
     if($(Test-Path -Path D:\HyperV\{{ vm_identifier }}) -eq $True){
-      Remove-Item -Path D:\HyperV\{{ vm_identifier }} -Recurse}
-    if($(Test-Path -Path $drive_letter) -eq $True){Remove-PSDrive $mount_point}
-      Write-Error "$_.Exception.Message "
+    Remove-Item -Path D:\HyperV\{{ vm_identifier }} -Recurse}
+    if($(Test-Path -Path $drive_letter) -eq $True){
+    Remove-PSDrive $mount_point
+    }
+    Write-Error "$_.Exception.Message "
   }
 }
