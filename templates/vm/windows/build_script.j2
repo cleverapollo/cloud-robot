@@ -43,7 +43,7 @@ function VMBuilder {
     Copy-Item $unattend "$mount_path\unattend.xml"
     Copy-Item $network "$mount_path\network.xml"
 {# Expanding the VHDx drive to its requested size #}
-    $size = Get-PartitionSupportedSize -DiskNumber $mountedVHD.Number
+    [System.UInt64]$size = Get-PartitionSupportedSize -DiskNumber $mountedVHD.Number -PartitionNumber $partitions[-1].PartitionNumber
     Resize-Partition -DiskNumber $mountedVHD.Number -PartitionNumber $partitions[-1].PartitionNumber -Size $size.SizeMax
     Remove-Item -Path $mount_path -Recurse -Force
     Dismount-VHD -Path {{ vhd_path }}
