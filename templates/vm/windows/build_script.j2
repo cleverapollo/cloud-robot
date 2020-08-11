@@ -18,7 +18,8 @@ function VMBuilder {
 {# VM Path #}
     {% set vm_path = "D:\HyperV\\" %}
     New-Item -ItemType directory -Path {{ vm_path }}{{ vm_identifier }}
-{# VHDX Path #}{% set vhd_path = [[[[vm_path, vm_identifier]|join(), vm_identifier]|join("\\"), drive_format, drive_id]|join("_"), ".vhdx"]|join() %}
+{# VHDX Path #}
+    {% set vhd_path = [[[[vm_path, vm_identifier]|join(), vm_identifier]|join("\\"), drive_format, drive_id]|join("_"), ".vhdx"]|join() %}
 {# IMAGE VHDX Path #}
     [ValidateScript({Test-Path $_ })]
     [string]$VHDXPath = "$drive_letter\HyperV\VHDXs\{{ image_name }} Gen 2.vhdx"
@@ -60,7 +61,7 @@ function VMBuilder {
 {# Setting Network Adapter #}
     Set-VMNetworkAdapter -VMName {{ vm_identifier }} -DeviceNaming On
     Rename-VMNetworkAdapter -VMName {{ vm_identifier }} -NewName "vNIC-0"
-    Set-VMNetworkAdapterVlan -VMName {{ vm_identifier }} -VMNetworkAdapterName "vNIC-0" -Access -VlanId {{ vlan }}
+    Set-VMNetworkAdapterVlan -VMName {{ vm_identifier }} -VMNetworkAdapterName "vNIC-0" -Access -VlanId {{ default_vlan }}
     {% for ip in ip_addresses %}
       Add-VMNetworkAdapter -VMName {{ vm_identifier }} -Name "vNIC-{{ loop.index }}" -SwitchName "Virtual Switch" -DeviceNaming On
       Set-VMNetworkAdapterVlan -VMName {{ vm_identifier }} -VMNetworkAdapterName "vNIC-{{ loop.index }}" -Access -VlanId {{ ip['vlan'] }}
