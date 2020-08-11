@@ -38,7 +38,7 @@ function VMBuilder {
     $partitions = Get-Partition -DiskNumber $mountedVHD.Number
     $mount_path = "D:\HyperV\{{ vm_identifier }}\mount"
     mkdir $mount_path
-    Add-PartitionAccessPath -InputObject $partitions[1] -AccessPath $mount_path
+    Add-PartitionAccessPath -InputObject $partitions[-1] -AccessPath $mount_path
 {# Copying unattend and network xml files into mounded drive #}
     Copy-Item $unattend "$mount_path\unattend.xml"
     Copy-Item $network "$mount_path\network.xml"
@@ -46,7 +46,7 @@ function VMBuilder {
     Remove-PSDrive $mount_point
 {# Expanding the VHDx drive to its requested size #}
     $size = Get-PartitionSupportedSize -DiskNumber $mountedVHD.Number
-    Resize-Partition -DiskNumber $mountedVHD.Number -PartitionNumber $partitions[1].PartitionNumber -Size $size.SizeMax
+    Resize-Partition -DiskNumber $mountedVHD.Number -PartitionNumber $partitions[-1].PartitionNumber -Size $size.SizeMax
     Remove-Item -Path $mount_path -Recurse -Force
     Dismount-VHD -Path {{ vhd_path }}
 {# VM Creation and Configuration #}
