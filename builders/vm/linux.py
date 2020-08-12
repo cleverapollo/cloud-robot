@@ -288,6 +288,7 @@ class Linux(LinuxMixin):
                     'vlan': vlan,
                 },
             )
+        data['vlans'] = list(set(data['vlans']))  # Removing duplicates
 
         # Add locale data to the VM
         data['keyboard'] = 'ie'

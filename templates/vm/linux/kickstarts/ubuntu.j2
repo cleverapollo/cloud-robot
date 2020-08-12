@@ -61,6 +61,7 @@ skipx
 openssh-server
 
 {# Post Install #}
+{% if len(ip_addresses) > 0 %}
 %post --nochroot
 (
     {% for ip in ip_addresses %}
@@ -69,3 +70,4 @@ openssh-server
     sudo ifup -a
 ) 1> /target/root/post_install.log 2>&1
 %end
+{% endif %}
