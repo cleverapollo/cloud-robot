@@ -61,7 +61,7 @@ skipx
 openssh-server
 
 {# Post Install #}
-{% if len(ip_addresses) > 0 %}
+{% if ip_addresses|length > 0 %}
 %post --nochroot
 (
     {% for ip in ip_addresses %}
