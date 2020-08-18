@@ -187,8 +187,8 @@ class Robot:
         This gets run once a day at midnight, once we're sure it works
         """
         self.logger.info(f'Commencing scrub checks with updated__lte={timestamp}')
-        self._vrf_scrub(timestamp)
         self._vm_scrub(timestamp)
+        self._vrf_scrub(timestamp)
         # Flush the loggers
         utils.flush_logstash()
 
