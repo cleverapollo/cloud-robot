@@ -54,15 +54,21 @@ class Linux(LinuxMixin):
         # the default subnet gateway
         'default_gateway',
         # default ip address of the VM
-        'default_ip',
+        'default_ips',
         # the default subnet mask in ip address form (255.255.255.0)
         'default_netmask',
         # the default vlan that the vm is a part of
         'default_vlan',
+        # device index and type for nic
+        'device_index',
+        'device_type',
         # the dns servers for the vm
         'dns',
         # the drives in the vm
         'drives',
+        # first nic
+        'first_nic_primary',
+        'first_nic_secondary',
         # the hdd primary drive of the VM 'id:size'
         'hdd',
         # the ip address of the host that the VM will be built on
@@ -71,8 +77,8 @@ class Linux(LinuxMixin):
         'host_sudo_passwd',
         # the filename of the image used to build the vm
         'image_filename',
-        # the non default ip addresses of the vm
-        'ip_addresses',
+        # the non default ip addresses of the vm as nics
+        'nics',
         # the keyboard layout to use for the vm
         'keyboard',
         # the language of the vm
@@ -258,37 +264,87 @@ class Linux(LinuxMixin):
 
         # Get the Networking details
         data['vlans'] = []
-        data['ip_addresses'] = []
-        for ip_address in vm_data['ip_addresses']:
-            # The private IPs for the VM will be the one we need to pass to the template
-            if not IPAddress(ip_address['address']).is_private():
-                continue
-            ip = ip_address['address']
-            # Read the subnet for the IPAddress to fetch information like the gateway and subnet mask
-            subnet = utils.api_read(IAAS.subnet, ip_address['idSubnet'], span=span)
-            if subnet is None:
-                return None
+        data['nics'] = []
+        data['default_ips'] = []
+        data['default_gateway'] = None
+        data['default_netmask'] = None
+        data['default_netmask_int'] = None
+        data['default_vlan'] = None
+
+        # The private IPs for the VM will be the one we need to pass to the template
+        ip_addresses = [
+            ip_address for ip_address in vm_data['ip_addresses'] if IPAddress(ip_address['address']).is_private()
+        ]
+        subnet_ids = [ip['idSubnet'] for ip in ip_addresses]
+        subnets = utils.api_list(IAAS.subnet, {'idSubnet__in': subnet_ids}, span=span)
+
+        for subnet in subnets:
+            non_default_ips = []
             net = IPNetwork(subnet['addressRange'])
             gateway, netmask = str(net.ip), str(net.netmask)
+            netmask_int = subnet['addressRange'].split('/')[1]
             vlan = str(subnet['vLAN'])
             data['vlans'].append(vlan)
 
-            # Pick the default ip
-            if subnet['idSubnet'] == vm_data['gateway_subnet']['idSubnet']:
-                data['default_ip'] = ip
-                data['default_gateway'] = gateway
-                data['default_netmask'] = netmask
-                data['default_vlan'] = vlan
-                continue
-            data['ip_addresses'].append(
-                {
-                    'ip': ip,
-                    'gateway': gateway,
-                    'netmask': netmask,
-                    'vlan': vlan,
-                },
-            )
+            for ip_address in ip_addresses:
+                address = ip_address['address']
+                if ip_address['idSubnet'] == subnet['idSubnet']:
+                    # Pick the default ips if any
+                    if vm_data['gateway_subnet'] is not None:
+                        if subnet['idSubnet'] == vm_data['gateway_subnet']['idSubnet']:
+                            data['default_ips'].append(address)
+                            data['default_gateway'] = gateway
+                            data['default_netmask'] = netmask
+                            data['default_netmask_int'] = netmask_int
+                            data['default_vlan'] = vlan
+                            continue
+                    # else store the non gateway subnet ips
+                    non_default_ips.append(address)
+
+            if len(non_default_ips) > 0:
+                data['nics'].append(
+                    {
+                        'ips': non_default_ips,
+                        'gateway': gateway,
+                        'netmask': netmask,
+                        'netmask_int': netmask_int,
+                        'vlan': vlan,
+                    },
+                )
+        # required adjustments for templates simplicity
         data['vlans'] = list(set(data['vlans']))  # Removing duplicates
+
+        data['first_nic_primary'] = {}
+        data['first_nic_secondary'] = None
+        if len(data['default_ips']) > 0:
+            data['first_nic_primary'] = {
+                'ip': data['default_ips'][0],  # taking the first ip
+                'gateway': data['default_gateway'],
+                'netmask': data['default_netmask'],
+                'netmask_int': data['default_netmask_int'],
+                'vlan': data['default_vlan'],
+            }
+            data['default_ips'].pop(0)  # removing the first ip
+            if len(data['default_ips']) > 0:
+                data['first_nic_secondary'] = {
+                    'ips': data['default_ips'],
+                    'gateway': data['default_gateway'],
+                    'netmask': data['default_netmask'],
+                    'netmask_int': data['default_netmask_int'],
+                    'vlan': data['default_vlan'],
+                }
+        elif len(data['default_ips']) == 0 and len(data['nics']) > 0:
+            data['first_nic_primary'] = {
+                'ip': data['nics'][0]['ips'][0],  # taking the first ip
+                'gateway': data['nics'][0]['gateway'],
+                'netmask': data['nics'][0]['netmask'],
+                'netmask_int': data['nics'][0]['netmask_int'],
+                'vlan': data['nics'][0]['vlan'],
+            }
+            data['nics'][0]['ips'].pop(0)  # removing the first ip
+            if len(data['nics'][0]['ips']) > 0:
+                data['first_nic_secondary'] = data['nics'][0]
+                data['nics'].pop(0)
 
         # Add locale data to the VM
         data['keyboard'] = 'ie'
@@ -316,6 +372,13 @@ class Linux(LinuxMixin):
             return None
         data['osname'] = os_name
 
+        # device type
+        data['device_type'] = 'eth'
+        data['device_index'] = 0
+        if os_name == 'ubuntu' and '14' not in image_data['filename']:
+            data['device_type'] = 'ens'
+            data['device_index'] = 3
+
         return data
 
     @staticmethod
@@ -340,23 +403,6 @@ class Linux(LinuxMixin):
             )
             return False
 
-        # Render and attempt to write the kickstart file
-        template_name = f'vm/linux/kickstarts/{template_data["osname"]}.j2'
-        kickstart = utils.JINJA_ENV.get_template(template_name).render(**template_data)
-        Linux.logger.debug(f'Generated kickstart file for VM #{vm_id}\n{kickstart}')
-        try:
-            # Attempt to write
-            kickstart_filename = f'{path}/{template_data["vm_identifier"]}.cfg'
-            with open(kickstart_filename, 'w') as f:
-                f.write(kickstart)
-            Linux.logger.debug(f'Successfully wrote kickstart file for VM #{vm_id} to {kickstart_filename}')
-        except IOError:
-            Linux.logger.error(
-                f'Failed to write kickstart file for VM #{vm_id} to {kickstart_filename}',
-                exc_info=True,
-            )
-            return False
-
         # Render and attempt to write the bridge definition file
         for vlan in template_data['vlans']:
             template_name = 'kvm/bridge_definition.j2'
@@ -376,6 +422,26 @@ class Linux(LinuxMixin):
                     exc_info=True,
                 )
                 return False
+
+        # need to remove the default_vlan from vlans to simplify later in templates
+        if template_data['default_vlan'] is not None:
+            template_data['vlans'].remove(template_data['default_vlan'])
+        # Render and attempt to write the kickstart file
+        template_name = f'vm/linux/kickstarts/{template_data["osname"]}.j2'
+        kickstart = utils.JINJA_ENV.get_template(template_name).render(**template_data)
+        Linux.logger.debug(f'Generated kickstart file for VM #{vm_id}\n{kickstart}')
+        try:
+            # Attempt to write
+            kickstart_filename = f'{path}/{template_data["vm_identifier"]}.cfg'
+            with open(kickstart_filename, 'w') as f:
+                f.write(kickstart)
+            Linux.logger.debug(f'Successfully wrote kickstart file for VM #{vm_id} to {kickstart_filename}')
+        except IOError:
+            Linux.logger.error(
+                f'Failed to write kickstart file for VM #{vm_id} to {kickstart_filename}',
+                exc_info=True,
+            )
+            return False
 
         # Return True as all was successful
         return True
