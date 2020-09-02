@@ -25,16 +25,9 @@
   --location {{ network_drive_path }}/ISOs/{{ image_filename }} \
   --os-variant rhel6 \
   --initrd-inject={{ network_drive_path }}/VMs/{{ vm_identifier }}/{{ vm_identifier }}.cfg -x "ks=file:/{{ vm_identifier }}.cfg" \
-{% if osname == 'centos' %}
-  --network bridge=br{{ default_vlan }} --extra-args="netcfg/choose_interface=eth0, ip={{ default_ip }}::{{ default_gateway }}:{{ default_netmask }}::eth0:none" \
-  {% for ip in ip_addresses %}
-  --network bridge=br{{ ip["vlan"] }} --extra-args="ip={{ ip["ip"] }}::{{ ip["gateway"] }}:{{ ip["netmask"] }}::eth{{ loop.index }}:none" \
+  --network bridge=br{{ default_vlan }} --extra-args="netcfg/choose_interface={{ device_type }}{{ device_index }}" \
+{% for vlan in vlans %}
+  --network bridge=br{{ vlan }} \
 {% endfor %}
-{% elif osname == 'ubuntu' %}
-  --network bridge=br{{ default_vlan }} --extra-args="netcfg/choose_interface=ens3" \
-{% for ip in ip_addresses %}
-  --network bridge=br{{ ip["vlan"] }} \
-{% endfor %}
-{% endif %}
 --autostart
 }

@@ -36,11 +36,16 @@ clearpart --all --initlabel
 {# Installation log level #}
 logging --level=info
 
+{# Network Information #}
+network --bootproto=static --device={{ device_type }}{{ device_index }} --ip={{ first_nic_primary['ip'] }} --netmask={{ first_nic_primary['netmask'] }} --gateway={{ first_nic_primary['gateway'] }} --nameserver={{ dns }} --activate
+{% for nic in nics %}
+network --bootproto=static --device={{ device_type }}{{ device_index + loop.index }} --ip={{ nic['ip'][0] }} --netmask={{ nic['netmask'] }} --gateway={{ nic['gateway'] }} --nameserver={{ dns }} --activate
+{% endfor %}
+
 {# System Bootloader information #}
 bootloader --location=mbr
 
 {# Disk Partioning #}
-clearpart --all --initlabel
 autopart --type=lvm
 
 {# Root password #}
@@ -61,4 +66,23 @@ reboot --eject
 {# Install packages #}
 %packages
 @core
+
+{# Post Install #}
+%post -log=/root/install-post.log (
+
+{% if first_nic_secondary is not None %}
+{% for ip in first_nic_secondary['ips'] %}
+    echo -e "IPADDR{{ loop.index + 1 }}={{ ip['ip'] }}\nPREFIX{{ loop.index + 1 }}={{ ip['netmask_int'] }}" >> /etc/sysconfig/network-scripts/ifcfg-{{ device_type }}{{ device_index }}
+{% endfor %}
+{% endif%}
+
+{% for nic in nics %}
+{% set nic_count = loop.index % }
+{% for ip in nic['ips'] %}
+{% if loop.index0 != 0 %}
+    echo -e "IPADDR{{ loop.index0 + 1 }}={{ ip['ip'] }}\nPREFIX{{ loop.index0 + 1 }}={{ ip['netmask_int'] }}" >> /etc/sysconfig/network-scripts/ifcfg-{{ device_type }}{{ device_index }}
+{% endif %}
+{% endfor %}
+{% endfor %}
 %end
+

@@ -58,12 +58,10 @@ function VMBuilder {
 {# Setting the RAM #}
     Set-VMMemory {{ vm_identifier }} -DynamicMemoryEnabled $false -StartupBytes $ram
 {# Setting Network Adapter #}
-    Set-VMNetworkAdapter -VMName {{ vm_identifier }} -DeviceNaming On
-    Rename-VMNetworkAdapter -VMName {{ vm_identifier }} -NewName "vNIC-0"
-    Set-VMNetworkAdapterVlan -VMName {{ vm_identifier }} -VMNetworkAdapterName "vNIC-0" -Access -VlanId {{ default_vlan }}
-{% for ip in ip_addresses %}
-    Add-VMNetworkAdapter -VMName {{ vm_identifier }} -Name "vNIC-{{ loop.index }}" -SwitchName "Virtual Switch" -DeviceNaming On
-    Set-VMNetworkAdapterVlan -VMName {{ vm_identifier }} -VMNetworkAdapterName "vNIC-{{ loop.index }}" -Access -VlanId {{ ip['vlan'] }}
+    Remove-VMNetworkAdapter -VMName {{ vm_identifier }}
+{% for vlan in vlans %}
+    Add-VMNetworkAdapter -VMName {{ vm_identifier }} -Name "vNIC-{{ vlan }}" -SwitchName "Virtual Switch" -DeviceNaming On
+    Set-VMNetworkAdapterVlan -VMName {{ vm_identifier }} -VMNetworkAdapterName "vNIC-{{ vlan }}" -Access -VlanId {{ vlan }}
 {% endfor %}
 {# Adding Additional Drives #}
 {% if drives %}

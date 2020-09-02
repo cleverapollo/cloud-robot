@@ -46,7 +46,7 @@ class Windows(WindowsMixin):
         # the default subnet gateway
         'default_gateway',
         # default ip address of the VM
-        'default_ip',
+        'default_ips',
         # the default subnet mask in integer form (/24)
         'default_netmask_int',
         # the default vlan that the vm is a part of
@@ -75,6 +75,8 @@ class Windows(WindowsMixin):
         'timezone',
         # an identifier that uniquely identifies the vm
         'vm_identifier',
+        # all subnet vlans numbers list for bridges
+        'vlans',
     }
 
     @staticmethod
@@ -228,33 +230,47 @@ class Windows(WindowsMixin):
         # Get the Networking details
         data['vlans'] = []
         data['ip_addresses'] = []
-        for ip_address in vm_data['ip_addresses']:
-            # The private IPs for the VM will be the one we need to pass to the template
-            if not IPAddress(ip_address['address']).is_private():
-                continue
-            ip = ip_address['address']
-            # Read the subnet for the IPAddress to fetch information like the gateway and subnet mask
-            subnet = utils.api_read(IAAS.subnet, ip_address['idSubnet'], span=span)
-            if subnet is None:
-                return None
+        data['default_ips'] = []
+        data['default_gateway'] = ''
+        data['default_netmask_int'] = ''
+        data['default_vlan'] = ''
+
+        # The private IPs for the VM will be the one we need to pass to the template
+        ip_addresses = [
+            ip_address for ip_address in vm_data['ip_addresses'] if IPAddress(ip_address['address']).is_private()
+        ]
+        subnet_ids = [ip['idSubnet'] for ip in ip_addresses]
+        subnet_ids = list(set(subnet_ids))  # Removing duplicates
+        subnets = utils.api_list(IAAS.subnet, {'idSubnet__in': subnet_ids}, span=span)
+
+        for subnet in subnets:
+            non_default_ips = []
             gateway, netmask_int = subnet['addressRange'].split('/')
             vlan = str(subnet['vLAN'])
-
-            # Pick the default ip
-            if subnet['idSubnet'] == vm_data['gateway_subnet']['idSubnet']:
-                data['default_ip'] = ip
-                data['default_gateway'] = gateway
-                data['default_netmask_int'] = netmask_int
-                data['default_vlan'] = vlan
-                continue
-            data['ip_addresses'].append(
-                {
-                    'ip': ip,
-                    'gateway': gateway,
-                    'netmask_int': netmask_int,
-                    'vlan': vlan,
-                },
-            )
+            data['vlans'].append(vlan)
+            for ip_address in ip_addresses:
+                address = ip_address['address']
+                if ip_address['idSubnet'] == subnet['idSubnet']:
+                    # Pick the default ips if any
+                    if vm_data['gateway_subnet'] is not None:
+                        if subnet['idSubnet'] == vm_data['gateway_subnet']['idSubnet']:
+                            data['default_ips'].append(address)
+                            data['default_gateway'] = gateway
+                            data['default_netmask_int'] = netmask_int
+                            data['default_vlan'] = vlan
+                            continue
+                    # else store the non gateway subnet ips
+                    non_default_ips.append(address)
+            if len(non_default_ips) > 0:
+                data['ip_addresses'].append(
+                    {
+                        'ips': non_default_ips,
+                        'gateway': gateway,
+                        'netmask_int': netmask_int,
+                        'vlan': vlan,
+                    },
+                )
+        data['vlans'] = list(set(data['vlans']))  # Removing duplicates
 
         # Add locale data to the VM
         data['language'] = 'en_IE'

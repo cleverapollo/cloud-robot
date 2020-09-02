@@ -100,7 +100,7 @@ EMAIL_REPLY_TO = 'CloudCIX <no-reply@cloudcix.net>'
 EMAIL_USERNAME = 'Vodafone Cork01 <vodafone-cork01@cloudcix.net>'
 
 # Email to send build fail emails to
-SEND_TO_FAIL = 'developers@cloudcix.com'
+SEND_TO_FAIL = 'noc@cix.ie'
 
 # Subject for Project build fail Emails
 SUBJECT_PROJECT_FAIL = '[CloudCIX] VM Failure Occurred!'
