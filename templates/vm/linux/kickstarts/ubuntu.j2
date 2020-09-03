@@ -65,15 +65,15 @@ ifupdown
 %post --nochroot
 (
 {% if first_nic_secondary %}
-{% for ip in first_nic_secondary['ips'] %}
-    echo -e 'auto {{ device_type }}{{ device_index }}:{{ loop.index }}\niface {{ device_type }}{{ device_index }}:{{ loop.index }} inet static\n    address {{ ip['ip'] }}\n    netmask {{ ip['netmask'] }}\n' >> /target/etc/network/interfaces;
+{% for address in first_nic_secondary['ips'] %}
+    echo -e 'auto {{ device_type }}{{ device_index }}:{{ loop.index }}\niface {{ device_type }}{{ device_index }}:{{ loop.index }} inet static\n    address {{ address['ip'] }}\n    netmask {{ first_nic_secondary['netmask'] }}\n' >> /target/etc/network/interfaces;
 {% endfor %}
 {% endif%}
 
 {% for nic in nics %}
-{% set nic_count = loop.index %}
-{% for ip in nic['ips'] %}
-    echo -e 'auto {{ device_type }}{{ device_index + nic_count }}\niface {{ device_type }}{{ device_index + nic_count }} inet static\n    address {{ ip['ip'] }}\n    netmask {{ ip['netmask'] }}\n' >> /target/etc/network/interfaces;
+{% set nic_count = device_index + loop.index %}
+{% for address in nic['ips'] %}
+    echo -e 'auto {{ device_type }}{{ nic_count }}\niface {{ device_type }}{{ nic_count }} inet static\n    address {{ address['ip'] }}\n    netmask {{ nic['netmask'] }}\n' >> /target/etc/network/interfaces;
 {% endfor %}
 {% endfor %}
 
