@@ -77,7 +77,7 @@ reboot --eject
 {% endif%}
 
 {% for nic in nics %}
-{% set nic_count = loop.index % }
+{% set nic_count = loop.index %}
 {% for ip in nic['ips'] %}
 {% if loop.index0 != 0 %}
     echo -e "IPADDR{{ loop.index0 + 1 }}={{ ip['ip'] }}\nPREFIX{{ loop.index0 + 1 }}={{ ip['netmask_int'] }}" >> /etc/sysconfig/network-scripts/ifcfg-{{ device_type }}{{ device_index }}
