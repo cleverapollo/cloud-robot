@@ -248,6 +248,7 @@ class Windows(WindowsMixin):
             gateway, netmask_int = subnet['addressRange'].split('/')
             vlan = str(subnet['vLAN'])
             data['vlans'].append(vlan)
+
             for ip_address in ip_addresses:
                 address = ip_address['address']
                 if ip_address['idSubnet'] == subnet['idSubnet']:
@@ -261,6 +262,7 @@ class Windows(WindowsMixin):
                             continue
                     # else store the non gateway subnet ips
                     non_default_ips.append(address)
+
             if len(non_default_ips) > 0:
                 data['ip_addresses'].append(
                     {
