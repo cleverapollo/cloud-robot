@@ -236,6 +236,7 @@ class Windows(WindowsMixin):
         data['default_vlan'] = ''
 
         # The private IPs for the VM will be the one we need to pass to the template
+        vm_data['ip_addresses'].reverse()
         ip_addresses = [
             ip_address for ip_address in vm_data['ip_addresses'] if IPAddress(ip_address['address']).is_private()
         ]
