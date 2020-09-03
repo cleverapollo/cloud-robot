@@ -276,6 +276,7 @@ class Linux(LinuxMixin):
             ip_address for ip_address in vm_data['ip_addresses'] if IPAddress(ip_address['address']).is_private()
         ]
         subnet_ids = [ip['idSubnet'] for ip in ip_addresses]
+        subnet_ids = list(set(subnet_ids))  # Removing duplicates
         subnets = utils.api_list(IAAS.subnet, {'idSubnet__in': subnet_ids}, span=span)
 
         for subnet in subnets:
