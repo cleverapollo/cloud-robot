@@ -297,7 +297,7 @@ class Linux(LinuxMixin):
                             data['default_netmask'] = netmask
                             data['default_netmask_int'] = netmask_int
                             data['default_vlan'] = vlan
-                            continue
+                            break
                     # else store the non gateway subnet ips
                     non_default_ips.append(address)
 
