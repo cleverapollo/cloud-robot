@@ -258,7 +258,7 @@ class Windows(WindowsMixin):
                             data['default_gateway'] = gateway
                             data['default_netmask_int'] = netmask_int
                             data['default_vlan'] = vlan
-                            break
+                            continue
                     # else store the non gateway subnet ips
                     non_default_ips.append(address)
             if len(non_default_ips) > 0:

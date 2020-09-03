@@ -70,7 +70,7 @@ reboot --eject
 {# Post Install #}
 %post -log=/root/install-post.log (
 
-{% if first_nic_secondary is not None %}
+{% if first_nic_secondary %}
 {% for ip in first_nic_secondary['ips'] %}
     echo -e "IPADDR{{ loop.index + 1 }}={{ ip['ip'] }}\nPREFIX{{ loop.index + 1 }}={{ ip['netmask_int'] }}" >> /etc/sysconfig/network-scripts/ifcfg-{{ device_type }}{{ device_index }}
 {% endfor %}
