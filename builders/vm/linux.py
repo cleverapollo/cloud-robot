@@ -316,11 +316,6 @@ class Linux(LinuxMixin):
         # required adjustments for templates simplicity
         data['vlans'] = list(set(data['vlans']))  # Removing duplicates
 
-        # prints stuff
-        Linux.logger.debug(
-            f'default_ip:{data["default_ips"]};\n',
-        )
-
         data['first_nic_primary'] = {}
         data['first_nic_secondary'] = False
         # in case of default_ips then pick the first ip of default_ips as first_nic_primary
@@ -342,10 +337,7 @@ class Linux(LinuxMixin):
                     'netmask_int': data['default_netmask_int'],
                     'vlan': data['default_vlan'],
                 }
-            # prints stuff
-            Linux.logger.debug(
-                f'first_nic_primary:{data["first_nic_primary"]};\n first_nic_secondary:{data["first_nic_secondary"]}',
-            )
+
         # in case of no default_ips then pick the first ip of first nic as first_nic_primary
         elif len(data['default_ips']) == 0 and len(data['nics']) > 0:
             nic0 = data['nics'][0].pop(0)  # removing the first nic
