@@ -64,7 +64,7 @@ ifupdown
 {# Post Install #}
 %post --nochroot
 (
-{% if first_nic_secondary is not None %}
+{% if first_nic_secondary %}
 {% for ip in first_nic_secondary['ips'] %}
     echo -e 'auto {{ device_type }}{{ device_index }}:{{ loop.index }}\niface {{ device_type }}{{ device_index }}:{{ loop.index }} inet static\n    address {{ ip['ip'] }}\n    netmask {{ ip['netmask'] }}\n' >> /target/etc/network/interfaces;
 {% endfor %}

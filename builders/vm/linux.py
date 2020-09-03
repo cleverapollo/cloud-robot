@@ -297,7 +297,7 @@ class Linux(LinuxMixin):
                             data['default_netmask'] = netmask
                             data['default_netmask_int'] = netmask_int
                             data['default_vlan'] = vlan
-                            break
+                            continue
                     # else store the non gateway subnet ips
                     non_default_ips.append(address)
 
@@ -315,7 +315,7 @@ class Linux(LinuxMixin):
         data['vlans'] = list(set(data['vlans']))  # Removing duplicates
 
         data['first_nic_primary'] = {}
-        data['first_nic_secondary'] = None
+        data['first_nic_secondary'] = False
         if len(data['default_ips']) > 0:
             data['first_nic_primary'] = {
                 'ip': data['default_ips'][0],  # taking the first ip
