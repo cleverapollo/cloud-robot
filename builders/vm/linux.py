@@ -272,6 +272,7 @@ class Linux(LinuxMixin):
         data['default_vlan'] = None
 
         # The private IPs for the VM will be the one we need to pass to the template
+        vm_data['ip_addresses'].reverse()
         ip_addresses = [
             ip_address for ip_address in vm_data['ip_addresses'] if IPAddress(ip_address['address']).is_private()
         ]
@@ -315,10 +316,14 @@ class Linux(LinuxMixin):
         # required adjustments for templates simplicity
         data['vlans'] = list(set(data['vlans']))  # Removing duplicates
 
+        # prints stuff
+        Linux.logger.debug(
+            f'default_ip:{data["default_ips"]};\n',
+        )
+
         data['first_nic_primary'] = {}
         data['first_nic_secondary'] = False
         # in case of default_ips then pick the first ip of default_ips as first_nic_primary
-        # if any ip left in default_ips would go into first_nic_secondary
         if len(data['default_ips']) > 0:
             ip0 = data['default_ips'].pop(0)  # removing the first ip
             data['first_nic_primary'] = {
@@ -328,6 +333,7 @@ class Linux(LinuxMixin):
                 'netmask_int': data['default_netmask_int'],
                 'vlan': data['default_vlan'],
             }
+            # if any ip left in default_ips would go into first_nic_secondary
             if len(data['default_ips']) > 0:
                 data['first_nic_secondary'] = {
                     'ips': data['default_ips'],
@@ -336,8 +342,11 @@ class Linux(LinuxMixin):
                     'netmask_int': data['default_netmask_int'],
                     'vlan': data['default_vlan'],
                 }
+            # prints stuff
+            Linux.logger.debug(
+                f'first_nic_primary:{data["first_nic_primary"]};\n first_nic_secondary:{data["first_nic_secondary"]}',
+            )
         # in case of no default_ips then pick the first ip of first nic as first_nic_primary
-        # if any ip left in first nic would go into first_nic_secondary
         elif len(data['default_ips']) == 0 and len(data['nics']) > 0:
             nic0 = data['nics'][0].pop(0)  # removing the first nic
             ip0 = nic0['ips'].pop(0)  # removing the first ip
@@ -348,6 +357,7 @@ class Linux(LinuxMixin):
                 'netmask_int': nic0['netmask_int'],
                 'vlan': nic0['vlan'],
             }
+            # if any ip left in first nic would go into first_nic_secondary
             if len(nic0['ips']) > 0:
                 data['first_nic_secondary'] = nic0
 
