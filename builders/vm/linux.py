@@ -316,15 +316,17 @@ class Linux(LinuxMixin):
 
         data['first_nic_primary'] = {}
         data['first_nic_secondary'] = False
+        # in case of default_ips then pick the first ip of default_ips as first_nic_primary
+        # if any ip left in default_ips would go into first_nic_secondary
         if len(data['default_ips']) > 0:
+            ip0 = data['default_ips'].pop(0)  # removing the first ip
             data['first_nic_primary'] = {
-                'ip': data['default_ips'][0],  # taking the first ip
+                'ip': ip0,  # taking the first ip
                 'gateway': data['default_gateway'],
                 'netmask': data['default_netmask'],
                 'netmask_int': data['default_netmask_int'],
                 'vlan': data['default_vlan'],
             }
-            data['default_ips'].pop(0)  # removing the first ip
             if len(data['default_ips']) > 0:
                 data['first_nic_secondary'] = {
                     'ips': data['default_ips'],
@@ -333,18 +335,20 @@ class Linux(LinuxMixin):
                     'netmask_int': data['default_netmask_int'],
                     'vlan': data['default_vlan'],
                 }
+        # in case of no default_ips then pick the first ip of first nic as first_nic_primary
+        # if any ip left in first nic would go into first_nic_secondary
         elif len(data['default_ips']) == 0 and len(data['nics']) > 0:
+            nic0 = data['nics'][0].pop(0)  # removing the first nic
+            ip0 = nic0['ips'].pop(0)  # removing the first ip
             data['first_nic_primary'] = {
-                'ip': data['nics'][0]['ips'][0],  # taking the first ip
-                'gateway': data['nics'][0]['gateway'],
-                'netmask': data['nics'][0]['netmask'],
-                'netmask_int': data['nics'][0]['netmask_int'],
-                'vlan': data['nics'][0]['vlan'],
+                'ip': ip0,  # taking the first ip
+                'gateway': nic0['gateway'],
+                'netmask': nic0['netmask'],
+                'netmask_int': nic0['netmask_int'],
+                'vlan': nic0['vlan'],
             }
-            data['nics'][0]['ips'].pop(0)  # removing the first ip
-            if len(data['nics'][0]['ips']) > 0:
-                data['first_nic_secondary'] = data['nics'][0]
-                data['nics'].pop(0)
+            if len(nic0['ips']) > 0:
+                data['first_nic_secondary'] = nic0
 
         # Add locale data to the VM
         data['keyboard'] = 'ie'
@@ -423,9 +427,6 @@ class Linux(LinuxMixin):
                 )
                 return False
 
-        # need to remove the default_vlan from vlans to simplify later in templates
-        if template_data['default_vlan'] is not None:
-            template_data['vlans'].remove(template_data['default_vlan'])
         # Render and attempt to write the kickstart file
         template_name = f'vm/linux/kickstarts/{template_data["osname"]}.j2'
         kickstart = utils.JINJA_ENV.get_template(template_name).render(**template_data)
