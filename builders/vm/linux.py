@@ -340,7 +340,7 @@ class Linux(LinuxMixin):
 
         # in case of no default_ips then pick the first ip of first nic as first_nic_primary
         elif len(data['default_ips']) == 0 and len(data['nics']) > 0:
-            nic0 = data['nics'][0].pop(0)  # removing the first nic
+            nic0 = data['nics'].pop(0)  # removing the first nic
             ip0 = nic0['ips'].pop(0)  # removing the first ip
             data['first_nic_primary'] = {
                 'ip': ip0,  # taking the first ip
