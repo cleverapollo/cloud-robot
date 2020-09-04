@@ -51,7 +51,7 @@ part /boot --fstype ext4 --size 256 --asprimary
 authconfig --passalgo=sha512 --kickstart
 
 {# Network #}
-network --bootproto=static --device={{ device_type }}{{ device_index }} --ip={{ first_nic_primary['ip'] }} --netmask={{ first_nic_primary['netmask'] }} --gateway={{ first_nic_primary['gateway'] }} --nameserver='{{ dns }}'
+network --bootproto=static --device={{ device_type }}{{ device_index }} --ip={{ first_nic_primary['ip'] }} --netmask={{ first_nic_primary['netmask'] }} --gateway={{ first_nic_primary['gateway'] }} --nameserver="{{ dns.replace(',', ' ') }}"
 
 {# Do not configure the X Window System #}
 skipx
