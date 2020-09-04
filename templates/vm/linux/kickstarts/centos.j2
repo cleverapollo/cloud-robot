@@ -39,7 +39,9 @@ logging --level=info
 {# Network Information #}
 network --bootproto=static --device={{ device_type }}{{ device_index }} --ip={{ first_nic_primary['ip'] }} --netmask={{ first_nic_primary['netmask'] }} --gateway={{ first_nic_primary['gateway'] }} --nameserver={{ dns }} --activate
 {% for nic in nics %}
-network --bootproto=static --device={{ device_type }}{{ device_index + loop.index }} --ip={% for address in nic %}{% if loop.index0 = 0 %}{{ address['ip'] }}{% endif %}{% endfor %} --netmask={{ nic['netmask'] }} --gateway={{ nic['gateway'] }} --nameserver={{ dns }} --activate
+{% set nic_count = device_index + nic['order'] %}
+{% set address = nic['ips'].pop(0) %}
+network --bootproto=static --device={{ device_type }}{{ nic_count}} --ip={{ address }} --netmask={{ nic['netmask'] }} --gateway={{ nic['gateway'] }} --nameserver={{ dns }} --activate
 {% endfor %}
 
 {# System Bootloader information #}
@@ -78,11 +80,9 @@ reboot --eject
 {% endif%}
 
 {% for nic in nics %}
-{% set nic_count = device_index + loop.index %}
+{% set nic_count = device_index + nic['order'] %}
 {% for address in nic['ips'] %}
-{% if loop.index0 != 0 %}
-    echo -e "IPADDR{{ loop.index0 + 1 }}={{ address }}\nPREFIX{{ loop.index0 + 1 }}={{ nic['netmask_int'] }}" >> /etc/sysconfig/network-scripts/ifcfg-{{ device_type }}{{ nic_count }}
-{% endif %}
+    echo -e "IPADDR{{ loop.index + 1 }}={{ address }}\nPREFIX{{ loop.index + 1 }}={{ nic['netmask_int'] }}" >> /etc/sysconfig/network-scripts/ifcfg-{{ device_type }}{{ nic_count }}
 {% endfor %}
 {% endfor %}
 %end
