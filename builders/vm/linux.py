@@ -51,14 +51,6 @@ class Linux(LinuxMixin):
         'crypted_root_password',
         # the number of cpus in the vm
         'cpu',
-        # the default subnet gateway
-        'default_gateway',
-        # default ip address of the VM
-        'default_ips',
-        # the default subnet mask in ip address form (255.255.255.0)
-        'default_netmask',
-        # the default vlan that the vm is a part of
-        'default_vlan',
         # device index and type for nic
         'device_index',
         'device_type',
@@ -265,11 +257,11 @@ class Linux(LinuxMixin):
         # Get the Networking details
         data['vlans'] = []
         data['nics'] = []
-        data['default_ips'] = []
-        data['default_gateway'] = None
-        data['default_netmask'] = None
-        data['default_netmask_int'] = None
-        data['default_vlan'] = None
+        default_ips = []
+        default_gateway = None
+        default_netmask = None
+        default_netmask_int = None
+        default_vlan = None
 
         # The private IPs for the VM will be the one we need to pass to the template
         vm_data['ip_addresses'].reverse()
@@ -294,11 +286,11 @@ class Linux(LinuxMixin):
                     # Pick the default ips if any
                     if vm_data['gateway_subnet'] is not None:
                         if subnet['idSubnet'] == vm_data['gateway_subnet']['idSubnet']:
-                            data['default_ips'].append(address)
-                            data['default_gateway'] = gateway
-                            data['default_netmask'] = netmask
-                            data['default_netmask_int'] = netmask_int
-                            data['default_vlan'] = vlan
+                            default_ips.append(address)
+                            default_gateway = gateway
+                            default_netmask = netmask
+                            default_netmask_int = netmask_int
+                            default_vlan = vlan
                             continue
                     # else store the non gateway subnet ips
                     non_default_ips.append(address)
@@ -319,27 +311,27 @@ class Linux(LinuxMixin):
         data['first_nic_primary'] = {}
         data['first_nic_secondary'] = False
         # in case of default_ips then pick the first ip of default_ips as first_nic_primary
-        if len(data['default_ips']) > 0:
-            ip0 = data['default_ips'].pop(0)  # removing the first ip
+        if len(default_ips) > 0:
+            ip0 = default_ips.pop(0)  # removing the first ip
             data['first_nic_primary'] = {
                 'ip': ip0,  # taking the first ip
-                'gateway': data['default_gateway'],
-                'netmask': data['default_netmask'],
-                'netmask_int': data['default_netmask_int'],
-                'vlan': data['default_vlan'],
+                'gateway': default_gateway,
+                'netmask': default_netmask,
+                'netmask_int': default_netmask_int,
+                'vlan': default_vlan,
             }
             # if any ip left in default_ips would go into first_nic_secondary
-            if len(data['default_ips']) > 0:
+            if len(default_ips) > 0:
                 data['first_nic_secondary'] = {
-                    'ips': data['default_ips'],
-                    'gateway': data['default_gateway'],
-                    'netmask': data['default_netmask'],
-                    'netmask_int': data['default_netmask_int'],
-                    'vlan': data['default_vlan'],
+                    'ips': default_ips,
+                    'gateway': default_gateway,
+                    'netmask': default_netmask,
+                    'netmask_int': default_netmask_int,
+                    'vlan': default_vlan,
                 }
 
         # in case of no default_ips then pick the first ip of first nic as first_nic_primary
-        elif len(data['default_ips']) == 0 and len(data['nics']) > 0:
+        elif len(default_ips) == 0 and len(data['nics']) > 0:
             nic0 = data['nics'].pop(0)  # removing the first nic
             ip0 = nic0['ips'].pop(0)  # removing the first ip
             data['first_nic_primary'] = {
