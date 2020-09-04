@@ -344,6 +344,10 @@ class Linux(LinuxMixin):
             # if any ip left in first nic would go into first_nic_secondary
             if len(nic0['ips']) > 0:
                 data['first_nic_secondary'] = nic0
+        # set the order for nics in case list order changes
+        if len(data['nics']) > 0:
+            for i, nic in enumerate(data['nics']):
+                nic['order'] = i + 1
 
         # Add locale data to the VM
         data['keyboard'] = 'ie'

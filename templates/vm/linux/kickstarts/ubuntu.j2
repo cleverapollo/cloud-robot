@@ -71,7 +71,7 @@ ifupdown
 {% endif%}
 
 {% for nic in nics %}
-{% set nic_count = device_index + loop.index %}
+{% set nic_count = device_index + nic['order'] %}
 {% for address in nic['ips'] %}
     echo -e 'auto {{ device_type }}{{ nic_count }}\niface {{ device_type }}{{ nic_count }} inet static\n    address {{ address }}\n    netmask {{ nic['netmask'] }}\n' >> /target/etc/network/interfaces;
 {% endfor %}
