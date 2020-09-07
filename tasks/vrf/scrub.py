@@ -77,15 +77,16 @@ def _scrub_vrf(vrf_id: int, span: Span):
     # Also ensure that all the VMs under this project are scrubbed
     child_span = opentracing.tracer.start_span('read_project_vms', child_of=span)
     vms_request_data = {'project_id': vrf['idProject']}
-    vrf_vms = utils.api_list(IAAS.vm, vms_request_data, span=child_span)[0]
+    vrf_vms = utils.api_list(IAAS.vm, vms_request_data, span=child_span)
     child_span.finish()
     vm_count = len(vrf_vms)
     if vm_count > 0:
-        logger.error(
+        logger.warning(
             f'{vm_count} VMs are still in this project, we cannot scrub VRF #{vrf_id} so postponing the scrub',
         )
         # since vms are yet in the project so wait for 1 min and try again.
         scrub_vrf.s(vrf_id).apply_async(eta=datetime.now() + timedelta(seconds=60))
+        return
 
     # There's no in-between state for Scrub tasks, just jump straight to doing the work
     success: bool = False
