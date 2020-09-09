@@ -217,4 +217,5 @@ def _build_vm(vm_id: int, span: Span):
         metrics.vm_build_success(total_time.seconds)
     else:
         logger.error(f'Failed to build VM #{vm_id}')
+        vm.pop('admin_password')
         _unresource(vm, span)

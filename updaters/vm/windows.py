@@ -35,18 +35,20 @@ class Windows(WindowsMixin, VmUpdateMixin):
     template_keys = {
         # # the admin password for the vm, unencrypted
         # 'admin_password',
+        # the default subnet gateway
+        'default_gateway',
+        # default ip address of the VM
+        'default_ip',
+        # the default subnet mask in integer form (/24)
+        'default_netmask_int',
+        # the default vlan that the vm is a part of
+        'default_vlan',
         # the dns servers for the vm
         'dns',
-        # the subnet gateway
-        'gateway',
-        # the ip address of the vm in its subnet
-        'ip_address',
-        # the subnet mask in address form (255.255.255.0)
-        'netmask',
+        # the non default ip addresses of the vm
+        'ip_addresses',
         # a flag stating whether or not the VM should be turned back on after updating it
         'restart',
-        # the vlan that the vm is a part of
-        'vlan',
         # an identifier that uniquely identifies the vm
         'vm_identifier',
         # changes of vm
@@ -163,22 +165,22 @@ class Windows(WindowsMixin, VmUpdateMixin):
             'cpu': False,
             'storages': False,
         }
-        changes_this_month = vm_data['changes_this_month'][0]
+        updates = vm_data['history'][0]
         try:
-            if changes_this_month['ram_quantity']:
+            if updates['ram_quantity'] is not None:
                 # RAM is needed in MB for the updater but we take it in in GB (1024, not 1000)
                 changes['ram'] = vm_data['ram'] * 1024
         except KeyError:
             pass
         try:
-            if changes_this_month['cpu_quantity']:
+            if updates['cpu_quantity'] is not None:
                 changes['cpu'] = vm_data['cpu']
         except KeyError:
             pass
 
         # Fetch the drive information for the update
         try:
-            if len(changes_this_month['storage_histories']) != 0:
+            if len(updates['storage_histories']) != 0:
                 Windows.logger.debug(f'Fetching drives for VM #{vm_id}')
                 hdd, ssd, drives = Windows.fetch_drive_updates(vm_data, span)
                 changes['storages'] = {
@@ -192,6 +194,7 @@ class Windows(WindowsMixin, VmUpdateMixin):
         data['changes'] = changes
 
         # Get the Networking details
+        # TODO will update with multiple IPs stuff
         Windows.logger.debug(f'Fetching networking information for VM #{vm_id}')
         for ip_address in utils.api_list(IAAS.ipaddress, {'vm': vm_id}, span=span):
             # The private IP for the VM will be the one we need to pass to the template

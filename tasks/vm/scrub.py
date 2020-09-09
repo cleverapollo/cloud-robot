@@ -134,9 +134,6 @@ def _scrub_vm(vm_id: int, span: Span):
             return
         logger.info(f'Successfully deleted VM #{vm_id} from the CMDB.')
 
-        child_span = opentracing.tracer.start_span('delete_project_from_api', child_of=span)
-        utils.project_delete(vm['idProject'], child_span)
-        child_span.finish()
     else:
         logger.error(f'Failed to scrub VM #{vm_id}')
         metrics.vm_scrub_failure()
