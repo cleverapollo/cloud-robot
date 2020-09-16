@@ -51,7 +51,7 @@ part /boot --fstype ext4 --size 256 --asprimary
 authconfig --passalgo=sha512 --kickstart
 
 {# Network #}
-network --bootproto=static --device={{ device_type }}{{ device_index }} --ip={{ first_nic_primary['ip'] }} --netmask={{ first_nic_primary['netmask'] }} --gateway={{ first_nic_primary['gateway'] }} --nameserver="{{ dns.replace(',', ' ') }}"
+network --bootproto=static --device=ens3 --ip={{ first_nic_primary['ip'] }} --netmask={{ first_nic_primary['netmask'] }} --gateway={{ first_nic_primary['gateway'] }} --nameserver="{{ dns.replace(',', ' ') }}"
 
 {# Do not configure the X Window System #}
 skipx
@@ -66,14 +66,14 @@ ifupdown
 (
 {% if first_nic_secondary %}
 {% for address in first_nic_secondary['ips'] %}
-    echo -e 'auto {{ device_type }}{{ device_index }}:{{ loop.index }}\niface {{ device_type }}{{ device_index }}:{{ loop.index }} inet static\n    address {{ address }}\n    netmask {{ first_nic_secondary['netmask'] }}\n' >> /target/etc/network/interfaces;
+    echo -e 'auto ens3:{{ loop.index }}\niface ens3:{{ loop.index }} inet static\n    address {{ address }}\n    netmask {{ first_nic_secondary['netmask'] }}\n' >> /target/etc/network/interfaces;
 {% endfor %}
 {% endif%}
 
 {% for nic in nics %}
-{% set nic_count = device_index + nic['order'] %}
+{% set nic_count = 3 + nic['order'] %}
 {% for address in nic['ips'] %}
-    echo -e 'auto {{ device_type }}{{ nic_count }}\niface {{ device_type }}{{ nic_count }} inet static\n    address {{ address }}\n    netmask {{ nic['netmask'] }}\n' >> /target/etc/network/interfaces;
+    echo -e 'auto ens{{ nic_count }}\niface ens{{ nic_count }} inet static\n    address {{ address }}\n    netmask {{ nic['netmask'] }}\n' >> /target/etc/network/interfaces;
 {% endfor %}
 {% endfor %}
 

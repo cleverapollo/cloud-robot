@@ -25,7 +25,7 @@ timezone --utc {{ timezone }}
 text
 
 {# System Authorization Information #}
-auth --enableshadow --passalgo=sha512
+auth{{ auth }} --enableshadow --passalgo=sha512
 
 {# Clear the MBR #}
 zerombr
@@ -37,11 +37,11 @@ clearpart --all --initlabel
 logging --level=info
 
 {# Network Information #}
-network --bootproto=static --device={{ device_type }}{{ device_index }} --ip={{ first_nic_primary['ip'] }} --netmask={{ first_nic_primary['netmask'] }} --gateway={{ first_nic_primary['gateway'] }} --nameserver={{ dns }} --activate
+network --bootproto=static --device=ens3 --ip={{ first_nic_primary['ip'] }} --netmask={{ first_nic_primary['netmask'] }} --gateway={{ first_nic_primary['gateway'] }} --nameserver={{ dns }} --activate
 {% for nic in nics %}
-{% set nic_count = device_index + nic['order'] %}
+{% set nic_count = 3 + nic['order'] %}
 {% set address = nic['ips'].pop(0) %}
-network --bootproto=static --device={{ device_type }}{{ nic_count}} --ip={{ address }} --netmask={{ nic['netmask'] }} --gateway={{ nic['gateway'] }} --nameserver={{ dns }} --activate
+network --bootproto=static --device=ens{{ nic_count}} --ip={{ address }} --netmask={{ nic['netmask'] }} --gateway={{ nic['gateway'] }} --nameserver={{ dns }} --activate
 {% endfor %}
 
 {# System Bootloader information #}
@@ -71,18 +71,17 @@ reboot --eject
 %end
 
 {# Post Install #}
-%post --log=/root/install-post.log (
-
+%post --log=/root/install-post.log
 {% if first_nic_secondary %}
 {% for address in first_nic_secondary['ips'] %}
-    echo -e "IPADDR{{ loop.index + 1 }}={{ address }}\nPREFIX{{ loop.index + 1 }}={{ first_nic_secondary['netmask_int'] }}" >> /etc/sysconfig/network-scripts/ifcfg-{{ device_type }}{{ device_index }}
+    echo -e "IPADDR{{ loop.index + 1 }}={{ address }}\nPREFIX{{ loop.index + 1 }}={{ first_nic_secondary['netmask_int'] }}" >> /etc/sysconfig/network-scripts/ifcfg-ens3
 {% endfor %}
 {% endif%}
 
 {% for nic in nics %}
-{% set nic_count = device_index + nic['order'] %}
+{% set nic_count = 3 + nic['order'] %}
 {% for address in nic['ips'] %}
-    echo -e "IPADDR{{ loop.index + 1 }}={{ address }}\nPREFIX{{ loop.index + 1 }}={{ nic['netmask_int'] }}" >> /etc/sysconfig/network-scripts/ifcfg-{{ device_type }}{{ nic_count }}
+    echo -e "IPADDR{{ loop.index + 1 }}={{ address }}\nPREFIX{{ loop.index + 1 }}={{ nic['netmask_int'] }}" >> /etc/sysconfig/network-scripts/ifcfg-ens{{ nic_count }}
 {% endfor %}
 {% endfor %}
 %end
