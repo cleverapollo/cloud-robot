@@ -53,6 +53,9 @@ class Linux(LinuxMixin):
         'crypted_root_password',
         # the number of cpus in the vm
         'cpu',
+        # device index and type for nic
+        'device_index',
+        'device_type',
         # the dns servers for the vm
         'dns',
         # the drives in the vm
@@ -367,6 +370,12 @@ class Linux(LinuxMixin):
         data['auth'] = 'select'
         if image_data['idImage'] in [10, 11, 15]:
             data['auth'] = ''
+        # device type
+        data['device_type'] = 'ens'
+        data['device_index'] = 3
+        if image_data['idImage'] in [10, 11, 15]:
+            data['device_type'] = 'eth'
+            data['device_index'] = 0
 
         # Determine the kickstart template to use for the VM
         os_name = KICKSTART_TEMPLATE_MAP.get(image_data['idImage'], None)
