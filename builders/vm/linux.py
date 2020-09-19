@@ -77,6 +77,8 @@ class Linux(LinuxMixin):
         'keyboard',
         # the language of the vm
         'language',
+        # ubuntu netplan support
+        'netplan',
         # the path on the host where the network drive is found
         'network_drive_path',
         # os name to differentiate between centos and ubuntu
@@ -373,9 +375,13 @@ class Linux(LinuxMixin):
         # device type
         data['device_type'] = 'ens'
         data['device_index'] = 3
-        if image_data['idImage'] in [10, 11, 15]:
+        if image_data['idImage'] in [7, 10, 11, 15]:
             data['device_type'] = 'eth'
             data['device_index'] = 0
+        # netplan in ubuntu 16 complicated so we keep networks
+        data['netplan'] = True
+        if image_data['idImage'] in [6, 7]:
+            data['netplan'] = False
 
         # Determine the kickstart template to use for the VM
         os_name = KICKSTART_TEMPLATE_MAP.get(image_data['idImage'], None)

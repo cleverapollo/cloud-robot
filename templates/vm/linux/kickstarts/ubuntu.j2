@@ -59,24 +59,41 @@ skipx
 {# Packages #}
 %packages
 openssh-server
-ifupdown
 
 {# Post Install #}
 %post --nochroot
 (
+{% if netplan %}
+{# -------- Netplan --------- #}
 {% if first_nic_secondary %}
+{% set addresses = first_nic_secondary['ips'] %}
+{% set netmask = first_nic_secondary['netmask_int'] %}
+    echo -e '    {{ device_type }}{{ device_index }}:\n      addresses: [ {% for address in  addresses %}{{ address }}/{{ netmask }}, {% endfor %} ]' >> /target/etc/netplan/01-netcfg.yaml
+{% endif%}
+{% for nic in nics %}
+{% set nic_count = device_index + nic['order'] %}
+{% set addresses = nic['ips'] %}
+{% set netmask = nic['netmask_int'] %}
+    echo -e '    {{ device_type }}{{ device_index }}:\n      addresses: [ {% for address in  addresses %}{{ address }}/{{ netmask }}, {% endfor %} ]' >> /target/etc/netplan/01-netcfg.yaml
+{% endfor %}
+    netplan apply
+
+{% else %}
+{# -------- Networks --------- #}
+{% if first_nic_secondary %}
+{% set netmask = first_nic_secondary['netmask'] %}
 {% for address in first_nic_secondary['ips'] %}
-    echo -e 'auto {{ device_type }}{{ device_index }}:{{ loop.index }}\niface {{ device_type }}{{ device_index }}:{{ loop.index }} inet static\n    address {{ address }}\n    netmask {{ first_nic_secondary['netmask'] }}\n' >> /target/etc/network/interfaces;
+    echo -e 'auto {{ device_type }}{{ device_index }}:{{ loop.index }}\niface {{ device_type }}{{ device_index }}:{{ loop.index }} inet static\n    address {{ address }}\n    netmask {{ netmask }}\n' >> /target/etc/network/interfaces;
 {% endfor %}
 {% endif%}
-
 {% for nic in nics %}
 {% set nic_count = device_index + nic['order'] %}
 {% for address in nic['ips'] %}
     echo -e 'auto {{ device_type }}{{ nic_count }}\niface {{ device_type }}{{ nic_count }} inet static\n    address {{ address }}\n    netmask {{ nic['netmask'] }}\n' >> /target/etc/network/interfaces;
 {% endfor %}
 {% endfor %}
-
     ifup -a
+
+{% endif %}
 ) 1> /target/root/post_install.log 2>&1
 %end
