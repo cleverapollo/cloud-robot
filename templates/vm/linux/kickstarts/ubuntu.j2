@@ -92,7 +92,6 @@ openssh-server
     echo -e 'auto {{ device_type }}{{ nic_count }}\niface {{ device_type }}{{ nic_count }} inet static\n    address {{ address }}\n    netmask {{ nic['netmask'] }}\n' >> /target/etc/network/interfaces;
 {% endfor %}
 {% endfor %}
-    ifup -a
 
 {% endif %}
 ) 1> /target/root/post_install.log 2>&1
