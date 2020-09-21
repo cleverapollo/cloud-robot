@@ -74,7 +74,7 @@ openssh-server
 {% set nic_count = device_index + nic['order'] %}
 {% set addresses = nic['ips'] %}
 {% set netmask = nic['netmask_int'] %}
-    echo -e '    {{ device_type }}{{ device_index }}:\n      addresses: [ {% for address in  addresses %}{{ address }}/{{ netmask }}, {% endfor %} ]' >> /target/etc/netplan/01-netcfg.yaml
+    echo -e '    {{ device_type }}{{ nic_count }}:\n      addresses: [ {% for address in  addresses %}{{ address }}/{{ netmask }}, {% endfor %} ]' >> /target/etc/netplan/01-netcfg.yaml
 {% endfor %}
     netplan apply
 
