@@ -53,17 +53,25 @@ def _debug_logs(vrf_id: int, span: Span):
 
     # Ensure that the state of the vrf is in Running state
     if vrf['state'] != state.RUNNING:
-        logger.warn(f'Cancelling update of VRF #{vrf_id} to disable the debug status of firewall logs.'
-                    f'Expected state to be RUNNING, found {vrf["state"]}.')
+        logger.warning(f'Cancelling update of VRF #{vrf_id} to disable the debug status of firewall logs.'
+                       f'Expected state to be RUNNING, found {vrf["state"]}.')
         # Return out of this function without doing anything as it will be handled by other tasks
         span.set_tag('return_reason', 'not_in_valid_state')
         return
 
     # No need to update the state of vrf to updating as this is not actual UPDATE task.
 
+    # check if any firewall rule debug_logging needs to be reset and
     # change the debug_logging to false for all firewall rules
+    debug: bool = False
     for firewall in vrf['firewall_rules']:
-        firewall['debug_logging'] = False
+        if firewall['debug_logging']:
+            debug = True
+            firewall['debug_logging'] = False
+
+    if not debug:
+        logger.info(f'No firewall rule debug_logging needs to reset for VRF #{vrf_id}')
+        return
 
     success: bool = False
     child_span = opentracing.tracer.start_span('update', child_of=span)
