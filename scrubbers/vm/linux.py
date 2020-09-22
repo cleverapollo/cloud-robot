@@ -185,6 +185,7 @@ class Linux(LinuxMixin):
         data['drives'] = drives
 
         # Get the Networking details
+        data['vlans'] = []
         ip_addresses = [
             ip_address for ip_address in vm_data['ip_addresses'] if IPAddress(ip_address['address']).is_private()
         ]
