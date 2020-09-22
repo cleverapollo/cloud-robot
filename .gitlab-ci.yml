@@ -125,29 +125,29 @@ deploy_nti-cork01:
     - stable
 
 
-build_netsoc-cork01:
-  stage: build
-  tags:
-  - docker-build
-  script:
-  - docker build -f deployment/dockerfiles/netsoc-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/netsoc-cork01:latest --no-cache .
-  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/netsoc-cork01:latest
-  only:
-  - stable
-
-deploy_netsoc-cork01:
-  image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
-  before_script:
-    - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
-    - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
-  stage: deploy
-  script:
-    # Deploy Heartbeat
-    - ansible-playbook -i deployment/hosts/netsoc-cork01.yml deployment/playbook.yml --extra-vars="deployment_host=netsoc-cork01"
-    # Deploy workers
-    - ansible-playbook -i deployment/hosts/netsoc-cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=netsoc-cork01-worker0"
-  only:
-    - stable
+#build_netsoc-cork01:
+#  stage: build
+#  tags:
+#  - docker-build
+#  script:
+#  - docker build -f deployment/dockerfiles/netsoc-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/netsoc-cork01:latest --no-cache .
+#  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/netsoc-cork01:latest
+#  only:
+#  - stable
+#
+#deploy_netsoc-cork01:
+#  image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
+#  before_script:
+#    - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
+#    - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
+#  stage: deploy
+#  script:
+#    # Deploy Heartbeat
+#    - ansible-playbook -i deployment/hosts/netsoc-cork01.yml deployment/playbook.yml --extra-vars="deployment_host=netsoc-cork01"
+#    # Deploy workers
+#    - ansible-playbook -i deployment/hosts/netsoc-cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=netsoc-cork01-worker0"
+#  only:
+#    - stable
 
 
 build_vodafone-cork01:
