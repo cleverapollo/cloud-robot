@@ -169,6 +169,9 @@ OS_TEMPLATE_MAP = {
         10: 'centos',
         11: 'centos',
         12: 'ubuntu',
+        15: 'centos',  # redhat is similar to centos
+        16: 'centos',
+        17: 'ubuntu',
     },
     'Windows': {
         2: '2012',

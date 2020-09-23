@@ -6,7 +6,6 @@ scrubber class for linux vms
 """
 # stdlib
 import logging
-import os
 from collections import deque
 from typing import Any, Deque, Dict, Optional, Tuple
 # lib
@@ -47,8 +46,8 @@ class Linux(LinuxMixin):
         'host_sudo_passwd',
         # the ssd primary drive of the VM 'id:size'
         'ssd',
-        # the vlan that the vm is a part of
-        'vlan',
+        # the vlans that the vm is a part of
+        'vlans',
         # an identifier that uniquely identifies the vm
         'vm_identifier',
     }
@@ -116,10 +115,7 @@ class Linux(LinuxMixin):
             if stdout:
                 Linux.logger.debug(f'VM scrub command for VM #{vm_id} generated stdout.\n{stdout}')
                 scrubbed = True
-                # Attempt to delete the config file from the network drive
-                child_span = opentracing.tracer.start_span('delete_kickstart_file', child_of=span)
-                Linux._delete_network_file(vm_id, f'kickstarts/{template_data["vm_identifier"]}.cfg')
-                child_span.finish()
+
             if stderr:
                 Linux.logger.warning(f'VM scrub command for VM #{vm_id} generated stderr.\n{stderr}')
 
@@ -135,10 +131,6 @@ class Linux(LinuxMixin):
                     Linux.logger.debug(f'Bridge scrub command for VM #{vm_id} generated stdout\n{stdout}')
                 if stderr:
                     Linux.logger.warning(f'Bridge scrub command for VM #{vm_id} generated stderr\n{stderr}')
-                # Attempt to delete the bridge definition file from the network drive
-                child_span = opentracing.tracer.start_span('delete_bridge_def_file', child_of=span)
-                Linux._delete_network_file(vm_id, f'bridge_xmls/br{template_data["vlan"]}.xml')
-                child_span.finish()
         except SSHException:
             Linux.logger.error(
                 f'Exception occurred while scrubbing VM #{vm_id} in {host_ip}',
@@ -193,16 +185,16 @@ class Linux(LinuxMixin):
         data['drives'] = drives
 
         # Get the Networking details
-        for ip_address in utils.api_list(IAAS.ipaddress, {'vm': vm_id}, span=span):
-            # The private IP for the VM will be the one we need to pass to the template
-            if not IPAddress(ip_address['address']).is_private():
-                continue
-            data['ip_address'] = ip_address['address']
-            # Read the subnet for the IPAddress to fetch information like the gateway and subnet mask
-            subnet = utils.api_read(IAAS.subnet, ip_address['idSubnet'], span=span)
-            if subnet is None:
-                return None
-            data['vlan'] = subnet['vLAN']
+        data['vlans'] = []
+        ip_addresses = [
+            ip_address for ip_address in vm_data['ip_addresses'] if IPAddress(ip_address['address']).is_private()
+        ]
+        subnet_ids = [ip['idSubnet'] for ip in ip_addresses]
+        subnet_ids = list(set(subnet_ids))  # Removing duplicates
+        subnets = utils.api_list(IAAS.subnet, {'idSubnet__in': subnet_ids}, span=span)
+
+        for subnet in subnets:
+            data['vlans'].append(subnet['vLAN'])
 
         # Get the ip address of the host
         for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer'], span=span):
@@ -237,31 +229,14 @@ class Linux(LinuxMixin):
         return bridge_cmd, vm_cmd
 
     @staticmethod
-    def _delete_network_file(vm_id: int, path: str):
-        """
-        Given a path to a file, attempt to delete it from the network drive
-        """
-        abspath = os.path.join(settings.KVM_ROBOT_NETWORK_DRIVE_PATH, path)
-        if not os.path.exists(abspath):
-            return
-        try:
-            os.remove(abspath)
-            Linux.logger.debug(f'Deleted {path} from the network drive')
-        except IOError:
-            Linux.logger.error(
-                f'Exception occurred while attempting to delete {path} from the network drive for VM #{vm_id}',
-                exc_info=True,
-            )
-
-    @staticmethod
     def _determine_bridge_deletion(vm_data: Dict[str, Any], span: Span) -> bool:
         """
         Given a VM, determine if we need to delete it's bridge.
         We need to delete the bridge if the VM is the last Linux VM left in the Subnet
 
         Steps:
-            - Get the private IP Address of the VM being deleted
-            - Read the other private IP Addresses (fip_id__isnull=False) in the same Subnet (excluding this VM's id)
+            - sort out all the subnets of the VM being deleted
+            - List the other private IP Addresses in the same Subnets (excluding this VM's id)
             - List all the VMs pointed to by the idVM fields of the returned (if any)
             - For each VM, check if it is Windows or Linux
             - If we find a Linux one, return False
@@ -269,20 +244,16 @@ class Linux(LinuxMixin):
         """
         vm_id = vm_data['idVM']
         # Get the details of the VM's private IP by getting all IPs associated with the VM and finding the private one
-        priv_ip: Optional[Dict[str, Any]] = None
-        for ip_data in utils.api_list(IAAS.ipaddress, {'vm': vm_id}, span=span):
-            if IPAddress(ip_data['address']).is_private():
-                priv_ip = ip_data
-                break
-        if priv_ip is None:
-            Linux.logger.error(f'Unable to find private IP Address for VM #{vm_data["idVM"]}.')
-            return False
+        ip_addresses = [
+            ip_address for ip_address in vm_data['ip_addresses'] if IPAddress(ip_address['address']).is_private()
+        ]
+        subnet_ids = [ip['idSubnet'] for ip in ip_addresses]
+        subnet_ids = list(set(subnet_ids))  # Removing duplicates
 
-        # Find the other private ip addresses in the subnet
+        # Find the other private ip addresses in the subnets
         params = {
-            'fip_id__isnull': False,
-            'exclude__idIPAddress': priv_ip['idIPAddress'],
-            'subnet__idSubnet': priv_ip['idSubnet'],
+            'exclude__vm': vm_id,
+            'subnet__idSubnet__in': subnet_ids,
         }
         subnet_ips = utils.api_list(IAAS.ipaddress, params, span=span)
 
@@ -297,4 +268,4 @@ class Linux(LinuxMixin):
         # Check the list of images for any linux hypervisor
         # any returns True if any item in the iterable is True
         # make an iterable that checks if the image's idHypervisor is 2
-        return any(image['idHypervisor'] == 2 for image in images)
+        return not any(image['idHypervisor'] == 2 for image in images)

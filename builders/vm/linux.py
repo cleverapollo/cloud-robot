@@ -45,6 +45,8 @@ class Linux(LinuxMixin):
     template_keys = {
         # the admin password for the vm, unencrypted
         'admin_password',
+        # kickstart thing
+        'auth',
         # the admin password for the vm, pre-crpyted
         'crypted_admin_password',
         # root password encrypted, needed for centos kickstart
@@ -75,6 +77,8 @@ class Linux(LinuxMixin):
         'keyboard',
         # the language of the vm
         'language',
+        # ubuntu netplan support
+        'netplan',
         # the path on the host where the network drive is found
         'network_drive_path',
         # os name to differentiate between centos and ubuntu
@@ -364,6 +368,21 @@ class Linux(LinuxMixin):
         data['host_sudo_passwd'] = settings.NETWORK_PASSWORD
         data['network_drive_path'] = settings.KVM_HOST_NETWORK_DRIVE_PATH
 
+        # kickstart thing for old linux oses such as centos7.x or below and rhel7.x or below
+        data['auth'] = 'select'
+        if image_data['idImage'] in [10, 11, 15]:
+            data['auth'] = ''
+        # device type
+        data['device_type'] = 'ens'
+        data['device_index'] = 3
+        if image_data['idImage'] in [7, 10, 11, 15]:
+            data['device_type'] = 'eth'
+            data['device_index'] = 0
+        # netplan in ubuntu 16 complicated so we keep networks
+        data['netplan'] = True
+        if image_data['idImage'] in [6, 7]:
+            data['netplan'] = False
+
         # Determine the kickstart template to use for the VM
         os_name = KICKSTART_TEMPLATE_MAP.get(image_data['idImage'], None)
         if os_name is None:
@@ -374,13 +393,6 @@ class Linux(LinuxMixin):
             )
             return None
         data['osname'] = os_name
-
-        # device type
-        data['device_type'] = 'eth'
-        data['device_index'] = 0
-        if os_name == 'ubuntu' and '14' not in image_data['filename']:
-            data['device_type'] = 'ens'
-            data['device_index'] = 3
 
         return data
 

@@ -23,12 +23,12 @@
 {% endfor %}
   --graphics vnc \
   --location {{ network_drive_path }}/ISOs/{{ image_filename }} \
-  --os-variant rhel6 \
+  --os-variant generic \
   --initrd-inject={{ network_drive_path }}/VMs/{{ vm_identifier }}/{{ vm_identifier }}.cfg -x "ks=file:/{{ vm_identifier }}.cfg" \
-  --network bridge=br{{ first_nic_primary['vlan'] }} --extra-args="netcfg/choose_interface={{ device_type }}{{ device_index }}" \
+  --network bridge=br{{ first_nic_primary['vlan'] }},model=virtio --extra-args="netcfg/choose_interface={{ device_type }}{{ device_index }}" \
 {% for vlan in vlans %}
 {% if vlan != first_nic_primary['vlan'] %}
-  --network bridge=br{{ vlan }} \
+  --network bridge=br{{ vlan }},model=virtio \
 {% endif %}
 {% endfor %}
 --autostart

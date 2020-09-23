@@ -25,7 +25,7 @@ timezone --utc {{ timezone }}
 text
 
 {# System Authorization Information #}
-auth --enableshadow --passalgo=sha512
+auth{{ auth }} --enableshadow --passalgo=sha512
 
 {# Clear the MBR #}
 zerombr
@@ -71,8 +71,7 @@ reboot --eject
 %end
 
 {# Post Install #}
-%post --log=/root/install-post.log (
-
+%post --log=/root/install-post.log
 {% if first_nic_secondary %}
 {% for address in first_nic_secondary['ips'] %}
     echo -e "IPADDR{{ loop.index + 1 }}={{ address }}\nPREFIX{{ loop.index + 1 }}={{ first_nic_secondary['netmask_int'] }}" >> /etc/sysconfig/network-scripts/ifcfg-{{ device_type }}{{ device_index }}
