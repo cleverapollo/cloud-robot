@@ -25,12 +25,16 @@ PortData = Optional[Dict[str, Union[list, dict]]]
 RouterData = Optional[Dict[str, Optional[str]]]
 MAX_ATTEMPTS = 10
 
+commit_warnings = [
+    'Child /usr/sbin/mustd dumped core (0x8b)',
+]
+
 
 class VrfMixin:
     logger: logging.Logger
 
     @classmethod
-    def deploy(cls, setconf: str, management_ip: str, ignore_missing: bool = False) -> bool:
+    def deploy(cls, setconf: str, management_ip: str, ignore_missing: bool = True) -> bool:
         """
         Deploy the generated configuration to the Router and return whether or not the deployment succeeded
         :param setconf: The configuration for the virtual router
@@ -96,16 +100,18 @@ class VrfMixin:
                     'now checking the commit status',
                 )
                 # Commit check either raises an error or returns True
-                config.commit_check()
+                config.commit_check(ignore_warning=commit_warnings)
                 cls.logger.debug(f'Commit check on Router {management_ip} successful, committing changes.')
                 if not ignore_missing:
                     detail = config.commit(
                         comment=commit_msg,
+                        ignore_warning=commit_warnings,
                     )
                 else:
+                    commit_warnings.append('statement not found')
                     detail = config.commit(
                         comment=commit_msg,
-                        ignore_warning=['statement not found'],
+                        ignore_warning=commit_warnings,
                     )
                 cls.logger.debug(f'Response from commit on Router {management_ip}\n{detail}')
             except CommitError:
