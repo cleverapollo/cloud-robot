@@ -9,6 +9,7 @@ builder class for vrfs
 # stdlib
 import logging
 import re
+import time
 from collections import deque
 from typing import Any, Deque, Dict, List, Optional
 # lib
@@ -101,17 +102,32 @@ class Vrf(VrfMixin):
             return False
 
         # If everything is okay, commence building the VRF
-        child_span = opentracing.tracer.start_span('generate_setconf', child_of=span)
-        conf = utils.JINJA_ENV.get_template('vrf/build.j2').render(**template_data)
+        child_span = opentracing.tracer.start_span('generate_setconf0', child_of=span)
+        conf0 = utils.JINJA_ENV.get_template('vrf/build0.j2').render(**template_data)
         child_span.finish()
 
-        Vrf.logger.debug(f'Generated setconf for VRF #{vrf_id}\n{conf}')
+        Vrf.logger.debug(f'Generated setconf0 for VRF #{vrf_id}\n{conf0}')
 
-        # Deploy the generated setconf to the router
+        # Deploy the generated setconf0 to the router
         management_ip = template_data.pop('management_ip')
         child_span = opentracing.tracer.start_span('deploy_setconf', child_of=span)
-        success = Vrf.deploy(conf, management_ip)
+        success = Vrf.deploy(conf0, management_ip)
         child_span.finish()
+
+        if success:
+            # wait for a minute so the Router can be ready for second commit
+            time.sleep(60)
+            child_span = opentracing.tracer.start_span('generate_setconf', child_of=span)
+            conf = utils.JINJA_ENV.get_template('vrf/build.j2').render(**template_data)
+            child_span.finish()
+
+            Vrf.logger.debug(f'Generated setconf for VRF #{vrf_id}\n{conf}')
+
+            # Deploy the generated setconf to the router
+            child_span = opentracing.tracer.start_span('deploy_setconf', child_of=span)
+            success = Vrf.deploy(conf, management_ip)
+            child_span.finish()
+
         return success
 
     @staticmethod

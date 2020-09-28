@@ -1,0 +1,4 @@
+{# Define VRF public IP on PUBLIC interface #}
+set groups vrf-{{ project_id }} interfaces {{ public_port }} unit 0 family {{ port_address_family }} address {{ vrf_ip }}/{{ vrf_subnet_mask }}
+set groups vrf-{{ project_id }} security nat source pool vrf-{{ project_id }}-public address {{ vrf_ip }}
+set apply-groups vrf-{{ project_id }}
