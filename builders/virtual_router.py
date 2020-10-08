@@ -14,7 +14,6 @@ from typing import Any, Deque, Dict, List, Optional
 # lib
 import opentracing
 from cloudcix.api.iaas import IAAS
-from cloudcix.api.ipam import IPAM
 from jaeger_client import Span
 from netaddr import IPNetwork
 # local
@@ -153,7 +152,7 @@ class VirtualRouter(VirtualRouterMixin):
         # Check if there are any NAT rules needed in this subnet
         params = {'search[subnet_id__in]': [subnet['id'] for subnet in subnets]}
         child_span = opentracing.tracer.start_span('listing_ip_addresses', child_of=span)
-        subnet_ips = utils.api_list(IPAM.ip_address, params, span=child_span)
+        subnet_ips = utils.api_list(IAAS.ip_address, params, span=child_span)
         child_span.finish()
         for ip in subnet_ips:
             if len(ip['public_ip']) != 0:
