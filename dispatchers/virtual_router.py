@@ -1,6 +1,8 @@
 # stdlib
 import logging
+from datetime import datetime, timedelta
 # local
+import tasks
 from tasks import virtual_router as virtual_router_tasks
 
 
@@ -25,6 +27,11 @@ class VirtualRouter:
             f'Passing virtual_router #{virtual_router_id} to the build task queue',
         )
         virtual_router_tasks.build_virtual_router.delay(virtual_router_id)
+        # Reset debug logs of firewall rules after 15min
+        logging.getLogger('robot.dispatchers.virtual_router.debug_logging').debug(
+            f'Passing virtual_router #{virtual_router_id} to the debug_logs task queue after virtual_router build',
+        )
+        tasks.debug.s(virtual_router_id).apply_async(eta=datetime.now() + timedelta(seconds=15 * 60))
 
     def quiesce(self, virtual_router_id: int):
         """
@@ -69,3 +76,8 @@ class VirtualRouter:
             f'Passing virtual_router #{virtual_router_id} to the update task queue',
         )
         virtual_router_tasks.update_virtual_router.delay(virtual_router_id)
+        # Reset debug logs of firewall rules after 15min
+        logging.getLogger('robot.dispatchers.vrf.debug_logging').debug(
+            f'Passing VRF #{virtual_router_id} to the debug_logs task queue after vrf update',
+        )
+        tasks.debug.s(virtual_router_id).apply_async(eta=datetime.now() + timedelta(seconds=15 * 60))

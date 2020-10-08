@@ -29,8 +29,6 @@ __all__ = [
     'LOGSTASH_URL',
     'NETWORK_DRIVE_URL',
     'NETWORK_PASSWORD',
-    'PRIVATE_PORT',
-    'PUBLIC_PORT',
     'REGION_NAME',
     'ROBOT_ENV',
     'SEND_TO_FAIL',
@@ -168,11 +166,3 @@ HYPERV_VMS_PATH = ''
 
 # Nas drive mount url
 NETWORK_DRIVE_URL = ''
-
-"""
-Router settings, are required if VIRTUAL_ROUTERS_ENABLED is True
-"""
-# Public port e.g 'ge-0/0/0'
-PUBLIC_PORT = ''
-# Private port e.g 'ge-0/0/0'
-PRIVATE_PORT = ''

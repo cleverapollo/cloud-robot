@@ -9,11 +9,13 @@ builder class for kvm vms
 import logging
 import os
 import random
+import shutil
 import string
 from crypt import crypt, mksalt, METHOD_SHA512
 from typing import Any, Dict, Optional, Tuple
 # lib
 import opentracing
+from cloudcix.api.iaas import IAAS
 from jaeger_client import Span
 from netaddr import IPAddress, IPNetwork
 from paramiko import AutoAddPolicy, SSHClient, SSHException
@@ -39,16 +41,22 @@ class Linux(LinuxMixin):
     template_keys = {
         # the admin password for the vm, unencrypted
         'admin_password',
+        # kickstart thing
+        'auth',
         # the number of cpus in the vm
         'cpu',
         # the admin password for the vm, pre-crpyted
         'crypted_admin_password',
         # root password encrypted, needed for centos kickstart
         'crypted_root_password',
+        # device index and type for nic
+        'device_index',
+        'device_type',
         # the dns servers for the vm
         'dns',
-        # the subnet gateway
-        'gateway',
+        # first nic
+        'first_nic_primary',
+        'first_nic_secondary',
         # the ip address of the host that the VM will be built on
         'host_ip',
         # the sudo password of the host, used to run some commands
@@ -65,8 +73,10 @@ class Linux(LinuxMixin):
         'keyboard',
         # the language of the vm
         'language',
-        # the subnet mask in ip address form (255.255.255.0)
-        'netmask',
+        # ubuntu netplan support
+        'netplan',
+        # the non default ip addresses of the vm as nics
+        'nics',
         # the path on the host where the network drive is found
         'network_drive_path',
         # the amount of RAM in the VM
@@ -77,8 +87,8 @@ class Linux(LinuxMixin):
         'storages',
         # the timezone of the vm
         'timezone',
-        # the vlan that the vm is a part of
-        'vlan',
+        # all subnet vlans numbers list for bridges
+        'vlans',
         # an identifier that uniquely identifies the vm
         'vm_identifier',
         # path for vm's .img files located in host
@@ -97,7 +107,7 @@ class Linux(LinuxMixin):
 
         # Generate the necessary template data
         child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
-        template_data = Linux._get_template_data(vm_data)
+        template_data = Linux._get_template_data(vm_data, child_span)
         child_span.finish()
 
         # Check that the data was successfully generated
@@ -125,8 +135,10 @@ class Linux(LinuxMixin):
         answer_file = template_data.pop('image_answer_file_name')
 
         # Write necessary files into the network drive
+        network_drive_path = settings.KVM_ROBOT_NETWORK_DRIVE_PATH
+        path = f'{network_drive_path}/VMs/{vm_data["project"]["id"]}_{vm_id}'
         child_span = opentracing.tracer.start_span('write_files_to_network_drive', child_of=span)
-        file_write_success = Linux._generate_network_drive_files(vm_id, answer_file, template_data)
+        file_write_success = Linux._generate_network_drive_files(vm_id, answer_file, template_data, path)
         child_span.finish()
 
         if not file_write_success:
@@ -182,20 +194,22 @@ class Linux(LinuxMixin):
         finally:
             client.close()
 
-        # remove the generated files from the network drive
-        child_span = opentracing.tracer.start_span('delete_files_from_network_drive', child_of=span)
-        Linux._remove_network_drive_files(vm_id, template_data)
-        child_span.finish()
+        # remove all the files created in network drive
+        try:
+            shutil.rmtree(path)
+        except OSError:
+            Linux.logger.warning(f'Failed to remove network drive files for VM #{vm_id}')
 
         return built
 
     @staticmethod
-    def _get_template_data(vm_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _get_template_data(vm_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
         """
         Given the vm data from the API, create a dictionary that contains all of the necessary keys for the template
         The keys will be checked in the build method and not here, this method is only concerned with fetching the data
         that it can.
         :param vm_data: The data of the VM read from the API
+        :param span: The tracing span in use for this task. In this method, just pass it to API calls.
         :returns: The data needed for the templates to build a Linux VM
         """
         vm_id = vm_data['id']
@@ -235,10 +249,99 @@ class Linux(LinuxMixin):
         data['storage_type'] = vm_data['storage_type']
 
         # Get the Networking details
-        data['ip_address'] = vm_data['ip_address']['address']
-        net = IPNetwork(vm_data['ip_address']['subnet']['address_range'])
-        data['gateway'], data['netmask'] = str(net.ip), str(net.netmask)
-        data['vlan'] = vm_data['ip_address']['subnet']['vlan']
+        data['vlans'] = []
+        data['nics'] = []
+        default_ips = []
+        default_gateway = None
+        default_netmask = None
+        default_netmask_int = None
+        default_vlan = None
+
+        # The private IPs for the VM will be the one we need to pass to the template
+        vm_data['ip_addresses'].reverse()
+        ip_addresses = [
+            ip_address for ip_address in vm_data['ip_addresses'] if IPAddress(ip_address['address']).is_private()
+        ]
+        subnet_ids = [ip['subnet'] for ip in ip_addresses]
+        subnet_ids = list(set(subnet_ids))  # Removing duplicates
+        subnets = utils.api_list(IAAS.subnet, {'subnet__in': subnet_ids}, span=span)
+
+        for subnet in subnets:
+            non_default_ips = []
+            net = IPNetwork(subnet['address_range'])
+            gateway, netmask = str(net.ip), str(net.netmask)
+            netmask_int = subnet['address_range'].split('/')[1]
+            vlan = str(subnet['vlan'])
+            data['vlans'].append(vlan)
+
+            for ip_address in ip_addresses:
+                address = ip_address['address']
+                if ip_address['subnet']['id'] == subnet['id']:
+                    # Pick the default ips if any
+                    if vm_data['gateway_subnet'] is not None:
+                        if subnet['id'] == vm_data['gateway_subnet']['id']:
+                            default_ips.append(address)
+                            default_gateway = gateway
+                            default_netmask = netmask
+                            default_netmask_int = netmask_int
+                            default_vlan = vlan
+                            continue
+                    # else store the non gateway subnet ips
+                    non_default_ips.append(address)
+
+            if len(non_default_ips) > 0:
+                data['nics'].append(
+                    {
+                        'ips': non_default_ips,
+                        'gateway': gateway,
+                        'netmask': netmask,
+                        'netmask_int': netmask_int,
+                        'vlan': vlan,
+                    },
+                )
+        # required adjustments for templates simplicity
+        data['vlans'] = list(set(data['vlans']))  # Removing duplicates
+
+        data['first_nic_primary'] = {}
+        data['first_nic_secondary'] = False
+        # in case of default_ips then pick the first ip of default_ips as first_nic_primary
+        if len(default_ips) > 0:
+            ip0 = default_ips.pop(0)  # removing the first ip
+            data['first_nic_primary'] = {
+                'ip': ip0,  # taking the first ip
+                'gateway': default_gateway,
+                'netmask': default_netmask,
+                'netmask_int': default_netmask_int,
+                'vlan': default_vlan,
+            }
+            # if any ip left in default_ips would go into first_nic_secondary
+            if len(default_ips) > 0:
+                data['first_nic_secondary'] = {
+                    'ips': default_ips,
+                    'gateway': default_gateway,
+                    'netmask': default_netmask,
+                    'netmask_int': default_netmask_int,
+                    'vlan': default_vlan,
+                }
+
+        # in case of no default_ips then pick the first ip of first nic as first_nic_primary
+        elif len(default_ips) == 0 and len(data['nics']) > 0:
+            nic0 = data['nics'].pop(0)  # removing the first nic
+            ip0 = nic0['ips'].pop(0)  # removing the first ip
+            data['first_nic_primary'] = {
+                'ip': ip0,  # taking the first ip
+                'gateway': nic0['gateway'],
+                'netmask': nic0['netmask'],
+                'netmask_int': nic0['netmask_int'],
+                'vlan': nic0['vlan'],
+            }
+            # if any ip left in first nic would go into first_nic_secondary
+            if len(nic0['ips']) > 0:
+                data['first_nic_secondary'] = nic0
+        # set the order for nics in case list order changes
+        if len(data['nics']) > 0:
+            for i, nic in enumerate(data['nics']):
+                nic['order'] = i + 1
 
         # Add locale data to the VM
         data['keyboard'] = 'ie'
@@ -263,10 +366,28 @@ class Linux(LinuxMixin):
         data['host_sudo_passwd'] = settings.NETWORK_PASSWORD
         data['network_drive_path'] = settings.KVM_HOST_NETWORK_DRIVE_PATH
         data['vms_path'] = settings.KVM_VMS_PATH
+
+        # kickstart thing for old linux oses such as centos7.x or below and rhel7.x or below
+        data['auth'] = 'select'
+        if vm_data['image']['id'] in [10, 11, 15]:
+            data['auth'] = ''
+        # device type
+        data['device_type'] = 'ens'
+        data['device_index'] = 3
+        if vm_data['image']['id'] in [7, 10, 11, 15]:
+            data['device_type'] = 'eth'
+            data['device_index'] = 0
+        # netplan in ubuntu 16 complicated so we keep networks
+        data['netplan'] = True
+        if vm_data['image']['id'] in [6, 7]:
+            data['netplan'] = False
+
         return data
 
     @staticmethod
-    def _generate_network_drive_files(vm_id: int, answer_file_name: str, template_data: Dict[str, Any]) -> bool:
+    def _generate_network_drive_files(
+            vm_id: int, answer_file_name: str, template_data: Dict[str, Any], path: str,
+    ) -> bool:
         """
         Generate and write files into the network drive so they are on the host for the build scripts to utilise.
         Writes the following files to the drive;
@@ -275,40 +396,52 @@ class Linux(LinuxMixin):
         :param vm_id: The id of the VM being built. Used for log messages
         :param answer_file_name: The name of the image's answer_file_name file used to build the VM
         :param template_data: The retrieved template data for the kvm vm
+        :param path: Network drive location to create above files for VM build
         :returns: A flag stating whether or not the job was successful
         """
-        network_drive_path = settings.KVM_ROBOT_NETWORK_DRIVE_PATH
+        # Create a folder by vm_identifier name at network_drive_path/VMs/
+        try:
+            os.mkdir(path)
+        except OSError:
+            Linux.logger.error(
+                f'Failed to create directory for VM #{vm_id} at {path}',
+                exc_info=True,
+            )
+            return False
+
+        # Render and attempt to write the bridge definition file
+        for vlan in template_data['vlans']:
+            template_name = 'kvm/bridge/definition.j2'
+            bridge_def = utils.JINJA_ENV.get_template(template_name).render(vlan=vlan)
+            Linux.logger.debug(f'Generated bridge definition file for VM #{vm_id}\n{bridge_def}')
+            bridge_def_filename = f'{path}/br{vlan}.xml'
+            try:
+                # Attempt to write
+                with open(bridge_def_filename, 'w') as f:
+                    f.write(bridge_def)
+                Linux.logger.debug(
+                    f'Successfully wrote bridge definition file for VM #{vm_id} to {bridge_def_filename}',
+                )
+            except IOError:
+                Linux.logger.error(
+                    f'Failed to write bridge definition file for VM #{vm_id} to {bridge_def_filename}',
+                    exc_info=True,
+                )
+                return False
 
         # Render and attempt to write the answer file
         template_name = f'vm/kvm/answer_files/{answer_file_name}.j2'
         answer_file_data = utils.JINJA_ENV.get_template(template_name).render(**template_data)
         Linux.logger.debug(f'Generated answer file for VM #{vm_id}\n{answer_file_data}')
+        answer_file_path = f'{path}/{template_data["vm_identifier"]}.cfg'
         try:
             # Attempt to write
-            answer_file_path = f'{network_drive_path}/answer_files/{template_data["vm_identifier"]}.cfg'
             with open(answer_file_path, 'w') as f:
                 f.write(answer_file_data)
             Linux.logger.debug(f'Successfully wrote answer file for VM #{vm_id} to {answer_file_path}')
         except IOError:
             Linux.logger.error(
                 f'Failed to write answer file for VM #{vm_id} to {answer_file_path}',
-                exc_info=True,
-            )
-            return False
-
-        # Render and attempt to write the bridge definition file
-        template_name = 'vm/kvm/bridge/definition.j2'
-        bridge_def = utils.JINJA_ENV.get_template(template_name).render(**template_data)
-        Linux.logger.debug(f'Generated bridge definition file for VM #{vm_id}\n{bridge_def}')
-        try:
-            # Attempt to write
-            bridge_def_filename = f'{network_drive_path}/bridge_xmls/br{template_data["vlan"]}.xml'
-            with open(bridge_def_filename, 'w') as f:
-                f.write(bridge_def)
-            Linux.logger.debug(f'Successfully wrote bridge definition file for VM #{vm_id} to {bridge_def_filename}')
-        except IOError:
-            Linux.logger.error(
-                f'Failed to write bridge definition file for VM #{vm_id} to {bridge_def_filename}',
                 exc_info=True,
             )
             return False
@@ -336,44 +469,6 @@ class Linux(LinuxMixin):
         Linux.logger.debug(f'Generated vm build command for VM #{vm_id}\n{vm_cmd}')
 
         return bridge_cmd, vm_cmd
-
-    @staticmethod
-    def _remove_network_drive_files(vm_id: int, template_data: Dict[str, Any]):
-        """
-        Removes files from the network drive as they are not necessary after build and are not supposed to be left.
-        Remove the following files from the drive;
-            - answer file
-            - bridge definition file
-        :param vm_id: The id of the VM being built. Used for log messages
-        :param template_data: The retrieved template data for the vm
-        """
-        network_drive_path = settings.KVM_ROBOT_NETWORK_DRIVE_PATH
-
-        # Remove answer file
-        file_path = f'answer_files/{template_data["vm_identifier"]}.cfg'
-        answer_file_path = os.path.join(network_drive_path, file_path)
-        if os.path.exists(answer_file_path):
-            try:
-                os.remove(answer_file_path)
-                Linux.logger.debug(f'Successfully removed answer file {answer_file_path} of VM #{vm_id}')
-            except IOError:
-                Linux.logger.error(
-                    f'Exception occurred while attempting to delete {file_path} from the network drive for VM #{vm_id}',
-                    exc_info=True,
-                )
-
-        # Remove bridge xml file
-        file_path = f'bridge_xmls/br{template_data["vlan"]}.xml'
-        bridge_def_filename = os.path.join(network_drive_path, file_path)
-        if os.path.exists(bridge_def_filename):
-            try:
-                os.remove(bridge_def_filename)
-                Linux.logger.debug(f'Successfully removed bridge definition file {bridge_def_filename} of VM #{vm_id}')
-            except IOError:
-                Linux.logger.error(
-                    f'Exception occurred while attempting to delete {file_path} from the network drive for VM #{vm_id}',
-                    exc_info=True,
-                )
 
     @staticmethod
     def _password_generator(size: int = 12, chars: Optional[str] = None) -> str:

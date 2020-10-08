@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any, Dict
 # lib
 import opentracing
-from cloudcix.api.compute import Compute
+from cloudcix.api.iaas import IAAS
 from jaeger_client import Span
 # local
 import metrics
@@ -32,7 +32,7 @@ def _unresource(vm: Dict[str, Any], span: Span):
 
     # Update state to UNRESOURCED in the API
     child_span = opentracing.tracer.start_span('update_to_unresourced', child_of=span)
-    response = Compute.vm.partial_update(
+    response = IAAS.vm.partial_update(
         token=Token.get_instance().token,
         pk=vm_id,
         data={'state': state.UNRESOURCED},
@@ -78,7 +78,7 @@ def _build_vm(vm_id: int, span: Span):
 
     # Read the VM
     child_span = opentracing.tracer.start_span('read_vm', child_of=span)
-    vm = utils.api_read(Compute.vm, vm_id, span=child_span)
+    vm = utils.api_read(IAAS.vm, vm_id, span=child_span)
     child_span.finish()
 
     # Ensure it is not none
@@ -99,7 +99,7 @@ def _build_vm(vm_id: int, span: Span):
     child_span = opentracing.tracer.start_span('read_project_vr', child_of=span)
     vr_id = vm['project']['virtual_router_id']
     # need to read so to get the current state of virtual_router
-    vm_vr = utils.api_read(Compute.virtual_router, pk=vr_id, span=child_span)
+    vm_vr = utils.api_read(IAAS.virtual_router, pk=vr_id, span=child_span)
     child_span.finish()
 
     if vm_vr['state'] == state.UNRESOURCED:
@@ -121,7 +121,7 @@ def _build_vm(vm_id: int, span: Span):
 
     # If all is well and good here, update the VM state to BUILDING and pass the data to the builder
     child_span = opentracing.tracer.start_span('update_to_building', child_of=span)
-    response = Compute.vm.partial_update(
+    response = IAAS.vm.partial_update(
         token=Token.get_instance().token,
         pk=vm_id,
         data={'state': state.BUILDING},
@@ -139,7 +139,7 @@ def _build_vm(vm_id: int, span: Span):
 
     # Read the VM server to get the server type
     child_span = opentracing.tracer.start_span('read_vm_server', child_of=span)
-    server = utils.api_read(Compute.server, vm['server_id'], span=child_span)
+    server = utils.api_read(IAAS.server, vm['server_id'], span=child_span)
     child_span.finish()
     if server is None:
         logger.error(
@@ -186,7 +186,7 @@ def _build_vm(vm_id: int, span: Span):
 
         # Update state to RUNNING in the API
         child_span = opentracing.tracer.start_span('update_to_running', child_of=span)
-        response = Compute.vm.partial_update(
+        response = IAAS.vm.partial_update(
             token=Token.get_instance().token,
             pk=vm_id,
             data={'state': state.RUNNING},
@@ -205,7 +205,7 @@ def _build_vm(vm_id: int, span: Span):
                 EmailNotifier.vm_build_success(vm)
             except Exception:
                 logger.error(
-                    f'Failed to send build success email for VM #{vm["idVM"]}',
+                    f'Failed to send build success email for VM #{vm_id}',
                     exc_info=True,
                 )
             child_span.finish()
@@ -217,4 +217,5 @@ def _build_vm(vm_id: int, span: Span):
         metrics.vm_build_success(total_time.seconds)
     else:
         logger.error(f'Failed to build VM #{vm_id}')
+        vm.pop('admin_password')
         _unresource(vm, span)

@@ -1,8 +1,9 @@
 # stdlib
 import logging
+from datetime import datetime, timedelta
 # lib
 import opentracing
-from cloudcix.api.compute import Compute
+from cloudcix.api.iaas import IAAS
 from jaeger_client import Span
 # local
 import metrics
@@ -42,7 +43,7 @@ def _scrub_virtual_router(virtual_router_id: int, span: Span):
     # Read the virtual_router
     # Don't use utils so we can check the response code
     child_span = opentracing.tracer.start_span('read_virtual_router', child_of=span)
-    response = Compute.virtual_router.read(
+    response = IAAS.virtual_router.read(
         token=Token.get_instance().token,
         pk=virtual_router_id,
         span=child_span,
@@ -74,6 +75,20 @@ def _scrub_virtual_router(virtual_router_id: int, span: Span):
         span.set_tag('return_reason', 'not_in_valid_state')
         return
 
+    # Also ensure that all the VMs under this project are scrubbed
+    child_span = opentracing.tracer.start_span('read_project_vms', child_of=span)
+    vms_request_data = {'search[project_id]': virtual_router['project']['id']}
+    vrf_vms = utils.api_list(IAAS.vm, vms_request_data, span=child_span)
+    child_span.finish()
+    vm_count = len(vrf_vms)
+    if vm_count > 0:
+        logger.warning(
+            f'{vm_count} VMs are still in this project, scrub of VRF #{virtual_router_id} is postponed',
+        )
+        # since vms are yet in the project so wait for 1 min and try again.
+        scrub_virtual_router.s(virtual_router_id).apply_async(eta=datetime.now() + timedelta(seconds=60))
+        return
+
     # There's no in-between state for Scrub tasks, just jump straight to doing the work
     success: bool = False
     child_span = opentracing.tracer.start_span('scrub', child_of=span)
@@ -93,7 +108,7 @@ def _scrub_virtual_router(virtual_router_id: int, span: Span):
         metrics.virtual_router_scrub_success()
         # Delete the virtual_router from the DB
         child_span = opentracing.tracer.start_span('delete_virtual_router_from_api', child_of=span)
-        response = Compute.virtual_router.delete(
+        response = IAAS.virtual_router.delete(
             token=Token.get_instance().token,
             pk=virtual_router_id,
             span=child_span,
