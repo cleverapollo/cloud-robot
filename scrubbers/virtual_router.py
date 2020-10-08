@@ -11,7 +11,7 @@ import logging
 from typing import Any, Dict, Optional
 # lib
 import opentracing
-from cloudcix.api.compute import Compute
+from cloudcix.api.iaas import IAAS
 from jaeger_client import Span
 # local
 import utils
@@ -104,7 +104,7 @@ class VirtualRouter(VirtualRouterMixin):
 
         # Get the management ip address from the Router.
         child_span = opentracing.tracer.start_span('reading_router', child_of=span)
-        router = utils.api_read(Compute.router, virtual_router_data['router_id'], span=child_span)
+        router = utils.api_read(IAAS.router, virtual_router_data['router_id'], span=child_span)
         child_span.finish()
         data['management_ip'] = router['management_ip']
 

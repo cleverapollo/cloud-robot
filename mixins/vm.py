@@ -7,7 +7,11 @@ methods included;
 import logging
 from collections import deque
 from typing import Any, Deque, Dict, Optional
+# lib
+from cloudcix.api.iaas import IAAS
+from jaeger_client import Span
 # local
+import utils
 from state import RUNNING
 
 __all__ = [
@@ -53,17 +57,24 @@ class VmUpdateMixin:
         return drives
 
     @classmethod
-    def determine_should_restart(cls, vm_data: Dict[str, Any]) -> Optional[bool]:
+    def determine_should_restart(cls, vm_data: Dict[str, Any], span: Span) -> Optional[bool]:
         """
         Check through the VM changes to see if the VM should be turned back on after the update is finished
         """
-        # Determine whether or not we should restart the VM by retrieving the previous state of the VM
-        state_change = vm_data['changes_this_month'][0]['details'].get('state', {})
-        if len(state_change) == 0:
-            # This is also as bug
-            return None
+        vm_id = vm_data['id']
+        params = {
+            'order': '-created',
+            'limit': 1,
+            'state__in': (4, 6, 9),
+            'vm_id': vm_id,
+        }
+        # Get the last two histories where state was changed, the first item returned will be the current request for
+        # change and the second item will be the current status of the VM
+        state_changes = utils.api_list(IAAS.vm_history, params, span=span)
+
         # Update the vm_data to retain the state to go back to
-        vm_data['return_state'] = state_change['old_value']
-        # We restart the VM iff the VM was in state RUNNING before this update
-        cls.logger.debug(f'VM #{vm_data["id"]} will be returned to state {state_change["old_value"]} after update')
-        return state_change['old_value'] == RUNNING
+        vm_data['return_state'] = state_changes[0]['state']
+
+        # We restart the VM if the VM was in state 4 before this update
+        cls.logger.debug(f'VM #{vm_id} will be returned to state {vm_data["return_state"]} after update')
+        return vm_data['return_state'] == RUNNING

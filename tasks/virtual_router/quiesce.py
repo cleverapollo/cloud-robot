@@ -2,7 +2,7 @@
 import logging
 # lib
 import opentracing
-from cloudcix.api.compute import Compute
+from cloudcix.api.iaas import IAAS
 from jaeger_client import Span
 # local
 import metrics
@@ -41,7 +41,7 @@ def _quiesce_virtual_router(virtual_router_id: int, span: Span):
 
     # Read the virtual_router
     child_span = opentracing.tracer.start_span('read_virtual_router', child_of=span)
-    virtual_router = utils.api_read(Compute.virtual_router, virtual_router_id, span=child_span)
+    virtual_router = utils.api_read(IAAS.virtual_router, virtual_router_id, span=child_span)
     child_span.finish()
 
     # Ensure it is not none
@@ -65,7 +65,7 @@ def _quiesce_virtual_router(virtual_router_id: int, span: Span):
     if virtual_router['state'] == state.QUIESCE:
         # Update the state to QUIESCING (12)
         child_span = opentracing.tracer.start_span('update_to_quiescing', child_of=span)
-        response = Compute.virtual_router.partial_update(
+        response = IAAS.virtual_router.partial_update(
             token=Token.get_instance().token,
             pk=virtual_router_id,
             data={'state': state.QUIESCING},
@@ -86,7 +86,7 @@ def _quiesce_virtual_router(virtual_router_id: int, span: Span):
     else:
         # Update the state to SCRUB_PREP (14)
         child_span = opentracing.tracer.start_span('update_to_scrub_prep', child_of=span)
-        response = Compute.virtual_router.partial_update(
+        response = IAAS.virtual_router.partial_update(
             token=Token.get_instance().token,
             pk=virtual_router_id,
             data={'state': state.SCRUB_PREP},
@@ -125,7 +125,7 @@ def _quiesce_virtual_router(virtual_router_id: int, span: Span):
         # (QUIESCE -> QUIESCED, SCRUB -> SCRUB_QUEUE)
         if virtual_router['state'] == state.QUIESCE:
             child_span = opentracing.tracer.start_span('update_to_quiescing', child_of=span)
-            response = Compute.virtual_router.partial_update(
+            response = IAAS.virtual_router.partial_update(
                 token=Token.get_instance().token,
                 pk=virtual_router_id,
                 data={'state': state.QUIESCED},
@@ -140,7 +140,7 @@ def _quiesce_virtual_router(virtual_router_id: int, span: Span):
                 )
         elif virtual_router['state'] == state.SCRUB:
             child_span = opentracing.tracer.start_span('update_to_deleted', child_of=span)
-            response = Compute.virtual_router.partial_update(
+            response = IAAS.virtual_router.partial_update(
                 token=Token.get_instance().token,
                 pk=virtual_router_id,
                 data={'state': state.SCRUB_QUEUE},
@@ -164,7 +164,7 @@ def _quiesce_virtual_router(virtual_router_id: int, span: Span):
 
         # Update state to UNRESOURCED in the API
         child_span = opentracing.tracer.start_span('update_to_unresourced', child_of=span)
-        response = Compute.virtual_router.partial_update(
+        response = IAAS.virtual_router.partial_update(
             token=Token.get_instance().token,
             pk=virtual_router_id,
             data={'state': state.UNRESOURCED},

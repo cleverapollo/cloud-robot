@@ -29,8 +29,6 @@ __all__ = [
     'LOGSTASH_URL',
     'NETWORK_DRIVE_URL',
     'NETWORK_PASSWORD',
-    'PRIVATE_PORT',
-    'PUBLIC_PORT',
     'REGION_NAME',
     'ROBOT_ENV',
     'SEND_TO_FAIL',
@@ -166,11 +164,3 @@ HYPERV_HOST_NETWORK_DRIVE_PATH = '/var/lib/libvirt/ISOs/HyperV'
 HYPERV_VMS_PATH = r'D:\HyperV\\'
 # Nas drive mount url
 NETWORK_DRIVE_URL = f'\\\\{REGION_NAME}-robothost.cloudcix.com\\var\\lib\\libvirt\\robot-drive'
-
-"""
-Router settings, are required if VIRTUAL_ROUTERS_ENABLED is True
-"""
-# Public port e.g 'ge-0/0/0'
-PUBLIC_PORT = 'ge-0/0/0'
-# Private port e.g 'ge-0/0/0'
-PRIVATE_PORT = 'ge-0/0/1'

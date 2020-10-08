@@ -16,14 +16,14 @@
 <h3>Step 3</h3>
 <p>After configuring the VPN on your local hardware, test that it works by pinging the gateway of a Project Subnet;<p>
 <hr />
-<h2>VPN Configuration</h2>
+<h2>{{ description }} VPN Configuration</h2>
 <table class="align-left">
   {# Addresses #}
   <tr><th colspan="2" class="align-center" style="font-size:1.5em;">Address Details</th></tr>
   <tr><th>Local Router Address</th><td>{{ ike_public_ip }}</td></tr>
   <tr><th>Remote Router Address</th><td>{{ virtual_router_ip'] }}</td></tr>
-  <tr><th>Local Proxy ID</th><td>{{ customer_proxy_id }}</td></tr>
-  <tr><th>Remote Proxy ID</th><td>{{ cloud_proxy_id }}</td></tr>
+  <tr><th>Local Proxy ID</th><td>{{ remote_proxy }}</td></tr>
+  <tr><th>Remote Proxy ID</th><td>{{ local_proxy }}</td></tr>
   {# IKE Settings #}
   <tr><th colspan="2" class="align-center" style="padding-top:1em;font-size:1.5em;">IKE (Phase 1) Settings</th></tr>
   <tr><th>Authentication</th><td>{{ ike_authentication }}</td></tr>

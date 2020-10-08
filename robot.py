@@ -5,10 +5,9 @@ new robot that uses a class, methods and instance variables to clean up the code
 import logging
 from typing import cast, Optional, Union
 # lib
-from cloudcix.api.compute import Compute
+from cloudcix.api.iaas import IAAS
 # local
 import dispatchers
-import metrics
 import settings
 import utils
 from state import (
@@ -65,8 +64,6 @@ class Robot:
         This is the main looping part of the robot.
         This method will loop until an exception occurs or a sigterm is received
         """
-        # Send info about uptime
-        metrics.heartbeat()
         self.logger.info('Commencing loop.')
         # Handle loop events in separate functions
 
@@ -106,13 +103,13 @@ class Robot:
         Check the API for virtual_routers to build, and asyncronously build them
         """
         # Retrive the virtual_routers from the API
-        to_build = utils.api_list(Compute.virtual_router, BUILD_FILTERS)
+        to_build = utils.api_list(IAAS.virtual_router, BUILD_FILTERS)
         if len(to_build) == 0:
             self.logger.debug('No virtual_routers found in the "Requested" state')
             return
         for virtual_router in to_build:
             # check if Router is busy.
-            busy = utils.api_list(Compute.virtual_router, IN_PROGRESS_FILTERS)
+            busy = utils.api_list(IAAS.virtual_router, IN_PROGRESS_FILTERS)
             if len(busy) == 0:
                 self.virtual_router_dispatcher.build(virtual_router['id'])
             else:
@@ -123,14 +120,14 @@ class Robot:
         Check the API for VMs to build, and asyncronously build them
         """
         # Retrive the VMs from the API
-        to_build = utils.api_list(Compute.vm, BUILD_FILTERS)
+        to_build = utils.api_list(IAAS.vm, BUILD_FILTERS)
         if len(to_build) == 0:
             self.logger.debug('No VMs found in the "Requested" state')
             return
         for vm in to_build:
             # check if virtual_router is ready.
             virtual_router_request_data = {'project_id': vm['project']['id']}
-            vm_virtual_router = utils.api_list(Compute.virtual_router, virtual_router_request_data)[0]
+            vm_virtual_router = utils.api_list(IAAS.virtual_router, virtual_router_request_data)[0]
             if vm_virtual_router['state'] == 4:
                 self.vm_dispatcher.build(vm['id'])
 
@@ -143,13 +140,13 @@ class Robot:
         Check the API for virtual_routers to quiesce, and asyncronously quiesce them
         """
         # Retrive the virtual_routers from the API
-        to_quiesce = utils.api_list(Compute.virtual_router, QUIESCE_FILTERS)
+        to_quiesce = utils.api_list(IAAS.virtual_router, QUIESCE_FILTERS)
         if len(to_quiesce) == 0:
             self.logger.debug('No virtual_routers found in the "Quiesce" state')
             return
         for virtual_router in to_quiesce:
             # check if Router is busy.
-            busy = utils.api_list(Compute.virtual_router, IN_PROGRESS_FILTERS)
+            busy = utils.api_list(IAAS.virtual_router, IN_PROGRESS_FILTERS)
             if len(busy) == 0:
                 self.virtual_router_dispatcher.quiesce(virtual_router['id'])
             else:
@@ -160,7 +157,7 @@ class Robot:
         Check the API for VMs to quiesce, and asyncronously quiesce them
         """
         # Retrive the VMs from the API
-        to_quiesce = utils.api_list(Compute.vm, QUIESCE_FILTERS)
+        to_quiesce = utils.api_list(IAAS.vm, QUIESCE_FILTERS)
         if len(to_quiesce) == 0:
             self.logger.debug('No VMs found in the "Quiesce" state')
             return
@@ -176,13 +173,13 @@ class Robot:
         Check the API for virtual_routers to restart, and asyncronously restart them
         """
         # Retrive the virtual_routers from the API
-        to_restart = utils.api_list(Compute.virtual_router, RESTART_FILTERS)
+        to_restart = utils.api_list(IAAS.virtual_router, RESTART_FILTERS)
         if len(to_restart) == 0:
             self.logger.debug('No virtual_routers found in the "Restart" state')
             return
         for virtual_router in to_restart:
             # check if Router is busy.
-            busy = utils.api_list(Compute.virtual_router, IN_PROGRESS_FILTERS)
+            busy = utils.api_list(IAAS.virtual_router, IN_PROGRESS_FILTERS)
             if len(busy) == 0:
                 self.virtual_router_dispatcher.restart(virtual_router['id'])
             else:
@@ -193,7 +190,7 @@ class Robot:
         Check the API for VMs to restart, and asyncronously restart them
         """
         # Retrive the VMs from the API
-        to_restart = utils.api_list(Compute.vm, RESTART_FILTERS)
+        to_restart = utils.api_list(IAAS.vm, RESTART_FILTERS)
         if len(to_restart) == 0:
             self.logger.debug('No VMs found in the "Restart" state')
             return
@@ -211,8 +208,8 @@ class Robot:
         This gets run once a day at midnight, once we're sure it works
         """
         self.logger.info(f'Commencing scrub checks with updated__lte={timestamp}')
-        self._virtual_router_scrub(timestamp)
         self._vm_scrub(timestamp)
+        self._virtual_router_scrub(timestamp)
         # Flush the loggers
         utils.flush_logstash()
 
@@ -226,7 +223,7 @@ class Robot:
             params['search[updated__lte]'] = timestamp
 
         # Retrive the virtual_routers from the API
-        to_scrub = utils.api_list(Compute.virtual_router, params)
+        to_scrub = utils.api_list(IAAS.virtual_router, params)
         if len(to_scrub) == 0:
             self.logger.debug('No virtual_routers found in the "Scrub" state')
             return
@@ -244,7 +241,7 @@ class Robot:
             params['search[updated__lte]'] = timestamp
 
         # Retrive the VMs from the API
-        to_scrub = utils.api_list(Compute.vm, params)
+        to_scrub = utils.api_list(IAAS.vm, params)
         if len(to_scrub) == 0:
             self.logger.debug('No VMs found in the "Scrub" state')
             return
@@ -260,13 +257,13 @@ class Robot:
         Check the API for virtual_routers to update, and asyncronously update them
         """
         # Retrive the virtual_routers from the API
-        to_update = utils.api_list(Compute.virtual_router, UPDATE_FILTERS)
+        to_update = utils.api_list(IAAS.virtual_router, UPDATE_FILTERS)
         if len(to_update) == 0:
             self.logger.debug('No virtual_routers found in the "Update" state')
             return
         for virtual_router in to_update:
             # check if Router is busy.
-            busy = utils.api_list(Compute.virtual_router, IN_PROGRESS_FILTERS)
+            busy = utils.api_list(IAAS.virtual_router, IN_PROGRESS_FILTERS)
             if len(busy) == 0:
                 self.virtual_router_dispatcher.update(virtual_router['id'])
             else:
@@ -277,7 +274,7 @@ class Robot:
         Check the API for VMs to update, and asyncronously update them
         """
         # Retrive the VMs from the API
-        to_update = utils.api_list(Compute.vm, UPDATE_FILTERS)
+        to_update = utils.api_list(IAAS.vm, UPDATE_FILTERS)
         if len(to_update) == 0:
             self.logger.debug('No VMs found in the "Update" state')
             return

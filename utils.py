@@ -11,7 +11,7 @@ from typing import Any, Deque, Dict, Iterable
 # lib
 import jinja2
 import netaddr
-from cloudcix.api.compute import Compute
+from cloudcix.api.iaas import IAAS
 from cloudcix.client import Client
 from jaeger_client import Span
 from logstash_async.formatter import LogstashFormatter
@@ -129,11 +129,11 @@ def project_delete(project_id: int, span: Span):
     """
     logger = logging.getLogger('robot.utils.project_delete')
     # Check that list requests for virtual_router and VM both are empty, and if so, delete the project
-    active_virtual_routers = len(api_list(Compute.virtual_router, {'project_id': project_id}, span=span))
-    active_vms = len(api_list(Compute.vm, {'project_id': project_id}, span=span))
+    active_virtual_routers = len(api_list(IAAS.virtual_router, {'project_id': project_id}, span=span))
+    active_vms = len(api_list(IAAS.vm, {'project_id': project_id}, span=span))
     if active_vms == 0 and active_virtual_routers == 0:
         logger.debug(f'Project #{project_id} is empty. Sending delete request.')
-        response = Compute.project.delete(token=Token.get_instance().token, pk=project_id, span=span)
+        response = IAAS.project.delete(token=Token.get_instance().token, pk=project_id, span=span)
         if response.status_code == 200:
             logger.info(f'Successfully deleted Project #{project_id} from the CMDB')
         else:

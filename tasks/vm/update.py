@@ -3,7 +3,7 @@ import logging
 from typing import Any, Dict
 # lib
 import opentracing
-from cloudcix.api.compute import Compute
+from cloudcix.api.iaas import IAAS
 from jaeger_client import Span
 # local
 import metrics
@@ -33,7 +33,7 @@ def _unresource(vm: Dict[str, Any], span: Span):
 
     # Update state to UNRESOURCED in the API
     child_span = opentracing.tracer.start_span('update_to_unresourced', child_of=span)
-    response = Compute.vm.partial_update(
+    response = IAAS.vm.partial_update(
         token=Token.get_instance().token,
         pk=vm_id,
         data={'state': state.UNRESOURCED},
@@ -80,7 +80,7 @@ def _update_vm(vm_id: int, span: Span):
 
     # Read the VM
     child_span = opentracing.tracer.start_span('read_vm', child_of=span)
-    vm = utils.api_read(Compute.vm, vm_id, span=child_span)
+    vm = utils.api_read(IAAS.vm, vm_id, span=child_span)
     child_span.finish()
 
     # Ensure it is not none
@@ -101,7 +101,7 @@ def _update_vm(vm_id: int, span: Span):
 
     # If all is well and good here, update the VM state to UPDATING and pass the data to the updater
     child_span = opentracing.tracer.start_span('update_to_updating', child_of=span)
-    response = Compute.vm.partial_update(
+    response = IAAS.vm.partial_update(
         token=Token.get_instance().token,
         pk=vm_id,
         data={'state': state.UPDATING},
@@ -121,16 +121,19 @@ def _update_vm(vm_id: int, span: Span):
     changes: bool = False
     # check if any changes in any of cpu, ram, storages otherwise ignore
     # the first change in changes_this_month list is the one we need to update about vm
-    if len(vm['changes_this_month']) != 0:
-        for detail in vm['changes_this_month'][0]['details'].keys():
-            if detail in ['cpu', 'ram', 'storages']:
-                changes = True
-                break
+    updates = vm['history'][0]
+    for item in updates.keys():
+        if item in ['cpu_quantity', 'ram_quantity'] and updates[item] is not None:
+            changes = True
+            break
+        if item in ['storage_histories'] and len(updates[item]) != 0:
+            changes = True
+            break
 
     if changes:
         # Read the VM server to get the server type
         child_span = opentracing.tracer.start_span('read_vm_server', child_of=span)
-        server = utils.api_read(Compute.server, vm['server_id'], span=child_span)
+        server = utils.api_read(IAAS.server, vm['server_id'], span=child_span)
         child_span.finish()
         if server is None:
             logger.error(
@@ -176,7 +179,7 @@ def _update_vm(vm_id: int, span: Span):
         # Update back to RUNNING
         child_span = opentracing.tracer.start_span('update_to_prev_state', child_of=span)
         return_state = vm.get('return_state', state.RUNNING)
-        response = Compute.vm.partial_update(
+        response = IAAS.vm.partial_update(
             token=Token.get_instance().token,
             pk=vm_id,
             data={'state': return_state},

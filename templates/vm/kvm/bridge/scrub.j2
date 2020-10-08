@@ -1,4 +1,5 @@
 {
+{% for vlan in vlans %}
   {# 1. Destroy or Stop the bridge interface first #}
   echo {{ host_sudo_passwd }} | sudo -S virsh iface-destroy br{{ vlan }}
 
@@ -7,4 +8,5 @@
 
   {# 3. Undefine or delete the vlan interface from the system #}
   echo {{ host_sudo_passwd }} | sudo -S virsh iface-undefine cloud0.{{ vlan }}
+{% endfor %}
 }

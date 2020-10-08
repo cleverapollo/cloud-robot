@@ -34,22 +34,24 @@ class Windows(WindowsMixin, VmUpdateMixin):
     template_keys = {
         # changes of vm
         'changes',
+        # the default subnet gateway
+        'default_gateway',
+        # default ip address of the VM
+        'default_ip',
+        # the default subnet mask in integer form (/24)
+        'default_netmask_int',
+        # the default vlan that the vm is a part of
+        'default_vlan',
         # the dns servers for the vm
         'dns',
-        # the subnet gateway
-        'gateway',
         # the DNS hostname for the host machine, as WinRM cannot use IPv6
         'host_name',
-        # the ip address of the vm in its subnet
-        'ip_address',
-        # the subnet mask in address form (255.255.255.0)
-        'netmask',
+        # the non default ip addresses of the vm
+        'ip_addresses',
         # a flag stating whether or not the VM should be turned back on after updating it
         'restart',
         # storage type (HDD/SSD)
         'storage_type'
-        # the vlan that the vm is a part of
-        'vlan',
         # an identifier that uniquely identifies the vm
         'vm_identifier',
         # path for vm's folders files located in host
@@ -164,24 +166,35 @@ class Windows(WindowsMixin, VmUpdateMixin):
             'cpu': False,
             'storages': False,
         }
-        if 'ram' in vm_data['changes_this_month'][0]['details'].keys():
-            # RAM is needed in MB for the updater but we take it in in GB (1024, not 1000)
-            changes['ram'] = vm_data['ram'] * 1024
-        if 'cpu' in vm_data['changes_this_month'][0]['details'].keys():
-            changes['cpu'] = vm_data['cpu']
+        updates = vm_data['history'][0]
+        try:
+            if updates['ram_quantity'] is not None:
+                # RAM is needed in MB for the updater but we take it in in GB (1024, not 1000)
+                changes['ram'] = vm_data['ram'] * 1024
+        except KeyError:
+            pass
+        try:
+            if updates['cpu_quantity'] is not None:
+                changes['cpu'] = vm_data['cpu']
+        except KeyError:
+            pass
         # Fetch the drive information for the update
-        if 'storages' in vm_data['changes_this_month'][0]['details'].keys():
-            Windows.logger.debug(f'Fetching drives for VM #{vm_id}')
-            child_span = opentracing.tracer.start_span('fetch_drive_updates', child_of=span)
-            changes['storages'] = Windows.fetch_drive_updates(vm_data)
-            child_span.finish()
+        try:
+            if len(updates['storage_histories']) != 0:
+                Windows.logger.debug(f'Fetching drives for VM #{vm_id}')
+                child_span = opentracing.tracer.start_span('fetch_drive_updates', child_of=span)
+                changes['storages'] = Windows.fetch_drive_updates(vm_data)
+                child_span.finish()
+        except KeyError:
+            pass
         # Add changes to data
         data['changes'] = changes
         data['storage_type'] = vm_data['storage_type']
 
         # Get the Networking details
+        # TODO will update with multiple IPs stuff
         data['dns'] = vm_data['dns'].replace(',', '", "')
-        data['ip_address'] = vm_data['ip_address']['address']
+        data['ip_addresses'] = vm_data['ip_addresses']['address']
         net = IPNetwork(vm_data['ip_address']['subnet']['address_range'])
         data['gateway'], data['netmask'] = str(net.ip), str(net.netmask)
         data['vlan'] = vm_data['ip_address']['subnet']['vlan']
@@ -204,6 +217,6 @@ class Windows(WindowsMixin, VmUpdateMixin):
         # Determine whether or not we should turn the VM back on after the update finishes
         Windows.logger.debug(f'Determining if VM #{vm_id} should be powered on after update')
         child_span = opentracing.tracer.start_span('determine_should_restart', child_of=span)
-        data['restart'] = Windows.determine_should_restart(vm_data)
+        data['restart'] = Windows.determine_should_restart(vm_data, child_span)
         child_span.finish()
         return data

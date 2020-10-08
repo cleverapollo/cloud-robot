@@ -2,7 +2,7 @@
 import logging
 # lib
 import opentracing
-from cloudcix.api.compute import Compute
+from cloudcix.api.iaas import IAAS
 from jaeger_client import Span
 # local
 import metrics
@@ -40,7 +40,7 @@ def _build_virtual_router(virtual_router_id: int, span: Span):
 
     # Read the virtual_router
     child_span = opentracing.tracer.start_span('read_virtual_router', child_of=span)
-    virtual_router = utils.api_read(Compute.virtual_router, virtual_router_id, span=child_span)
+    virtual_router = utils.api_read(IAAS.virtual_router, virtual_router_id, span=child_span)
     child_span.finish()
 
     # Ensure it is not none
@@ -63,7 +63,7 @@ def _build_virtual_router(virtual_router_id: int, span: Span):
 
     # If all is well and good here, update the virtual_router state to BUILDING and pass the data to the builder
     child_span = opentracing.tracer.start_span('update_to_building', child_of=span)
-    response = Compute.virtual_router.partial_update(
+    response = IAAS.virtual_router.partial_update(
         token=Token.get_instance().token,
         pk=virtual_router_id,
         data={'state': state.BUILDING},
@@ -99,7 +99,7 @@ def _build_virtual_router(virtual_router_id: int, span: Span):
 
         # Update state to RUNNING in the API
         child_span = opentracing.tracer.start_span('update_to_running', child_of=span)
-        response = Compute.virtual_router.partial_update(
+        response = IAAS.virtual_router.partial_update(
             token=Token.get_instance().token,
             pk=virtual_router_id,
             data={'state': state.RUNNING},
@@ -123,7 +123,7 @@ def _build_virtual_router(virtual_router_id: int, span: Span):
                     EmailNotifier.vpn_build_success(vpn)
                     # update the send_email to False.
                     child_span = opentracing.tracer.start_span('update_to_send_email', child_of=span)
-                    response = Compute.vpn.partial_update(
+                    response = IAAS.vpn.partial_update(
                         token=Token.get_instance().token,
                         pk=vpn['id'],
                         data={'send_email': False},
@@ -147,7 +147,7 @@ def _build_virtual_router(virtual_router_id: int, span: Span):
 
         # Update state to UNRESOURCED in the API
         child_span = opentracing.tracer.start_span('update_to_unresourced', child_of=span)
-        response = Compute.virtual_router.partial_update(
+        response = IAAS.virtual_router.partial_update(
             token=Token.get_instance().token,
             pk=virtual_router_id,
             data={'state': state.UNRESOURCED},

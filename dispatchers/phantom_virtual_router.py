@@ -2,7 +2,7 @@
 import logging
 # lib
 import opentracing
-from cloudcix.api.compute import Compute
+from cloudcix.api.iaas import IAAS
 # local
 import metrics
 import state
@@ -25,7 +25,7 @@ class PhantomVirtualRouter:
         logger = logging.getLogger('robot.dispatchers.phantom_virtual_router.build')
         logger.info(f'Updating virtual router #{virtual_router_id} to state BUILDING')
         # Change the state to BUILDING and report a success to influx
-        response = Compute.virtual_router.update(
+        response = IAAS.virtual_router.update(
             token=Token.get_instance().token,
             pk=virtual_router_id,
             data={'state': state.BUILDING},
@@ -38,7 +38,7 @@ class PhantomVirtualRouter:
             metrics.virtual_router_build_failure()
         logger.info(f'Updating virtual_router #{virtual_router_id} to state RUNNING')
         # Change the state to RUNNING and report a success to influx
-        response = Compute.virtual_router.update(
+        response = IAAS.virtual_router.update(
             token=Token.get_instance().token,
             pk=virtual_router_id,
             data={'state': state.RUNNING},
@@ -60,12 +60,12 @@ class PhantomVirtualRouter:
         """
         logger = logging.getLogger('robot.dispatchers.phantom_virtual_router.quiesce')
         # In order to change the state to the correct value we need to read the virtual_router and check its state
-        virtual_router = utils.api_read(Compute.virtual_router, virtual_router_id)
+        virtual_router = utils.api_read(IAAS.virtual_router, virtual_router_id)
         if virtual_router is None:
             return
         if virtual_router['state'] == state.QUIESCE:
             logger.info(f'Updating virtual_router #{virtual_router_id} to state QUIESCING')
-            response = Compute.virtual_router.partial_update(
+            response = IAAS.virtual_router.partial_update(
                 token=Token.get_instance().token,
                 pk=virtual_router_id,
                 data={'state': state.QUIESCING},
@@ -78,7 +78,7 @@ class PhantomVirtualRouter:
                 metrics.virtual_router_quiesce_failure()
                 return
             logger.info(f'Updating virtual_router #{virtual_router_id} to state QUIESCED')
-            response = Compute.virtual_router.partial_update(
+            response = IAAS.virtual_router.partial_update(
                 token=Token.get_instance().token,
                 pk=virtual_router_id,
                 data={'state': state.QUIESCED},
@@ -93,7 +93,7 @@ class PhantomVirtualRouter:
             metrics.virtual_router_quiesce_success()
         elif virtual_router['state'] == state.SCRUB:
             logger.info(f'Updating virtual_router #{virtual_router_id} to state SCRUB_PREP')
-            response = Compute.virtual_router.partial_update(
+            response = IAAS.virtual_router.partial_update(
                 token=Token.get_instance().token,
                 pk=virtual_router_id,
                 data={'state': state.SCRUB_PREP},
@@ -106,7 +106,7 @@ class PhantomVirtualRouter:
                 metrics.virtual_router_quiesce_failure()
                 return
             logger.info(f'Updating virtual_router #{virtual_router_id} to state SCRUB_QUEUE')
-            response = Compute.virtual_router.partial_update(
+            response = IAAS.virtual_router.partial_update(
                 token=Token.get_instance().token,
                 pk=virtual_router_id,
                 data={'state': state.SCRUB_QUEUE},
@@ -134,7 +134,7 @@ class PhantomVirtualRouter:
         """
         logger = logging.getLogger('robot.dispatchers.phantom_virtual_router.restart')
         logger.info(f'Updating virtual_router #{virtual_router_id} to state RESTARTING')
-        response = Compute.virtual_router.update(
+        response = IAAS.virtual_router.update(
             token=Token.get_instance().token,
             pk=virtual_router_id,
             data={'state': state.RESTARTING},
@@ -147,7 +147,7 @@ class PhantomVirtualRouter:
             metrics.virtual_router_restart_failure()
         logger.info(f'Updating virtual_router #{virtual_router_id} to state RUNNING')
         # Change the state of the virtual_router to RUNNING and report a success to influx
-        response = Compute.virtual_router.update(
+        response = IAAS.virtual_router.update(
             token=Token.get_instance().token,
             pk=virtual_router_id,
             data={'state': state.RUNNING},
@@ -170,7 +170,7 @@ class PhantomVirtualRouter:
         logger = logging.getLogger('robot.dispatchers.phantom_virtual_router.scrub')
         logger.debug(f'Scrubbing phantom virtual_router #{virtual_router_id}')
         # In order to check the project for deletion, we need to read the virtual_router and get the project id from it
-        virtual_router = utils.api_read(Compute.virtual_router, virtual_router_id)
+        virtual_router = utils.api_read(IAAS.virtual_router, virtual_router_id)
         if virtual_router is None:
             return
         span = opentracing.tracer.start_span('phantom_virtual_router_project_delete')
@@ -186,7 +186,7 @@ class PhantomVirtualRouter:
         """
         logger = logging.getLogger('robot.dispatchers.phantom_virtual_router.update')
         logger.info(f'Updating virtual_router #{virtual_router_id} to state UPDATING')
-        response = Compute.virtual_router.update(
+        response = IAAS.virtual_router.update(
             token=Token.get_instance().token,
             pk=virtual_router_id,
             data={'state': state.UPDATING},
@@ -199,7 +199,7 @@ class PhantomVirtualRouter:
             metrics.virtual_router_update_failure()
         # Change the state of the virtual_router to RUNNING and report a success to influx
         logger.info(f'Updating virtual_router #{virtual_router_id} to state RUNNING')
-        response = Compute.virtual_router.update(
+        response = IAAS.virtual_router.update(
             token=Token.get_instance().token,
             pk=virtual_router_id,
             data={'state': state.RUNNING},

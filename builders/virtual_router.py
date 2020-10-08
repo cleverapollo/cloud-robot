@@ -10,17 +10,16 @@ builder class for virtual_routers
 import logging
 import re
 from collections import deque
-from typing import Any, Deque, Dict, Optional
+from typing import Any, Deque, Dict, List, Optional
 # lib
 import opentracing
-from cloudcix.api.compute import Compute
+from cloudcix.api.iaas import IAAS
 from cloudcix.api.ipam import IPAM
 from jaeger_client import Span
 from netaddr import IPNetwork
 # local
 import utils
 from mixins import VirtualRouterMixin
-from settings import PRIVATE_PORT, PUBLIC_PORT
 
 __all__ = [
     'VirtualRouter',
@@ -41,18 +40,20 @@ class VirtualRouter(VirtualRouterMixin):
         'firewall_rules',
         # if inbound firewall exists or not
         'inbound_firewall',
-        # The IP Address of the Management port of the physical Router
+        # The IP Address of the Management interface of the physical Router
         'management_ip',
         # A list of NAT rules to be built in the virtual_router
         'nats',
         # if outbound firewall exists or not
         'outbound_firewall',
-        # The private port of the firewall
-        'private_port',
+        # The address family for the firewall port
+        'interface_address_family',
+        # The private interface of the firewall
+        'private_interface',
         # The id of the Project that owns the virtual_router being built
         'project_id',
-        # The public port of the Router
-        'public_port',
+        # The public interface of the Router
+        'public_interface',
         # A list of vLans to be built in the virtual_router
         'vlans',
         # A list of VPNs to be built in the virtual_router
@@ -165,13 +166,13 @@ class VirtualRouter(VirtualRouterMixin):
 
         # Get the management ip address from the Router.
         child_span = opentracing.tracer.start_span('reading_router', child_of=span)
-        router = utils.api_read(Compute.router, virtual_router_data['router_id'], span=child_span)
+        router = utils.api_read(IAAS.router, virtual_router_data['router_id'], span=child_span)
         child_span.finish()
         data['management_ip'] = router['management_ip']
 
-        # Router port information
-        data['private_port'] = PRIVATE_PORT
-        data['public_port'] = PUBLIC_PORT
+        # Router interface information
+        data['private_interface'] = router['private_interface']
+        data['public_interface'] = router['public_interface']
 
         # Firewall rules
         data['inbound_firewall'] = False
@@ -207,6 +208,9 @@ class VirtualRouter(VirtualRouterMixin):
             # Determine what permission string to include in the firewall rule
             firewall['permission'] = 'permit' if firewall['allow'] else 'deny'
 
+            # logging
+            firewall['log'] = True if firewall['pci_logging'] else firewall['debug_logging']
+
             # Check port and protocol to allow any port for a specific protocol
             if firewall['port'] == '-1' and firewall['protocol'] != 'any':
                 firewall['port'] = '0-65535'
@@ -219,17 +223,21 @@ class VirtualRouter(VirtualRouterMixin):
         vpns: Deque[Dict[str, Any]] = deque()
         params = {'search[virtual_router_id]': virtual_router_id}
         child_span = opentracing.tracer.start_span('listing_vpns', child_of=span)
-        virtual_router_vpns = utils.api_list(Compute.vpn, params, span=child_span)
+        virtual_router_vpns = utils.api_list(IAAS.vpn, params, span=child_span)
         child_span.finish()
         for vpn in virtual_router_vpns:
-            vpn['cloud_proxy_id'] = str(IPNetwork(vpn['cloud_subnet']['address_range']).cidr)
-            vpn['customer_proxy_id'] = str(IPNetwork(vpn['customer_subnets'][0]).cidr)
-            vpn['customer_subnets'] = [str(IPNetwork(cus_subnet).cidr) for cus_subnet in vpn['customer_subnets']]
-            vpn['vlan'] = vpn['cloud_subnet']['vlan']
+            customer_subnets: List[str] = []
+            for customer_subnet in vpn['customer_subnets']:
+                customer_subnets.append(IPNetwork(str(customer_subnet)).cidr)
+            vpn['customer_subnets'] = customer_subnets
+            vpn['local_proxy'] = IPNetwork(vpn['local_subnet']['address_range']).cidr
+            vpn['remote_proxy'] = customer_subnets[0]
+            vpns.append(vpn)
+
             # if send_email is true then read VPN for email addresses
             if vpn['send_email']:
                 child_span = opentracing.tracer.start_span('reading_vpn', child_of=span)
-                vpn['emails'] = utils.api_read(Compute.vpn, pk=vpn['id'])['email']
+                vpn['emails'] = utils.api_read(IAAS.vpn, pk=vpn['id'])['email']
                 child_span.finish()
             vpns.append(vpn)
         data['vpns'] = vpns

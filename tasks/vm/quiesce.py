@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict
 # lib
 import opentracing
-from cloudcix.api.compute import Compute
+from cloudcix.api.iaas import IAAS
 from jaeger_client import Span
 # local
 import metrics
@@ -34,7 +34,7 @@ def _unresource(vm: Dict[str, Any], span: Span):
 
     # Update state to UNRESOURCED in the API
     child_span = opentracing.tracer.start_span('update_to_unresourced', child_of=span)
-    response = Compute.vm.partial_update(
+    response = IAAS.vm.partial_update(
         token=Token.get_instance().token,
         pk=vm_id,
         data={'state': state.UNRESOURCED},
@@ -81,7 +81,7 @@ def _quiesce_vm(vm_id: int, span: Span):
 
     # Read the VM
     child_span = opentracing.tracer.start_span('read_vm', child_of=span)
-    vm = utils.api_read(Compute.vm, vm_id, span=child_span)
+    vm = utils.api_read(IAAS.vm, vm_id, span=child_span)
     child_span.finish()
 
     # Ensure it is not none
@@ -104,7 +104,7 @@ def _quiesce_vm(vm_id: int, span: Span):
     if vm['state'] == state.QUIESCE:
         # Update the state to QUIESCING (12)
         child_span = opentracing.tracer.start_span('update_to_quiescing', child_of=span)
-        response = Compute.vm.partial_update(
+        response = IAAS.vm.partial_update(
             token=Token.get_instance().token,
             pk=vm_id,
             data={'state': state.QUIESCING},
@@ -123,7 +123,7 @@ def _quiesce_vm(vm_id: int, span: Span):
     else:
         # Update the state to SCRUB_PREP (14)
         child_span = opentracing.tracer.start_span('update_to_scrub_prep', child_of=span)
-        response = Compute.vm.partial_update(
+        response = IAAS.vm.partial_update(
             token=Token.get_instance().token,
             pk=vm_id,
             data={'state': state.SCRUB_PREP},
@@ -141,7 +141,7 @@ def _quiesce_vm(vm_id: int, span: Span):
 
     # Read the VM server to get the server type
     child_span = opentracing.tracer.start_span('read_vm_server', child_of=span)
-    server = utils.api_read(Compute.server, vm['server_id'], span=child_span)
+    server = utils.api_read(IAAS.server, vm['server_id'], span=child_span)
     child_span.finish()
     if server is None:
         logger.error(
@@ -192,7 +192,7 @@ def _quiesce_vm(vm_id: int, span: Span):
         if vm['state'] == state.QUIESCE:
             # Update state to QUIESCED in the API
             child_span = opentracing.tracer.start_span('update_to_quiesced', child_of=span)
-            response = Compute.vm.partial_update(
+            response = IAAS.vm.partial_update(
                 token=Token.get_instance().token,
                 pk=vm_id,
                 data={'state': state.QUIESCED},
@@ -208,7 +208,7 @@ def _quiesce_vm(vm_id: int, span: Span):
         elif vm['state'] == state.SCRUB:
             # Update state to SCRUB_QUEUE in the API
             child_span = opentracing.tracer.start_span('update_to_deleted', child_of=span)
-            response = Compute.vm.partial_update(
+            response = IAAS.vm.partial_update(
                 token=Token.get_instance().token,
                 pk=vm_id,
                 data={'state': state.SCRUB_QUEUE},

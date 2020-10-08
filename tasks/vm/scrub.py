@@ -2,7 +2,7 @@
 import logging
 # lib
 import opentracing
-from cloudcix.api.compute import Compute
+from cloudcix.api.iaas import IAAS
 from jaeger_client import Span
 # local
 import metrics
@@ -44,7 +44,7 @@ def _scrub_vm(vm_id: int, span: Span):
     # Read the VM
     # Don't use utils so we can check the response code
     child_span = opentracing.tracer.start_span('read_vm', child_of=span)
-    response = Compute.vm.read(
+    response = IAAS.vm.read(
         token=Token.get_instance().token,
         pk=vm_id,
         span=child_span,
@@ -77,7 +77,7 @@ def _scrub_vm(vm_id: int, span: Span):
 
     # Read the VM server to get the server type
     child_span = opentracing.tracer.start_span('read_vm_server', child_of=span)
-    server = utils.api_read(Compute.server, vm['server_id'], span=child_span)
+    server = utils.api_read(IAAS.server, vm['server_id'], span=child_span)
     child_span.finish()
     if server is None:
         logger.error(
@@ -120,10 +120,10 @@ def _scrub_vm(vm_id: int, span: Span):
         logger.info(f'Successfully scrubbed VM #{vm_id} from hardware.')
         metrics.vm_scrub_success()
         # Do API deletions
-        logger.debug(f'Deleting VM #{vm_id} from the Compute')
+        logger.debug(f'Deleting VM #{vm_id} from the IAAS')
 
         child_span = opentracing.tracer.start_span('delete_vm_from_api', child_of=span)
-        response = Compute.vm.delete(token=Token.get_instance().token, pk=vm_id, span=child_span)
+        response = IAAS.vm.delete(token=Token.get_instance().token, pk=vm_id, span=child_span)
         child_span.finish()
 
         if response.status_code != 200:
@@ -132,11 +132,8 @@ def _scrub_vm(vm_id: int, span: Span):
                 f'Response Text: {response.content.decode()}',
             )
             return
-        logger.info(f'Successfully deleted VM #{vm_id} from the Compute.')
+        logger.info(f'Successfully deleted VM #{vm_id} from the IAAS.')
 
-        child_span = opentracing.tracer.start_span('delete_project_from_api', child_of=span)
-        utils.project_delete(vm['project']['id'], child_span)
-        child_span.finish()
     else:
         logger.error(f'Failed to scrub VM #{vm_id}')
         metrics.vm_scrub_failure()

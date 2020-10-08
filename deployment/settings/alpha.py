@@ -29,8 +29,6 @@ __all__ = [
     'LOGSTASH_URL',
     'NETWORK_DRIVE_URL',
     'NETWORK_PASSWORD',
-    'PRIVATE_PORT',
-    'PUBLIC_PORT',
     'REGION_NAME',
     'ROBOT_ENV',
     'SEND_TO_FAIL',
@@ -165,11 +163,3 @@ HYPERV_HOST_NETWORK_DRIVE_PATH = HYPERV_ROBOT_NETWORK_DRIVE_PATH
 HYPERV_VMS_PATH = r'D:\HyperV\\'
 # Nas drive mount url
 NETWORK_DRIVE_URL = f'\\\\{REGION_NAME}-freenas.cloudcix.com\\mnt\\volume\\{REGION_NAME}'
-
-"""
-Router settings, are required if VIRTUAL_ROUTERS_ENABLED is True
-"""
-# Public port e.g 'ge-0/0/0'
-PUBLIC_PORT = 'xe-0/0/0'
-# Private port e.g 'ge-0/0/0'
-PRIVATE_PORT = 'xe-0/0/1'

@@ -163,18 +163,28 @@ class Linux(LinuxMixin, VmUpdateMixin):
             'cpu': False,
             'storages': False,
         }
-        if 'ram' in vm_data['changes_this_month'][0]['details'].keys():
-            # RAM is needed in MB for the updater but we take it in in GB (1024, not 1000)
-            changes['ram'] = vm_data['ram'] * 1024
-        if 'cpu' in vm_data['changes_this_month'][0]['details'].keys():
-            changes['cpu'] = vm_data['cpu']
+        updates = vm_data['history'][0]
+        try:
+            if updates['ram_quantity'] is not None:
+                # RAM is needed in MB for the updater but we take it in in GB (1024, not 1000)
+                changes['ram'] = vm_data['ram'] * 1024
+        except KeyError:
+            pass
+        try:
+            if updates['cpu_quantity'] is not None:
+                changes['cpu'] = vm_data['cpu']
+        except KeyError:
+            pass
 
         # Fetch the drive information for the update
-        if 'storages' in vm_data['changes_this_month'][0]['details'].keys():
-            Linux.logger.debug(f'Fetching drives for VM #{vm_id}')
-            child_span = opentracing.tracer.start_span('fetch_drive_updates', child_of=span)
-            changes['storages'] = Linux.fetch_drive_updates(vm_data)
-            child_span.finish()
+        try:
+            if len(updates['storage_histories']) != 0:
+                Linux.logger.debug(f'Fetching drives for VM #{vm_id}')
+                child_span = opentracing.tracer.start_span('fetch_drive_updates', child_of=span)
+                changes['storages'] = Linux.fetch_drive_updates(vm_data)
+                child_span.finish()
+        except KeyError:
+            pass
 
         # Add changes to data
         data['changes'] = changes
@@ -202,6 +212,6 @@ class Linux(LinuxMixin, VmUpdateMixin):
         # Determine whether or not we should turn the VM back on after the update finishes
         Linux.logger.debug(f'Determining if VM #{vm_id} should be powered on after update')
         child_span = opentracing.tracer.start_span('determine_should_restart', child_of=span)
-        data['restart'] = Linux.determine_should_restart(vm_data)
+        data['restart'] = Linux.determine_should_restart(vm_data, child_span)
         child_span.finish()
         return data

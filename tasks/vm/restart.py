@@ -3,7 +3,7 @@ import logging
 from typing import Any, Dict
 # lib
 import opentracing
-from cloudcix.api.compute import Compute
+from cloudcix.api.iaas import IAAS
 from jaeger_client import Span
 # local
 import metrics
@@ -33,7 +33,7 @@ def _unresource(vm: Dict[str, Any], span: Span):
 
     # Update state to UNRESOURCED in the API
     child_span = opentracing.tracer.start_span('update_to_unresourced', child_of=span)
-    response = Compute.vm.partial_update(
+    response = IAAS.vm.partial_update(
         token=Token.get_instance().token,
         pk=vm_id,
         data={'state': state.UNRESOURCED},
@@ -79,7 +79,7 @@ def _restart_vm(vm_id: int, span: Span):
 
     # Read the VM
     child_span = opentracing.tracer.start_span('read_vm', child_of=span)
-    vm = utils.api_read(Compute.vm, vm_id, span=child_span)
+    vm = utils.api_read(IAAS.vm, vm_id, span=child_span)
     child_span.finish()
 
     # Ensure it is not none
@@ -100,7 +100,7 @@ def _restart_vm(vm_id: int, span: Span):
 
     # Update to intermediate state here (RESTARTING - 13)
     child_span = opentracing.tracer.start_span('update_to_restarting', child_of=span)
-    response = Compute.vm.partial_update(
+    response = IAAS.vm.partial_update(
         token=Token.get_instance().token,
         pk=vm_id,
         data={'state': state.RESTARTING},
@@ -120,7 +120,7 @@ def _restart_vm(vm_id: int, span: Span):
 
     # Read the VM server to get the server type
     child_span = opentracing.tracer.start_span('read_vm_server', child_of=span)
-    server = utils.api_read(Compute.server, vm['server_id'], span=child_span)
+    server = utils.api_read(IAAS.server, vm['server_id'], span=child_span)
     child_span.finish()
     if server is None:
         logger.error(
@@ -165,7 +165,7 @@ def _restart_vm(vm_id: int, span: Span):
         metrics.vm_restart_success()
         # Update state back to RUNNING
         child_span = opentracing.tracer.start_span('update_to_running', child_of=span)
-        response = Compute.vm.partial_update(
+        response = IAAS.vm.partial_update(
             token=Token.get_instance().token,
             pk=vm_id,
             data={'state': state.RUNNING},
