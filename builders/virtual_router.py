@@ -133,7 +133,7 @@ class VirtualRouter(VirtualRouterMixin):
         data['vxlan'] = virtual_router_data['project']['address_id']
         # Gather the IP Address and Subnet Mask for the virtual_router
         data['virtual_router_ip'] = virtual_router_data['ip_address']['address']
-        data['virtual_router_subnet_mask'] = virtual_router_data['ip_address']['mask']
+        data['virtual_router_subnet_mask'] = virtual_router_data['ip_address']['subnet']['address_range'].split('/')[1]
 
         # Get the vlans and nat rules for the virtual_router
         vlans: Deque[Dict[str, str]] = deque()
