@@ -236,7 +236,7 @@ class VirtualRouter(VirtualRouterMixin):
             # if send_email is true then read VPN for email addresses
             if vpn['send_email']:
                 child_span = opentracing.tracer.start_span('reading_vpn', child_of=span)
-                vpn['emails'] = utils.api_read(IAAS.vpn, pk=vpn['id'])['email']
+                vpn['emails'] = utils.api_read(IAAS.vpn, pk=vpn['id'])['emails']
                 child_span.finish()
             vpns.append(vpn)
         data['vpns'] = vpns
