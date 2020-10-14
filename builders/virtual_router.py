@@ -45,8 +45,6 @@ class VirtualRouter(VirtualRouterMixin):
         'nats',
         # if outbound firewall exists or not
         'outbound_firewall',
-        # The address family for the firewall port
-        'interface_address_family',
         # The private interface of the firewall
         'private_interface',
         # The id of the Project that owns the virtual_router being built
