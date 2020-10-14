@@ -209,7 +209,7 @@ class VirtualRouter(VirtualRouterMixin):
             firewall['log'] = True if firewall['pci_logging'] else firewall['debug_logging']
 
             # Check port and protocol to allow any port for a specific protocol
-            if firewall['port'] == '-1' and firewall['protocol'] != 'any':
+            if firewall['port'] is None:
                 firewall['port'] = '0-65535'
 
             firewalls.append(firewall)

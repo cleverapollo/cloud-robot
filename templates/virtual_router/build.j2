@@ -105,9 +105,9 @@ set groups vrf-{{ project_id }}-sp-{{ firewall['scope'] }} security policies fro
 set groups vrf-{{ project_id }}-sp-{{ firewall['scope'] }} security policies from-zone {{ firewall['from_zone'] }} to-zone {{ firewall['to_zone'] }} policy vrf-{{ project_id }}-policy-{{ firewall['scope'] }}-{{ firewall['order'] }} match destination-address any
 {% endif %}
 {# application creation if required #}
-{% if firewall['protocol'] == 'any' and firewall['port'] == '-1' %}
+{% if firewall['protocol'] == 'any' %}
 set groups vrf-{{ project_id }}-sp-{{ firewall['scope'] }} security policies from-zone {{ firewall['from_zone'] }} to-zone {{ firewall['to_zone'] }} policy vrf-{{ project_id }}-policy-{{ firewall['scope'] }}-{{ firewall['order'] }} match application any
-{% elif firewall['protocol'] == 'icmp' and firewall['port'] == '-2' %}
+{% elif firewall['protocol'] == 'icmp' %}
 set groups vrf-{{ project_id }}-sp-{{ firewall['scope'] }} security policies from-zone {{ firewall['from_zone'] }} to-zone {{ firewall['to_zone'] }} policy vrf-{{ project_id }}-policy-{{ firewall['scope'] }}-{{ firewall['order'] }} match application [junos-icmp-all junos-icmp6-all]
 {% else %}
 set applications application cloudcix-{{ firewall['protocol'] }}-{{ firewall['port'] }} protocol {{ firewall['protocol'] }} destination-port {{ firewall['port'] }}
