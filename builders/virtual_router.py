@@ -229,8 +229,6 @@ class VirtualRouter(VirtualRouterMixin):
             vpn['customer_subnets'] = customer_subnets
             vpn['local_proxy'] = IPNetwork(vpn['local_subnet']['address_range']).cidr
             vpn['remote_proxy'] = customer_subnets[0]
-            vpns.append(vpn)
-
             # if send_email is true then read VPN for email addresses
             if vpn['send_email']:
                 child_span = opentracing.tracer.start_span('reading_vpn', child_of=span)
