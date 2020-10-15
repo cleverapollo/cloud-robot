@@ -14,7 +14,6 @@ import string
 from typing import Any, Dict, Optional
 # lib
 import opentracing
-from cloudcix.api.iaas import IAAS
 from jaeger_client import Span
 from netaddr import IPAddress
 from winrm.exceptions import WinRMError
@@ -195,11 +194,7 @@ class Windows(WindowsMixin):
         vm_data['admin_password'] = data['admin_password']
 
         # Check for the primary storage
-        primary: bool = False
-        for storage in vm_data['storages']:
-            if storage['primary']:
-                primary = True
-        if not primary:
+        if not any(storage['primary'] for storage in vm_data['storages']):
             Windows.logger.error(
                 f'No primary storage drive found. Expected one primary storage drive',
             )
@@ -218,13 +213,21 @@ class Windows(WindowsMixin):
 
         # The private IPs for the VM will be the one we need to pass to the template
         vm_data['ip_addresses'].reverse()
-        ip_addresses = [
-            ip_address for ip_address in vm_data['ip_addresses'] if IPAddress(ip_address['address']).is_private()
-        ]
-        subnet_ids = [ip['subnet'] for ip in ip_addresses]
-        subnet_ids = list(set(subnet_ids))  # Removing duplicates
-        subnets = utils.api_list(IAAS.subnet, {'subnet__in': subnet_ids}, span=span)
-
+        ip_addresses = []
+        subnets = []
+        for ip in vm_data['ip_addresses']:
+            if IPAddress(ip['address']).is_private():
+                ip_addresses.append(ip)
+                subnets.append(
+                    {
+                        'address_range': ip['subnet']['address_range'],
+                        'vlan': ip['subnet']['vlan'],
+                        'id': ip['subnet']['id'],
+                    },
+                )
+        # Removing duplicates
+        subnets = [dict(tuple_item) for tuple_item in {tuple(subnet.items()) for subnet in subnets}]
+        # sorting nics (each subnet is one nic)
         for subnet in subnets:
             non_default_ips = []
             gateway, netmask_int = subnet['address_range'].split('/')
@@ -254,7 +257,6 @@ class Windows(WindowsMixin):
                         'vlan': vlan,
                     },
                 )
-        data['vlans'] = list(set(data['vlans']))  # Removing duplicates
 
         # Add locale data to the VM
         data['language'] = 'en_IE'

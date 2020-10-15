@@ -15,7 +15,6 @@ from crypt import crypt, mksalt, METHOD_SHA512
 from typing import Any, Dict, Optional, Tuple
 # lib
 import opentracing
-from cloudcix.api.iaas import IAAS
 from jaeger_client import Span
 from netaddr import IPAddress, IPNetwork
 from paramiko import AutoAddPolicy, SSHClient, SSHException
@@ -235,11 +234,7 @@ class Linux(LinuxMixin):
         data['crypted_root_password'] = str(crypt(root_password, mksalt(METHOD_SHA512)))
 
         # Check for the primary storage
-        primary: bool = False
-        for storage in vm_data['storages']:
-            if storage['primary']:
-                primary = True
-        if not primary:
+        if not any(storage['primary'] for storage in vm_data['storages']):
             Linux.logger.error(
                 f'No primary storage drive found. Expected one primary storage drive',
             )
@@ -259,13 +254,21 @@ class Linux(LinuxMixin):
 
         # The private IPs for the VM will be the one we need to pass to the template
         vm_data['ip_addresses'].reverse()
-        ip_addresses = [
-            ip_address for ip_address in vm_data['ip_addresses'] if IPAddress(ip_address['address']).is_private()
-        ]
-        subnet_ids = [ip['subnet'] for ip in ip_addresses]
-        subnet_ids = list(set(subnet_ids))  # Removing duplicates
-        subnets = utils.api_list(IAAS.subnet, {'subnet__in': subnet_ids}, span=span)
-
+        ip_addresses = []
+        subnets = []
+        for ip in vm_data['ip_addresses']:
+            if IPAddress(ip['address']).is_private():
+                ip_addresses.append(ip)
+                subnets.append(
+                    {
+                        'address_range': ip['subnet']['address_range'],
+                        'vlan': ip['subnet']['vlan'],
+                        'id': ip['subnet']['id'],
+                    },
+                )
+        # Removing duplicates
+        subnets = [dict(tuple_item) for tuple_item in {tuple(subnet.items()) for subnet in subnets}]
+        # sorting nics (each subnet is one nic)
         for subnet in subnets:
             non_default_ips = []
             net = IPNetwork(subnet['address_range'])
@@ -299,9 +302,7 @@ class Linux(LinuxMixin):
                         'vlan': vlan,
                     },
                 )
-        # required adjustments for templates simplicity
-        data['vlans'] = list(set(data['vlans']))  # Removing duplicates
-
+        # First/Default nic
         data['first_nic_primary'] = {}
         data['first_nic_secondary'] = False
         # in case of default_ips then pick the first ip of default_ips as first_nic_primary
