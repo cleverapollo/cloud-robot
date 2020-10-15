@@ -66,8 +66,6 @@ class Linux(LinuxMixin):
         'image_filename',
         # the os variant of the image used to build the VM
         'image_os_variant',
-        # the ip address of the vm in its subnet
-        'ip_address',
         # the keyboard layout to use for the vm
         'keyboard',
         # the language of the vm
