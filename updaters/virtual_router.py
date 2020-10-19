@@ -57,9 +57,9 @@ class VirtualRouter(VirtualRouterBuilder):
 
         # Check that the template data was successfully retrieved
         if template_data is None:
-            VirtualRouter.logger.error(
-                f'Failed to retrieve template data for virtual_router #{virtual_router_id}.',
-            )
+            error = f'Failed to retrieve template data for virtual_router #{virtual_router_id}.'
+            VirtualRouter.logger.error(error)
+            virtual_router_data['errors'].append(error)
             span.set_tag('failed_reason', 'template_data_failed')
             return False
 
@@ -68,10 +68,10 @@ class VirtualRouter(VirtualRouterBuilder):
             missing_keys = [
                 f'"{key}"' for key in VirtualRouter.template_keys if template_data[key] is None
             ]
-            VirtualRouter.logger.error(
-                f'Template Data Error, the following keys were missing from the virtual_router update data: '
-                f'{", ".join(missing_keys)}',
-            )
+            error = f'Template Data Error, the following keys were missing from the virtual_router update' \
+                    f' data: {", ".join(missing_keys)}'
+            VirtualRouter.logger.error(error)
+            virtual_router_data['errors'].append(error)
             span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
@@ -85,6 +85,7 @@ class VirtualRouter(VirtualRouterBuilder):
         # Deploy the generated setconf to the router
         management_ip = template_data.pop('management_ip')
         child_span = opentracing.tracer.start_span('deploy_update_setconf', child_of=span)
-        success = VirtualRouter.deploy(update_conf, management_ip, True)
+        success, errors = VirtualRouter.deploy(update_conf, management_ip, True)
+        virtual_router_data['errors'].extend(errors)
         child_span.finish()
         return success

@@ -95,6 +95,9 @@ def _build_vm(vm_id: int, span: Span):
         span.set_tag('return_reason', 'not_in_correct_state')
         return
 
+    # catch all the errors if any
+    vm['errors'] = []
+
     # Also ensure that the VR is built for the VM
     child_span = opentracing.tracer.start_span('read_project_vr', child_of=span)
     vr_id = vm['project']['virtual_router_id']
@@ -104,9 +107,9 @@ def _build_vm(vm_id: int, span: Span):
 
     if vm_vr['state'] == state.UNRESOURCED:
         # If the VR is UNRESOURCED, we cannot build the VM
-        logger.error(
-            f'Virtual Router #{vm_vr["id"]} is UNRESOURCED so we cannot build VM #{vm_id}',
-        )
+        error = f'Virtual Router #{vm_vr["id"]} is UNRESOURCED so we cannot build VM #{vm_id}'
+        logger.error(error)
+        vm['errors'].append(error)
         _unresource(vm, span)
         span.set_tag('return_reason', 'vr_unresourced')
         return
@@ -137,25 +140,11 @@ def _build_vm(vm_id: int, span: Span):
         span.set_tag('return_reason', 'could_not_update_state')
         return
 
-    # Read the VM server to get the server type
-    child_span = opentracing.tracer.start_span('read_vm_server', child_of=span)
-    server = utils.api_read(IAAS.server, vm['server_id'], span=child_span)
-    child_span.finish()
-    if server is None:
-        logger.error(
-            f'Could not build VM #{vm_id} as its Server was not readable',
-        )
-        _unresource(vm, span)
-        span.set_tag('return_reason', 'server_not_read')
-        return
-    server_type = server['type']['name']
-    # add server details to vm
-    vm['server_data'] = server
-
     # Call the appropriate builder
     success: bool = False
     send_email: bool = True
     child_span = opentracing.tracer.start_span('build', child_of=span)
+    server_type = vm['server_data']['type']['name']
     try:
         if server_type == 'HyperV':
             success = WindowsVmBuilder.build(vm, child_span)
@@ -168,15 +157,14 @@ def _build_vm(vm_id: int, span: Span):
             send_email = False
             child_span.set_tag('server_type', 'phantom')
         else:
-            logger.error(
-                f'Unsupported server type #{server_type} for VM #{vm_id}',
-            )
+            error = f'Unsupported server type #{server_type} for VM #{vm_id}.'
+            logger.error(error)
+            vm['errors'].append(error)
             child_span.set_tag('server_type', 'unsupported')
-    except Exception:
-        logger.error(
-            f'An unexpected error occurred when attempting to build VM #{vm_id}',
-            exc_info=True,
-        )
+    except Exception as err:
+        error = f'An unexpected error occurred when attempting to build VM #{vm_id}.'
+        logger.error(error, exc_info=True)
+        vm['errors'].append(f'{error} Error: {err}')
     child_span.finish()
 
     span.set_tag('return_reason', f'success: {success}')

@@ -83,15 +83,15 @@ def _restart_virtual_router(virtual_router_id: int, span: Span):
         return
 
     # Do the actual restarting
+    virtual_router['errors'] = []
     success: bool = False
     child_span = opentracing.tracer.start_span('restart', child_of=span)
     try:
         success = VirtualRouterRestarter.restart(virtual_router, child_span)
-    except Exception:
-        logger.error(
-            f'An unexpected error occurred when attempting to restart virtual_router #{virtual_router_id}',
-            exc_info=True,
-        )
+    except Exception as err:
+        error = f'An unexpected error occurred when attempting to restart virtual_router #{virtual_router_id}.'
+        logger.error(error, exc_info=True)
+        virtual_router['errors'].append(f'{error} Error: {err}')
     child_span.finish()
 
     span.set_tag('return_reason', f'success: {success}')

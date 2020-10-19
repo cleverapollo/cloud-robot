@@ -55,9 +55,9 @@ class Windows(WindowsMixin):
 
         # Check that the data was successfully generated
         if template_data is None:
-            Windows.logger.error(
-                f'Failed to retrieve template data for VM #{vm_id}.',
-            )
+            error = f'Failed to retrieve template data for VM #{vm_id}.'
+            Windows.logger.error(error)
+            vm_data['errors'].append(error)
             span.set_tag('failed_reason', 'template_data_failed')
             return False
 
@@ -66,10 +66,10 @@ class Windows(WindowsMixin):
             missing_keys = [
                 f'"{key}"' for key in Windows.template_keys if template_data[key] is None
             ]
-            Windows.logger.error(
-                f'Template Data Error, the following keys were missing from the VM restart data: '
-                f'{", ".join(missing_keys)}',
-            )
+            error = f'Template Data Error, the following keys were missing from the ' \
+                    f'VM restart data: {", ".join(missing_keys)}.'
+            Windows.logger.error(error)
+            vm_data['errors'].append(error)
             span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
@@ -88,11 +88,10 @@ class Windows(WindowsMixin):
             response = Windows.deploy(cmd, host_name, child_span)
             span.set_tag('host', host_name)
             child_span.finish()
-        except WinRMError:
-            Windows.logger.error(
-                f'Exception occurred while attempting to restart VM #{vm_id} on {host_name}',
-                exc_info=True,
-            )
+        except WinRMError as err:
+            error = f'Exception occurred while attempting to restart VM #{vm_id} on {host_name}.'
+            Windows.logger.error(error, exc_info=True)
+            vm_data['errors'].append(f'{error} Error: {err}')
             span.set_tag('failed_reason', 'winrm_error')
         else:
             # Check the stdout and stderr for messages
@@ -129,9 +128,9 @@ class Windows(WindowsMixin):
                     host_name = interface['hostname']
                     break
         if host_name is None:
-            Windows.logger.error(
-                f'Host name is not found for the server # {vm_data["server_id"]}',
-            )
+            error = f'Host ip address not found for the server # {vm_data["server_id"]}.'
+            Windows.logger.error(error)
+            vm_data['errors'].append(error)
             return None
 
         data['host_name'] = host_name

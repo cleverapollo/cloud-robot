@@ -61,6 +61,9 @@ def _build_virtual_router(virtual_router_id: int, span: Span):
         span.set_tag('return_reason', 'not_in_valid_state')
         return
 
+    # catch all the errors if any
+    virtual_router['errors'] = []
+
     # If all is well and good here, update the virtual_router state to BUILDING and pass the data to the builder
     child_span = opentracing.tracer.start_span('update_to_building', child_of=span)
     response = IAAS.virtual_router.partial_update(

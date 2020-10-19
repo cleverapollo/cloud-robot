@@ -91,14 +91,14 @@ class Windows(WindowsMixin):
 
         # Generate the necessary template data
         child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
-        template_data = Windows._get_template_data(vm_data, child_span)
+        template_data = Windows._get_template_data(vm_data)
         child_span.finish()
 
         # Check that the data was successfully generated
         if template_data is None:
-            Windows.logger.error(
-                f'Failed to retrieve template data for VM #{vm_id}.',
-            )
+            error = f'Failed to retrieve template data for VM #{vm_id}.'
+            Windows.logger.error(error)
+            vm_data['errors'].append(error)
             span.set_tag('failed_reason', 'template_data_failed')
             return False
 
@@ -107,10 +107,10 @@ class Windows(WindowsMixin):
             missing_keys = [
                 f'"{key}"' for key in Windows.template_keys if template_data[key] is None
             ]
-            Windows.logger.error(
-                f'Template Data Error, the following keys were missing from the VM build data: '
-                f'{", ".join(missing_keys)}',
-            )
+            error = f'Template Data Error, the following keys were missing from the VM build data: ' \
+                    f'{", ".join(missing_keys)}'
+            Windows.logger.error(error)
+            vm_data['errors'].append(error)
             span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
@@ -121,7 +121,7 @@ class Windows(WindowsMixin):
         network_drive_path = settings.HYPERV_ROBOT_NETWORK_DRIVE_PATH
         path = f'{network_drive_path}/VMs/{vm_data["idProject"]}_{vm_data["idVM"]}'
         child_span = opentracing.tracer.start_span('write_files_to_network_drive', child_of=span)
-        file_write_success = Windows._generate_network_drive_files(vm_id, path, template_data)
+        file_write_success = Windows._generate_network_drive_files(vm_data, template_data, path)
         child_span.finish()
 
         if not file_write_success:
@@ -141,11 +141,10 @@ class Windows(WindowsMixin):
             response = Windows.deploy(cmd, host_name, child_span)
             child_span.finish()
             span.set_tag('host', host_name)
-        except WinRMError:
-            Windows.logger.error(
-                f'Exception occurred while attempting to build VM #{vm_id} on {host_name}',
-                exc_info=True,
-            )
+        except WinRMError as err:
+            error = f'Exception occurred while attempting to build VM #{vm_id} on {host_name}.'
+            Windows.logger.error(error, exc_info=True)
+            vm_data['errors'].append(f'{error} Error: {err}')
             span.set_tag('failed_reason', 'winrm_error')
         else:
             # Check the stdout and stderr for messages
@@ -167,13 +166,12 @@ class Windows(WindowsMixin):
         return built
 
     @staticmethod
-    def _get_template_data(vm_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
+    def _get_template_data(vm_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Given the vm data from the API, create a dictionary that contains all of the necessary keys for the template
         The keys will be checked in the build method and not here, this method is only concerned with fetching the data
         that it can.
         :param vm_data: The data of the VM read from the API
-        :param span: The tracing span in use for this task. In this method, just pass it to API calls.
         :returns: The data needed for the templates to build a Windows VM
         """
         vm_id = vm_data['id']
@@ -195,9 +193,9 @@ class Windows(WindowsMixin):
 
         # Check for the primary storage
         if not any(storage['primary'] for storage in vm_data['storages']):
-            Windows.logger.error(
-                f'No primary storage drive found. Expected one primary storage drive',
-            )
+            error = f'No primary storage drive found. Expected one primary storage drive'
+            Windows.logger.error(error)
+            vm_data['errors'].append(error)
             return None
 
         data['storages'] = vm_data['storages']
@@ -270,9 +268,9 @@ class Windows(WindowsMixin):
                     host_name = interface['hostname']
                     break
         if host_name is None:
-            Windows.logger.error(
-                f'Host name is not found for the server # {vm_data["server_id"]}',
-            )
+            error = f'Host name is not found for the server # {vm_data["server_id"]}'
+            Windows.logger.error(error)
+            vm_data['errors'].append(error)
             return None
 
         # Add the host information to the data
@@ -282,26 +280,28 @@ class Windows(WindowsMixin):
         return data
 
     @staticmethod
-    def _generate_network_drive_files(vm_id: int, path: str, template_data: Dict[str, Any]) -> bool:
+    def _generate_network_drive_files(vm_data: Dict[str, Any], template_data: Dict[str, Any], path: str) -> bool:
         """
         Generate and write files into the network drive so they are on the host for the build scripts to utilise.
         Writes the following files to the drive;
             - unattend.xml
             - network.xml
             - build.psm1
-        :param vm_id: The id of the VM being built. Used for log messages
+        :param vm_data: The data of the VM read from the API
         :param path: Network drive location to create above files for VM build
         :param template_data: The retrieved template data for the vm
         :returns: A flag stating whether or not the job was successful
         """
+        vm_id = vm_data['id']
         # Create a folder by vm_identifier name at network_drive_path/VMs/
         try:
             os.mkdir(path)
-        except OSError:
-            Windows.logger.error(
-                f'Failed to create directory for VM #{vm_id} at {path}',
-                exc_info=True,
-            )
+        except FileExistsError:
+            pass
+        except OSError as err:
+            error = f'Failed to create directory for VM #{vm_id} at {path}.'
+            Windows.logger.error(error, exc_info=True)
+            vm_data['errors'].append(f'{error} Error: {err}')
             return False
 
         # Render and attempt to write the answer file
@@ -316,11 +316,10 @@ class Windows(WindowsMixin):
             with open(answer_file_path, 'w') as f:
                 f.write(answer_file_data)
             Windows.logger.debug(f'Successfully wrote answer file for VM #{vm_id} to {answer_file_data}')
-        except IOError:
-            Windows.logger.error(
-                f'Failed to write answer file for VM #{vm_id} to {answer_file_path}',
-                exc_info=True,
-            )
+        except IOError as err:
+            error = f'Failed to write answer file for VM #{vm_id} to {answer_file_path}.'
+            Windows.logger.error(error, exc_info=True)
+            vm_data['errors'].append(f'{error} Error: {err}')
             return False
 
         # Render and attempt to write the network file
@@ -333,11 +332,10 @@ class Windows(WindowsMixin):
             with open(network_file, 'w') as f:
                 f.write(network)
             Windows.logger.debug(f'Successfully wrote network file for VM #{vm_id} to {network_file}')
-        except IOError:
-            Windows.logger.error(
-                f'Failed to write network file for VM #{vm_id} to {network_file}',
-                exc_info=True,
-            )
+        except IOError as err:
+            error = f'Failed to write network file for VM #{vm_id} to {network_file}.'
+            Windows.logger.error(error, exc_info=True)
+            vm_data['errors'].append(f'{error} Error: {err}')
             return False
 
         # Render and attempt to write the build script file
@@ -350,11 +348,10 @@ class Windows(WindowsMixin):
             with open(script_file, 'w') as f:
                 f.write(builder)
             Windows.logger.debug(f'Successfully wrote build script file for VM #{vm_id} to {script_file}')
-        except IOError:
-            Windows.logger.error(
-                f'Failed to write build script file for VM #{vm_id} to {script_file}',
-                exc_info=True,
-            )
+        except IOError as err:
+            error = f'Failed to write build script file for VM #{vm_id} to {script_file}.'
+            Windows.logger.error(error, exc_info=True)
+            vm_data['errors'].append(f'{error} Error: {err}')
             return False
 
         # Return True as all was successful

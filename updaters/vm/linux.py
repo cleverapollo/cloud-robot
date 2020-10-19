@@ -68,9 +68,9 @@ class Linux(LinuxMixin, VmUpdateMixin):
 
         # Check that the data was successfully generated
         if template_data is None:
-            Linux.logger.error(
-                f'Failed to retrieve template data for VM #{vm_id}.',
-            )
+            error = f'Failed to retrieve template data for VM #{vm_id}.'
+            Linux.logger.error(error)
+            vm_data['errors'].append(error)
             span.set_tag('failed_reason', 'template_data_failed')
             return False
 
@@ -79,10 +79,9 @@ class Linux(LinuxMixin, VmUpdateMixin):
             missing_keys = [
                 f'"{key}"' for key in Linux.template_keys if template_data[key] is None
             ]
-            Linux.logger.error(
-                f'Template Data Error, the following keys were missing from the VM update data: '
-                f'{", ".join(missing_keys)}',
-            )
+            error = f'Template Data Error, the following keys were missing from the VM update ' \
+                    f'data: {", ".join(missing_keys)}.'
+            Linux.logger.error(error)
             span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
@@ -132,11 +131,10 @@ class Linux(LinuxMixin, VmUpdateMixin):
                     Linux.logger.debug(f'VM restart command for VM #{vm_id} generated stdout.\n{stdout}')
                 if stderr:
                     Linux.logger.warning(f'VM restart command for VM #{vm_id} generated stderr.\n{stderr}')
-        except SSHException:
-            Linux.logger.error(
-                f'Exception occurred while updating VM #{vm_id} in {host_ip}',
-                exc_info=True,
-            )
+        except SSHException as err:
+            error = f'Exception occurred while updating VM #{vm_id} in {host_ip}.'
+            Linux.logger.error(error, exc_info=True)
+            vm_data['errors'].append(f'{error} Error: {err}')
             span.set_tag('failed_reason', 'ssh_error')
         finally:
             client.close()
@@ -200,9 +198,9 @@ class Linux(LinuxMixin, VmUpdateMixin):
                     host_ip = interface['ip_address']
                     break
         if host_ip is None:
-            Linux.logger.error(
-                f'Host ip address not found for the server # {vm_data["server_id"]}',
-            )
+            error = f'Host ip address not found for the server # {vm_data["server_id"]}.'
+            Linux.logger.error(error)
+            vm_data['errors'].append(error)
             return None
         data['host_ip'] = host_ip
 
