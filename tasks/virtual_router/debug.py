@@ -77,16 +77,16 @@ def _debug_logs(virtual_router_id: int, span: Span):
         logger.info(f'No firewall rule debug_logging needs to reset for virtual_router #{virtual_router_id}')
         return
 
+    virtual_router['errors'] = []
     success: bool = False
     child_span = opentracing.tracer.start_span('update', child_of=span)
     try:
         success = VirtualRouterUpdater.update(virtual_router, child_span)
-    except Exception:
-        logger.error(
-            f'An unexpected error occurred when attempting to disable the debug status of firewall logs '
-            f'for virtual_router #{virtual_router_id}',
-            exc_info=True,
-        )
+    except Exception as err:
+        error = f'An unexpected error occurred when attempting to disable the debug status of firewall logs ' \
+                f'for virtual_router #{virtual_router_id}.'
+        logger.error(error, exc_info=True)
+        virtual_router['errors'].append(f'{error} Error: {err}')
     child_span.finish()
 
     span.set_tag('return_reason', f'success: {success}')

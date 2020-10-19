@@ -104,14 +104,14 @@ class Linux(LinuxMixin):
 
         # Generate the necessary template data
         child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
-        template_data = Linux._get_template_data(vm_data, child_span)
+        template_data = Linux._get_template_data(vm_data)
         child_span.finish()
 
         # Check that the data was successfully generated
         if template_data is None:
-            Linux.logger.error(
-                f'Failed to retrieve template data for VM #{vm_id}.',
-            )
+            error = f'Failed to retrieve template data for VM #{vm_id}.'
+            Linux.logger.error(error)
+            vm_data['errors'].append(error)
             span.set_tag('failed_reason', 'template_data_failed')
             return False
 
@@ -120,22 +120,21 @@ class Linux(LinuxMixin):
             missing_keys = [
                 f'"{key}"' for key in Linux.template_keys if template_data[key] is None
             ]
-            Linux.logger.error(
-                f'Template Data Error, the following keys were missing from the VM build data: '
-                f'{", ".join(missing_keys)}',
-            )
+            error = f'Template Data Error, the following keys were missing from the VM build data: ' \
+                    f'{", ".join(missing_keys)}'
+            Linux.logger.error(error)
+            vm_data['errors'].append(error)
             span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
         # If everything is okay, commence building the VM
         host_ip = template_data.pop('host_ip')
-        answer_file = template_data.pop('image_answer_file_name')
 
         # Write necessary files into the network drive
         network_drive_path = settings.KVM_ROBOT_NETWORK_DRIVE_PATH
         path = f'{network_drive_path}/VMs/{vm_data["project"]["id"]}_{vm_id}'
         child_span = opentracing.tracer.start_span('write_files_to_network_drive', child_of=span)
-        file_write_success = Linux._generate_network_drive_files(vm_id, answer_file, template_data, path)
+        file_write_success = Linux._generate_network_drive_files(vm_data, template_data, path)
         child_span.finish()
 
         if not file_write_success:
@@ -180,13 +179,13 @@ class Linux(LinuxMixin):
                 Linux.logger.debug(f'VM build command for VM #{vm_id} generated stdout.\n{stdout}')
             if stderr:
                 Linux.logger.warning(f'VM build command for VM #{vm_id} generated stderr.\n{stderr}')
+                vm_data['errors'].append(stderr)
             built = 'Domain creation completed' in stdout
 
         except SSHException:
-            Linux.logger.error(
-                f'Exception occurred while building VM #{vm_id} in {host_ip}',
-                exc_info=True,
-            )
+            error = f'Exception occurred while building VM #{vm_id} in {host_ip}'
+            Linux.logger.error(error, exc_info=True)
+            vm_data['errors'].append(error)
             span.set_tag('failed_reason', 'ssh_error')
         finally:
             client.close()
@@ -200,13 +199,12 @@ class Linux(LinuxMixin):
         return built
 
     @staticmethod
-    def _get_template_data(vm_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
+    def _get_template_data(vm_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Given the vm data from the API, create a dictionary that contains all of the necessary keys for the template
         The keys will be checked in the build method and not here, this method is only concerned with fetching the data
         that it can.
         :param vm_data: The data of the VM read from the API
-        :param span: The tracing span in use for this task. In this method, just pass it to API calls.
         :returns: The data needed for the templates to build a Linux VM
         """
         vm_id = vm_data['id']
@@ -233,9 +231,9 @@ class Linux(LinuxMixin):
 
         # Check for the primary storage
         if not any(storage['primary'] for storage in vm_data['storages']):
-            Linux.logger.error(
-                f'No primary storage drive found. Expected one primary storage drive',
-            )
+            error = f'No primary storage drive found. Expected one primary storage drive'
+            Linux.logger.error(error)
+            vm_data['errors'].append(error)
             return None
 
         data['storages'] = vm_data['storages']
@@ -355,9 +353,9 @@ class Linux(LinuxMixin):
                     host_ip = interface['ip_address']
                     break
         if host_ip is None:
-            Linux.logger.error(
-                f'Host ip address not found for the server # {vm_data["server_id"]}',
-            )
+            error = f'Host ip address not found for the server # {vm_data["server_id"]}'
+            Linux.logger.error(error)
+            vm_data['errors'].append(error)
             return None
         data['host_ip'] = host_ip
 
@@ -385,27 +383,29 @@ class Linux(LinuxMixin):
 
     @staticmethod
     def _generate_network_drive_files(
-            vm_id: int, answer_file_name: str, template_data: Dict[str, Any], path: str,
+            vm_data: Dict[str, Any], template_data: Dict[str, Any], path: str,
     ) -> bool:
         """
         Generate and write files into the network drive so they are on the host for the build scripts to utilise.
         Writes the following files to the drive;
             - answer file
             - bridge definition file
-        :param vm_id: The id of the VM being built. Used for log messages
-        :param answer_file_name: The name of the image's answer_file_name file used to build the VM
+        :param vm_data: The data of the VM read from the API
         :param template_data: The retrieved template data for the kvm vm
         :param path: Network drive location to create above files for VM build
         :returns: A flag stating whether or not the job was successful
         """
+        vm_id = vm_data['id']
+        answer_file_name = template_data['image_answer_file_name']
         # Create a folder by vm_identifier name at network_drive_path/VMs/
         try:
             os.mkdir(path)
-        except OSError:
-            Linux.logger.error(
-                f'Failed to create directory for VM #{vm_id} at {path}',
-                exc_info=True,
-            )
+        except FileExistsError:
+            pass
+        except OSError as err:
+            error = f'Failed to create directory for VM #{vm_id} at {path}.'
+            Linux.logger.error(error, exc_info=True)
+            vm_data['errors'].append(f'{error} Error: {err}')
             return False
 
         # Render and attempt to write the bridge definition file
@@ -421,11 +421,10 @@ class Linux(LinuxMixin):
                 Linux.logger.debug(
                     f'Successfully wrote bridge definition file for VM #{vm_id} to {bridge_def_filename}',
                 )
-            except IOError:
-                Linux.logger.error(
-                    f'Failed to write bridge definition file for VM #{vm_id} to {bridge_def_filename}',
-                    exc_info=True,
-                )
+            except IOError as err:
+                error = f'Failed to write bridge definition file for VM #{vm_id} to {bridge_def_filename}'
+                Linux.logger.error(error, exc_info=True)
+                vm_data['errors'].append(f'{error} Error: {err}')
                 return False
 
         # Render and attempt to write the answer file
@@ -438,11 +437,10 @@ class Linux(LinuxMixin):
             with open(answer_file_path, 'w') as f:
                 f.write(answer_file_data)
             Linux.logger.debug(f'Successfully wrote answer file for VM #{vm_id} to {answer_file_path}')
-        except IOError:
-            Linux.logger.error(
-                f'Failed to write answer file for VM #{vm_id} to {answer_file_path}',
-                exc_info=True,
-            )
+        except IOError as err:
+            error = f'Failed to write answer file for VM #{vm_id} to {answer_file_path}'
+            Linux.logger.error(error, exc_info=True)
+            vm_data['errors'].append(f'{error} Error: {err}')
             return False
 
         # Return True as all was successful

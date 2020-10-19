@@ -75,23 +75,11 @@ def _scrub_vm(vm_id: int, span: Span):
         span.set_tag('return_reason', 'not_in_valid_state')
         return
 
-    # Read the VM server to get the server type
-    child_span = opentracing.tracer.start_span('read_vm_server', child_of=span)
-    server = utils.api_read(IAAS.server, vm['server_id'], span=child_span)
-    child_span.finish()
-    if server is None:
-        logger.error(
-            f'Could not build VM #{vm_id} as its Server was not readable',
-        )
-        span.set_tag('return_reason', 'server_not_read')
-        return
-    server_type = server['type']['name']
-    # add server details to vm
-    vm['server_data'] = server
-
     # There's no in-between state for scrub tasks, just jump straight to doing the work
+    vm['errors'] = []
     success: bool = False
     child_span = opentracing.tracer.start_span('scrub', child_of=span)
+    server_type = vm['server_data']['type']['name']
     try:
         if server_type == 'HyperV':
             success = WindowsVmScrubber.scrub(vm, child_span)
@@ -103,15 +91,14 @@ def _scrub_vm(vm_id: int, span: Span):
             success = True
             child_span.set_tag('server_type', 'phantom')
         else:
-            logger.error(
-                f'Unsupported server ID #{server_type} for VM #{vm_id}',
-            )
-            child_span.set_tag('server_type', 'linux')
-    except Exception:
-        logger.error(
-            f'An unexpected error occurred when attempting to scrub VM #{vm_id}',
-            exc_info=True,
-        )
+            error = f'Unsupported server type #{server_type} for VM #{vm_id}.'
+            logger.error(error)
+            vm['errors'].append(error)
+            child_span.set_tag('server_type', 'unsupported')
+    except Exception as err:
+        error = f'An unexpected error occurred when attempting to scrub VM #{vm_id}.'
+        logger.error(error, exc_info=True)
+        vm['errors'].append(f'{error} Error: {err}')
     child_span.finish()
 
     span.set_tag('return_reason', f'success: {success}')
