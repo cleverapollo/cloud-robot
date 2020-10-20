@@ -75,11 +75,24 @@ def _scrub_vm(vm_id: int, span: Span):
         span.set_tag('return_reason', 'not_in_valid_state')
         return
 
+    # Read the VM server to get the server type
+    child_span = opentracing.tracer.start_span('read_vm_server', child_of=span)
+    server = utils.api_read(IAAS.server, vm['server_id'], span=child_span)
+    child_span.finish()
+    if server is None:
+        logger.error(
+            f'Could not build VM #{vm_id} as its Server was not readable',
+        )
+        span.set_tag('return_reason', 'server_not_read')
+        return
+    server_type = server['type']['name']
+    # add server details to vm
+    vm['server_data'] = server
+
     # There's no in-between state for scrub tasks, just jump straight to doing the work
     vm['errors'] = []
     success: bool = False
     child_span = opentracing.tracer.start_span('scrub', child_of=span)
-    server_type = vm['server_data']['type']['name']
     try:
         if server_type == 'HyperV':
             success = WindowsVmScrubber.scrub(vm, child_span)
@@ -123,6 +136,7 @@ def _scrub_vm(vm_id: int, span: Span):
 
     else:
         logger.error(f'Failed to scrub VM #{vm_id}')
+        vm.pop('server_data')
         metrics.vm_scrub_failure()
         # Email the user
         child_span = opentracing.tracer.start_span('send_email', child_of=span)

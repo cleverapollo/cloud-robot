@@ -140,11 +140,25 @@ def _build_vm(vm_id: int, span: Span):
         span.set_tag('return_reason', 'could_not_update_state')
         return
 
+    # Read the VM server to get the server type
+    child_span = opentracing.tracer.start_span('read_vm_server', child_of=span)
+    server = utils.api_read(IAAS.server, vm['server_id'], span=child_span)
+    child_span.finish()
+    if server is None:
+        logger.error(
+            f'Could not build VM #{vm_id} as its Server was not readable',
+        )
+        _unresource(vm, span)
+        span.set_tag('return_reason', 'server_not_read')
+        return
+    server_type = server['type']['name']
+    # add server details to vm
+    vm['server_data'] = server
+
     # Call the appropriate builder
     success: bool = False
     send_email: bool = True
     child_span = opentracing.tracer.start_span('build', child_of=span)
-    server_type = vm['server_data']['type']['name']
     try:
         if server_type == 'HyperV':
             success = WindowsVmBuilder.build(vm, child_span)
@@ -206,4 +220,5 @@ def _build_vm(vm_id: int, span: Span):
     else:
         logger.error(f'Failed to build VM #{vm_id}')
         vm.pop('admin_password')
+        vm.pop('server_data')
         _unresource(vm, span)
