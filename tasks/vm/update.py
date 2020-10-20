@@ -131,9 +131,21 @@ def _update_vm(vm_id: int, span: Span):
             break
 
     if changes:
+        # Read the VM server to get the server type
+        child_span = opentracing.tracer.start_span('read_vm_server', child_of=span)
+        server = utils.api_read(IAAS.server, vm['server_id'], span=child_span)
+        child_span.finish()
+        if server is None:
+            logger.error(
+                f'Could not build VM #{vm_id} as its Server was not readable',
+            )
+            span.set_tag('return_reason', 'server_not_read')
+            return
+        server_type = server['type']['name']
+        # add server details to vm
+        vm['server_data'] = server
         vm['errors'] = []
         child_span = opentracing.tracer.start_span('update', child_of=span)
-        server_type = vm['server_data']['type']['name']
         try:
             if server_type == 'HyperV':
                 success = WindowsVmUpdater.update(vm, child_span)
@@ -183,4 +195,5 @@ def _update_vm(vm_id: int, span: Span):
         metrics.vm_update_success()
     else:
         logger.error(f'Failed to update VM #{vm_id}')
+        vm.pop('server_data')
         _unresource(vm, span)
