@@ -154,7 +154,8 @@ class VirtualRouter(VirtualRouterMixin):
         subnet_ips = utils.api_list(IAAS.ip_address, params, span=child_span)
         child_span.finish()
         for ip in subnet_ips:
-            if len(ip['public_ip']) != 0:
+            public_ip = ip.get('public_ip', None)
+            if public_ip:
                 nats.append({
                     'private_address': ip['address'],
                     'public_address': ip['public_ip']['address'],

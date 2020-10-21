@@ -35,12 +35,15 @@ class EmailNotifier:
         logger = logging.getLogger('robot.email_notifier.failure')
         logger.debug(f'Sending failure email for VM #{vm_data["id"]}')
         vm_data.pop('admin_password', None)
+        # catch errors
+        errors = vm_data.pop('errors')
         # Add the pretty printed data blob to the VM
         vm_data['data'] = dumps(vm_data, indent=2, cls=utils.DequeEncoder)
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/vm_failure.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
             task=task,
+            errors=errors,
             **vm_data,
         )
         # Format the subject
@@ -56,10 +59,13 @@ class EmailNotifier:
         logger.debug(f'Sending failure email for virtual_router #{virtual_router_data["id"]}')
         # Add the pretty printed data blob to the virtual_router
         virtual_router_data['data'] = dumps(virtual_router_data, indent=2, cls=utils.DequeEncoder)
+        # catch errors
+        errors = virtual_router_data.pop('errors')
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/virtual_router_failure.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
             task=task,
+            errors=errors,
             **virtual_router_data,
         )
         # Format the subject
