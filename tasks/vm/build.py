@@ -1,6 +1,6 @@
 # stdlib
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict
 # lib
 import opentracing
@@ -119,7 +119,9 @@ def _build_vm(vm_id: int, span: Span):
             f'Virtual Router is currently in state {vm_vr["state"]}',
         )
         # Return without changing the state
-        span.set_tag('return_reason', 'vr_not_read')
+        span.set_tag('return_reason', 'vr_not_ready')
+        # since virtual_router is not ready yet so wait for 10 sec and try again.
+        build_vm.s(vm_id).apply_async(eta=datetime.now() + timedelta(seconds=10))
         return
 
     # If all is well and good here, update the VM state to BUILDING and pass the data to the builder
