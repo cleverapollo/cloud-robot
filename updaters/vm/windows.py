@@ -141,7 +141,9 @@ class Windows(WindowsMixin, VmUpdateMixin):
                 # Check if the error was parsed to ensure we're not logging invalid std_err output
                 if response.std_err and '#< CLIXML\r\n' not in response.std_err:
                     msg = response.std_err.strip()
-                    Windows.logger.warning(f'VM restart command for VM #{vm_id} generated stderr\n{msg}')
+                    error = f'VM restart command for VM #{vm_id} generated stderr\n{msg}'
+                    vm_data['errors'].append(error)
+                    Windows.logger.warning(error)
         return updated
 
     @staticmethod
