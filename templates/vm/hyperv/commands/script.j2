@@ -32,7 +32,7 @@ function VMBuilder {
 {# Copying VHDX to the folder #}
     Copy-Item $VHDXPath -Destination {{ vhd_path }}
 {# Resizing the drive  #}
-    Resize-VHD -Path {{ vhd_path }} -SizeBytes $drive_size
+    Resize-VHD -Path {{ vhd_path }} -SizeBytes $storage_size
 {# Mounting the drive #}
     $mountedVHD = Mount-VHD -Path {{ vhd_path }} -NoDriveLetter -Passthru
     Set-Disk -Number $mountedVHD.Number -IsOffline $false
