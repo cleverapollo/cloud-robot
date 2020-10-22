@@ -119,7 +119,7 @@ class Windows(WindowsMixin):
 
         # Write necessary files into the network drive
         network_drive_path = settings.HYPERV_ROBOT_NETWORK_DRIVE_PATH
-        path = f'{network_drive_path}/VMs/{vm_data["idProject"]}_{vm_data["idVM"]}'
+        path = f'{network_drive_path}/VMs/{vm_data["project"]["id"]}_{vm_id}'
         child_span = opentracing.tracer.start_span('write_files_to_network_drive', child_of=span)
         file_write_success = Windows._generate_network_drive_files(vm_data, template_data, path)
         child_span.finish()
