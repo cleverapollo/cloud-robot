@@ -40,7 +40,7 @@ class Linux(LinuxMixin):
         # the sudo password of the host, used to run some commands
         'host_sudo_passwd',
         # storage type (HDD/SSD)
-        'storage_type'
+        'storage_type',
         # storages of the vm
         'storages',
         # the vlans that the vm is a part of
@@ -234,7 +234,7 @@ class Linux(LinuxMixin):
 
         # Find the other private ip addresses in the subnets
         params = {
-            'search[exclude__vm]': vm_id,
+            'search[exclude__vm__id]': vm_id,
             'search[subnet__id__in]': subnet_ids,
         }
         subnet_ips = utils.api_list(IAAS.ip_address, params, span=span)
