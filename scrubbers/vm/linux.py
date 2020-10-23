@@ -237,7 +237,7 @@ class Linux(LinuxMixin):
             'search[exclude__vm]': vm_id,
             'search[subnet__id__in]': subnet_ids,
         }
-        subnet_ips = utils.api_list(IAAS.ipaddress, params, span=span)
+        subnet_ips = utils.api_list(IAAS.ip_address, params, span=span)
 
         # List the other VMs in the subnet
         subnet_vm_ids = list(map(lambda ip: ip['vm_id'], subnet_ips))
