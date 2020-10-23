@@ -234,7 +234,7 @@ class Linux(LinuxMixin):
 
         # Find the other private ip addresses in the subnets
         params = {
-            'search[exclude__vm__id]': vm_id,
+            'search[exclude__vm]': vm_id,
             'search[subnet__id__in]': subnet_ids,
         }
         subnet_ips = utils.api_list(IAAS.ip_address, params, span=span)
