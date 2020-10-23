@@ -189,7 +189,7 @@ class EmailNotifier:
             emails = [settings.SEND_TO_FAIL]
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/scheduled_delete_success.j2').render(
-            compute_url=settings.COMPUTE_URL,
+            compute_url=settings.COMPUTE_UI_URL,
             **vm_data,
         )
         # Format the subject
