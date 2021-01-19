@@ -11,9 +11,7 @@ from typing import Any, Deque, Dict, Iterable
 # lib
 import jinja2
 import netaddr
-from cloudcix.api.iaas import IAAS
 from cloudcix.client import Client
-from jaeger_client import Span
 from logstash_async.formatter import LogstashFormatter
 from logstash_async.handler import AsynchronousLogstashHandler
 # local
@@ -30,7 +28,6 @@ __all__ = [
     'get_current_git_sha',
     'JINJA_ENV',
     'api_list',
-    'project_delete',
     'api_read',
     'setup_root_logger',
 ]
@@ -119,33 +116,6 @@ def flush_logstash():
     for handler in logging.getLogger('robot').handlers:
         if hasattr(handler, 'flush'):
             handler.flush()
-
-
-def project_delete(project_id: int, span: Span):
-    """
-    Check if the specified project is ready to be deleted from the API, and delete it if it is
-    :param project_id:
-    :param span: The span currently tracing the job. Just passed into the API calls this function makes
-    """
-    logger = logging.getLogger('robot.utils.project_delete')
-    # Check that list requests for virtual_router and VM both are empty, and if so, delete the project
-    active_virtual_routers = len(api_list(IAAS.virtual_router, {'project_id': project_id}, span=span))
-    active_vms = len(api_list(IAAS.vm, {'project_id': project_id}, span=span))
-    if active_vms == 0 and active_virtual_routers == 0:
-        logger.debug(f'Project #{project_id} is empty. Sending delete request.')
-        response = IAAS.project.delete(token=Token.get_instance().token, pk=project_id, span=span)
-        if response.status_code == 200:
-            logger.info(f'Successfully deleted Project #{project_id} from the CMDB')
-        else:
-            logger.error(
-                f'HTTP {response.status_code} error occurred when attempting to delete Project #{project_id};\n'
-                f'Response Text: {response.content.decode()}',
-            )
-    else:
-        logger.debug(
-            f'Cannot delete Project #{project_id}. {active_virtual_routers} virtual_routers '
-            f'and {active_vms} VMs remain active.',
-        )
 
 
 # Methods that wrap cloudcix clients to abstract retrieval and checking
