@@ -106,26 +106,23 @@ def _scrub_virtual_router(virtual_router_id: int, span: Span):
     if success:
         logger.info(f'Successfully scrubbed virtual_router #{virtual_router_id}')
         metrics.virtual_router_scrub_success()
-        # Delete the virtual_router from the DB
-        child_span = opentracing.tracer.start_span('delete_virtual_router_from_api', child_of=span)
-        response = IAAS.virtual_router.delete(
+        # Closing the virtual_router
+        child_span = opentracing.tracer.start_span('close_virtual_router', child_of=span)
+        response = IAAS.virtual_router.partial_update(
             token=Token.get_instance().token,
             pk=virtual_router_id,
+            data={'state': state.CLOSED},
             span=child_span,
         )
         child_span.finish()
 
-        if response.status_code == 204:
-            logger.info(f'virtual_router #{virtual_router_id} successfully deleted from the API')
+        if response.status_code == 200:
+            logger.info(f'Successfully closed virtual_router #{virtual_router_id}')
         else:
             logger.error(
-                f'HTTP {response.status_code} response received when attempting to delete virtual_router '
+                f'HTTP {response.status_code} response received when attempting to close virtual_router '
                 f'#{virtual_router_id};\n Response Text: {response.content.decode()}',
             )
-
-        child_span = opentracing.tracer.start_span('delete_project_from_api', child_of=span)
-        utils.project_delete(virtual_router['project']['id'], child_span)
-        child_span.finish()
     else:
         logger.error(f'Failed to scrub virtual_router #{virtual_router_id}')
         metrics.virtual_router_scrub_failure()
@@ -135,7 +132,7 @@ def _scrub_virtual_router(virtual_router_id: int, span: Span):
             EmailNotifier.virtual_router_failure(virtual_router, 'scrub')
         except Exception:
             logger.error(
-                f'Failed to send build failure email for virtual_router #{virtual_router_id}',
+                f'Failed to send scrub failure email for virtual_router #{virtual_router_id}',
                 exc_info=True,
             )
         child_span.finish()

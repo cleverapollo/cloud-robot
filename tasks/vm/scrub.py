@@ -120,19 +120,23 @@ def _scrub_vm(vm_id: int, span: Span):
         logger.info(f'Successfully scrubbed VM #{vm_id} from hardware.')
         metrics.vm_scrub_success()
         # Do API deletions
-        logger.debug(f'Deleting VM #{vm_id} from the IAAS')
+        logger.debug(f'Closing VM #{vm_id} in IAAS')
 
-        child_span = opentracing.tracer.start_span('delete_vm_from_api', child_of=span)
-        response = IAAS.vm.delete(token=Token.get_instance().token, pk=vm_id, span=child_span)
+        child_span = opentracing.tracer.start_span('closing_vm_from', child_of=span)
+        response = IAAS.vm.partial_update(
+            token=Token.get_instance().token,
+            pk=vm_id,
+            data={'state': state.CLOSED},
+            span=child_span,
+        )
         child_span.finish()
-
-        if response.status_code != 204:
+        if response.status_code != 200:
             logger.error(
-                f'HTTP {response.status_code} error occurred when attempting to delete VM #{vm_id};\n'
+                f'HTTP {response.status_code} response received when attempting to close VM #{vm_id};\n'
                 f'Response Text: {response.content.decode()}',
             )
             return
-        logger.info(f'Successfully deleted VM #{vm_id} from the IAAS.')
+        logger.info(f'Successfully closed VM #{vm_id}')
 
     else:
         logger.error(f'Failed to scrub VM #{vm_id}')
