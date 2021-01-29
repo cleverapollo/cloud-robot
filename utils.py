@@ -11,11 +11,11 @@ from typing import Any, Deque, Dict, Iterable
 # lib
 import jinja2
 import netaddr
-from cloudcix.client import Client
 from logstash_async.formatter import LogstashFormatter
 from logstash_async.handler import AsynchronousLogstashHandler
 # local
 from cloudcix_token import Token
+from cloudcix.client import Client
 from settings import (
     LOGSTASH_URL,
     NETWORK_PASSWORD,
