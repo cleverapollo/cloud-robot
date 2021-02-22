@@ -37,7 +37,7 @@ class VirtualRouterMixin:
         try:
             # Using context managers for Router and Config will ensure everything is properly cleaned up when exiting
             # the function, regardless of how we exit the function
-            with Device(host=management_ip, user='robot', port=22) as router:
+            with Device(host=management_ip, user='robot', ssh_private_key_file='~/.ssh/id_rsa', port=22) as router:
                 router.timeout = 15 * 60  # 15 minute timeout
                 cls.logger.debug(f'Successfully connected to Router {management_ip}, now attempting to load config')
 

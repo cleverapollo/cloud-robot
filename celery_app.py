@@ -70,6 +70,9 @@ def setup_logger_and_tracer(*args, **kwargs):
     Set up the logger before each task is run, in the hopes that it will fix our logging issue.
     Also ensure that the opentracing.tracer is setup for this environment
     """
+    if not settings.LOGSTASH_ENABLE:
+        logging.disable(logging.CRITICAL)
+        return
     # Ensure the root logger is set up
     utils.setup_root_logger()
     # Also check to ensure we have a opentracing.tracer initialized in the forked process
@@ -83,7 +86,8 @@ def sleep_to_flush_spans(*args, **kwargs):
     """
     Flush spans by passing to IO loop, just to be safe
     """
-    time.sleep(5)
+    if settings.LOGSTASH_ENABLE:
+        time.sleep(5)
 
 # Catch all uncaught errors
 @task_failure.connect

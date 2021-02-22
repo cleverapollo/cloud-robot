@@ -26,6 +26,7 @@ __all__ = [
     'KVM_HOST_NETWORK_DRIVE_PATH',
     'KVM_ROBOT_NETWORK_DRIVE_PATH',
     'KVM_VMS_PATH',
+    'LOGSTASH_ENABLE',
     'LOGSTASH_URL',
     'NETWORK_DRIVE_URL',
     'NETWORK_PASSWORD',
@@ -124,6 +125,7 @@ SUBJECT_VIRTUAL_ROUTER_FAIL = '[CloudCIX] Virtual Router Failure Occurred!'
 """
 Logging Settings
 """
+LOGSTASH_ENABLE = True
 # Hostname of logstash for centralised logging
 LOGSTASH_URL = 'logstash.cloudcix.com'
 

@@ -1,0 +1,87 @@
+# Run using `docker-compose up` for local testing
+version: '3'
+services:
+  docker:
+    - name: Check for presence of Docker
+      shell: "docker --version"
+      register: docker_presence
+      ignore_errors: yes
+
+    - name: Ensure Docker is installed
+      shell: "curl -sSL https://get.docker.com/ | sh"
+      args:
+        warn: no
+      when: docker_presence.rc != 0
+
+    - name: Ensure pip3 is installed
+      apt:
+        update_cache: yes
+        name: python3-pip
+
+    - name: Ensure docker is installed so ansible can control docker
+      pip:
+        name: docker
+
+  jaeger:
+    - name: Deploy Jaeger Agent for reporting Spans to Jaeger
+      docker_container:
+        name: "jaeger-agent"
+        image: #TODO
+        pull: true
+        state: started
+        restart_policy: "unless-stopped"
+        network_mode: host
+        env:
+          COLLECTOR_HOST_PORT: "logstash.cloudcix.com:14267" # TODO
+
+  flower:
+    - name: Deploy flower for monitoring Celery
+      docker_container:
+        name: "flower"
+        image: "gitlab.cloudcix.com:5005/dockerproxy/flower"  # TODO
+        pull: true
+        state: started
+        restart_policy: "unless-stopped"
+        ports:
+          - "80:8080"
+        command: flower --port=8080 --broker=amqp://172.17.0.1:5672/
+
+  rabbitmq:
+    - name: Deploy RabbitMQ for Celery
+      docker_container:
+        name: "rabbitmq"
+        image: "gitlab.cloudcix.com:5005/dockerproxy/rabbitmq"  # TODO
+        pull: true
+        state: started
+        restart_policy: "unless-stopped"
+        network_mode: host
+
+  robot-worker:
+    - name: Deploy latest Robot worker for {{ env }} region
+      docker_container:
+        name: "robot-worker"
+        image: "gitlab.cloudcix.com:5005/cloudcix/robot/{{ env }}"  # TODO
+        state: started
+        pull: true
+        network_mode: host
+        restart_policy: "unless-stopped"
+        env:
+          ROBOT_ENV: "{{ env }}"
+        command: "celery -A celery_app -l info worker -Q celery -O fair -n {{ inventory_hostname }} --concurrency 25"
+        volumes:
+          - "/mnt:/mnt"
+
+  robot:
+    - name: Deploy latest Robot image for {{ env }} region
+      docker_container:
+        name: "robot"
+        image: "gitlab.cloudcix.com:5005/cloudcix/robot/{{ env }}"  # TODO
+        state: started
+        pull: true
+        network_mode: host
+        restart_policy: "unless-stopped"
+        command: supervisord
+        env:
+          ROBOT_ENV: "{{ env }}"
+        volumes:
+          - "/home/administrator/celerybeat:/opt/robot/celerybeat"
