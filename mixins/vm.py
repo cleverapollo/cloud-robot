@@ -5,8 +5,11 @@ methods included;
 """
 # stdlib
 import logging
+import os
 from collections import deque
 from typing import Any, Deque, Dict, Optional
+from urllib.error import HTTPError
+from urllib.request import urlretrieve
 # lib
 from cloudcix.api.iaas import IAAS
 from jaeger_client import Span
@@ -15,8 +18,47 @@ import utils
 from state import RUNNING
 
 __all__ = [
+    'VmImageMixin',
     'VmUpdateMixin',
 ]
+
+
+class VmImageMixin:
+    logger: logging.Logger
+
+    @classmethod
+    def check_image(cls, filename: str, path: str) -> Optional[bool]:
+        """
+        Checks if file exists at path
+        :param filename: name of the file to search
+        :param path: file location
+        :return: boolean True for file exists and False for not
+        """
+        file_found = False
+        for file in os.listdir(path):
+            if file == filename:
+                cls.logger.debug(f'File {filename} is available.')
+                file_found = True
+        return file_found
+
+    @classmethod
+    def download_image(cls, filename: str, path: str) -> Optional[bool]:
+        """
+        This function downloads file_name form downloads.cloudcix.com/robot/ into concerned path at /mnt/images/
+        :param filename: name of the file to be downloaded
+        :param path: file destination location
+        :return: boolean: True for Success and False for Failure
+        """
+        downloaded = False
+        cls.logger.debug(f'File {filename} not available at {path} so downloading.')
+        url = f'https://downloads.cloudcix.com/robot/{filename}'
+        try:
+            urlretrieve(url, f'{path}{filename}')
+            downloaded = True
+            cls.logger.debug(f'File {filename} downloaded successfully into {path}{filename}.')
+        except HTTPError:
+            cls.logger.error(f'File {filename} not found at {url}')
+        return downloaded
 
 
 class VmUpdateMixin:

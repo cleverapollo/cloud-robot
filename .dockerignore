@@ -1,0 +1,10 @@
+.git
+.gitignore
+.gitlab
+.gitlab-ci.yml
+.dockerignore
+CHANGELOG.md
+README.md
+deployment_sample
+docker-compose.yml
+LICENSE

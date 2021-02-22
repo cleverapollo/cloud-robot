@@ -1,10 +1,12 @@
 stages:
   - lint
   - test
-  - base
-  - build
+  - docker-base
+  - docker
   - deploy
   - deploy_github
+  - dockerhub
+
 
 lint:
   image: gitlab.cloudcix.com:5005/utils/ci/lint
@@ -20,33 +22,64 @@ mypy:
   image: python:3.7
   stage: lint
   script:
-    - pip3 install mypy
+    - pip3 install 'mypy<0.800'
     - mypy --ignore-missing-imports builders dispatchers metrics quiescers restarters scrubbers tasks updaters celery_app.py cloudcix_token.py email_notifier.py robot.py state.py utils.py
   except:
     - master
     - stable
     - robot2.0
 
-docker_base:
-  stage: base
+###############################################################################
+#                         Base Containers                                     #
+###############################################################################
+opensource_base:
+  stage: docker-base
   tags:
     - docker-build
   before_script:
     - echo "$GITLAB_KEY" > id_rsa
   script:
-    - docker build -f deployment/dockerfiles/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/base:latest --no-cache .
-    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/base:latest
+    - docker build -f deployment/docker/opensource/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/opensource-base --no-cache .
+    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/opensource-base
+  only:
+    - robot2.0
+    - stable
+
+dev_base:
+  stage: docker-base
+  tags:
+    - docker-build
+  before_script:
+    - echo "$GITLAB_KEY" > id_rsa
+  script:
+    - docker build -f deployment/docker/dev/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/dev-base --no-cache .
+    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/dev-base
   only:
     - master
     - robot2.0
 
-build_alpha:
-  stage: build
+stable_base:
+  stage: docker-base
+  tags:
+    - docker-build
+  before_script:
+    - echo "$GITLAB_KEY" > id_rsa
+  script:
+    - docker build -f deployment/docker/stable/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/stable-base --no-cache .
+    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/stable-base
+  only:
+    - stable
+
+###############################################################################
+#                           Dev Build and Deploy                              #
+###############################################################################
+alpha_image:
+  stage: docker
   tags:
     - docker-build
   script:
-    - docker build -f deployment/dockerfiles/alpha.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/alpha:latest --no-cache .
-    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/alpha:latest
+    - docker build -f deployment/docker/dev/alpha.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/alpha --no-cache .
+    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/alpha
   only:
   - master
   - robot2.0
@@ -68,25 +101,14 @@ deploy_alpha:
 #                         Production Build and Deploy                         #
 ###############################################################################
 
-stable_base:
-  stage: base
-  tags:
-    - docker-build
-  before_script:
-    - echo "$GITLAB_KEY" > id_rsa
-  script:
-    - docker build -f deployment/dockerfiles/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/base:stable --no-cache .
-    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/base:stable
-  only:
-    - stable
 
-build_cork01:
-  stage: build
+cork01_image:
+  stage: docker
   tags:
   - docker-build
   script:
-  - docker build -f deployment/dockerfiles/cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/cork01:latest --no-cache .
-  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/cork01:latest
+  - docker build -f deployment/docker/stable/cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/cork01 --no-cache .
+  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/cork01
   only:
   - stable
 
@@ -105,13 +127,13 @@ deploy_cork01:
     - stable
 
 
-build_nti-cork01:
-  stage: build
+nti-cork01_image:
+  stage: docker
   tags:
   - docker-build
   script:
-  - docker build -f deployment/dockerfiles/nti-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/nti-cork01:latest --no-cache .
-  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/nti-cork01:latest
+  - docker build -f deployment/docker/stable/nti-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/nti-cork01 --no-cache .
+  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/nti-cork01
   only:
   - stable
 
@@ -130,13 +152,13 @@ deploy_nti-cork01:
     - stable
 
 
-build_netsoc-cork01:
-  stage: build
+netsoc-cork01_image:
+  stage: docker
   tags:
   - docker-build
   script:
-  - docker build -f deployment/dockerfiles/netsoc-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/netsoc-cork01:latest --no-cache .
-  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/netsoc-cork01:latest
+  - docker build -f deployment/docker/stable/netsoc-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/netsoc-cork01 --no-cache .
+  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/netsoc-cork01
   only:
   - stable
 
@@ -155,13 +177,13 @@ deploy_netsoc-cork01:
     - stable
 
 
-build_vodafone-cork01:
-  stage: build
+vodafone-cork01_image:
+  stage: docker
   tags:
   - docker-build
   script:
-  - docker build -f deployment/dockerfiles/vodafone-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/vodafone-cork01:latest --no-cache .
-  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/vodafone-cork01:latest
+  - docker build -f deployment/docker/stable/vodafone-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/vodafone-cork01 --no-cache .
+  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/vodafone-cork01
   only:
   - stable
 
@@ -179,6 +201,10 @@ deploy_vodafone-cork01:
   only:
     - stable
 
+
+###############################################################################
+#                         Github and Dockerhub Deploy                         #
+###############################################################################
 deploy_github:
   image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
   before_script:
@@ -188,4 +214,15 @@ deploy_github:
   script:
     - /bin/bash deployment/github_deploy.sh
   only:
+    - stable
+
+dockerhub:
+  stage: dockerhub
+  tags:
+    - docker-build
+  script:
+    - ./deployment/docker/publish.sh
+  when: manual
+  only:
+    - robot2.0
     - stable

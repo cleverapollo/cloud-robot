@@ -20,7 +20,7 @@ from winrm.exceptions import WinRMError
 # local
 import settings
 import utils
-from mixins import WindowsMixin
+from mixins import WindowsMixin, VmImageMixin
 
 
 __all__ = [
@@ -28,7 +28,7 @@ __all__ = [
 ]
 
 
-class Windows(WindowsMixin):
+class Windows(WindowsMixin, VmImageMixin):
     """
     Class that handles the building of the specified VM
     When we get to this point, we can be sure that the VM is a windows VM
@@ -91,7 +91,7 @@ class Windows(WindowsMixin):
 
         # Generate the necessary template data
         child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
-        template_data = Windows._get_template_data(vm_data)
+        template_data = Windows._get_template_data(vm_data, child_span)
         child_span.finish()
 
         # Check that the data was successfully generated
@@ -168,12 +168,13 @@ class Windows(WindowsMixin):
         return built
 
     @staticmethod
-    def _get_template_data(vm_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _get_template_data(vm_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
         """
         Given the vm data from the API, create a dictionary that contains all of the necessary keys for the template
         The keys will be checked in the build method and not here, this method is only concerned with fetching the data
         that it can.
         :param vm_data: The data of the VM read from the API
+        :param span: Span
         :returns: The data needed for the templates to build a Windows VM
         """
         vm_id = vm_data['id']
@@ -183,6 +184,20 @@ class Windows(WindowsMixin):
         data['vm_identifier'] = f'{vm_data["project"]["id"]}_{vm_id}'
         data['image_answer_file_name'] = vm_data['image']['answer_file_name']
         data['image_name'] = vm_data['image']['display_name']
+
+        data['image_filename'] = vm_data['image']['display_name']
+        # check if file exists at /mnt/images/HyperV/VHDXs/
+        path = '/mnt/images/HyperV/VHDXs/'
+        child_span = opentracing.tracer.start_span('vm_image_file_download', child_of=span)
+        if not Windows.check_image(data['image_filename'], path):
+            # download the file
+            if not Windows.download_image(data['image_filename'], path):
+                error = f'Failed to download image file {data["image_filename"]}, 404 File Not Found.'
+                Windows.logger.error(error)
+                vm_data['errors'].append(error)
+                return None
+        child_span.finish()
+
         # RAM is needed in MB for the builder but we take it in in GB (1024, not 1000)
         data['ram'] = vm_data['ram'] * 1024
         data['cpu'] = vm_data['cpu']

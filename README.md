@@ -196,11 +196,11 @@ This provides a web UI for monitoring the tasks, queues and workers in Celery fo
 
 Copy this directory and rename `deployment`. Files named `region_n` and `region_n+1` represent two regions. These files should be renamed to correspond to the regions you are deploying to.
 
-#### `deployment_sample/dockerfiles/`
-*`deployment_sample/dockerfiles/base.Dockerfile`*: 
+#### `deployment_sample/docker/`
+*`deployment_sample/docker/base.Dockerfile`*: 
 1.  Replace `### SSH KEY HOST e.g. github.com ###` with an SSH Key host
 
-*`deployment_sample/dockerfiles/region_n.Dockerfile`*: 
+*`deployment_sample/docker/region_n.Dockerfile`*: 
 1.  Replace `### BASE IMAGE URL ###` with the the base image url for Robot
 2.  Replace region_n in `deployment/settings/region_n.py` with the name of the region
 
