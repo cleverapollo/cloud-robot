@@ -6,7 +6,7 @@ set groups vrf-{{ project_id }} security address-book vrf-{{ project_id }}-addre
 {# Create a northbound route #}
 set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} routing-options static route 0.0.0.0/0 next-table inet.0
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
-{# Define VRF public IP on ge-0/0/0.0 interface #}
+{# Define VRF public IP on PUBLIC interface #}
 set groups vrf-{{ project_id }} interfaces {{ public_port }} unit 0 family {{ port_address_family }} address {{ vrf_ip }}/{{ vrf_subnet_mask }}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Create southbound sub interface and gateway for each VLAN and attach them to the VRF #}
