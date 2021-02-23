@@ -32,8 +32,8 @@ docker_base:
   before_script:
     - echo "$GITLAB_KEY" > id_rsa
   script:
-    - docker build -f deployment/dockerfiles/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/base:latest --no-cache .
-    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/base:latest
+    - docker build -f deployment/dockerfiles/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/py2base:latest --no-cache .
+    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/py2base:latest
   only:
     - master
 
