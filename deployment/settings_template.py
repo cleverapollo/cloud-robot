@@ -133,7 +133,6 @@ HYPERV_VMS_PATH = r'D:\HyperV\\'
 NETWORK_DRIVE_URL = f'\\\\robot.{REGION_NAME}.{ORGANIZATION_URL}\\var\\lib\\robot'
 
 INFLUX_PORT = 443
-INFLUX_DATABASE = 'robot'
 
 if f'{PAM_NAME}.{PAM_ORGANIZATION_URL}' == 'support.cloudcix.com':
     INFLUX_URL = 'influx.support.cloudcix.com'
@@ -144,7 +143,9 @@ if f'{PAM_NAME}.{PAM_ORGANIZATION_URL}' == 'support.cloudcix.com':
         },
     }
     LOGSTASH_ENABLE = True
+    INFLUX_DATABASE = 'robot'
 else:
     LOGSTASH_ENABLE = False
     LOGSTASH_URL = ''
     INFLUX_URL = ''
+    INFLUX_DATABASE = None

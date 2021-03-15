@@ -144,7 +144,7 @@ ROBOT_ENV = os.environ.get('ROBOT_ENV', 'dev')
  Real Time Monitoring Settings
  """
 # Database in influx to send to
-INFLUX_DATABASE = 'robot'
+INFLUX_DATABASE = None
 
 # Port of influx endpoint
 INFLUX_PORT = 443
