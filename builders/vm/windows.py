@@ -55,8 +55,8 @@ class Windows(WindowsMixin, VmImageMixin):
         'host_name',
         # the answer_files file of the image used to build the VM
         'image_answer_file_name',
-        # the name of the image used to build the vm
-        'image_name',
+        # the name of the image file used to build the vm
+        'image_filename',
         # the non default ip addresses of the vm
         'ip_addresses',
         # the language of the vm
@@ -183,9 +183,8 @@ class Windows(WindowsMixin, VmImageMixin):
 
         data['vm_identifier'] = f'{vm_data["project"]["id"]}_{vm_id}'
         data['image_answer_file_name'] = vm_data['image']['answer_file_name']
-        data['image_name'] = vm_data['image']['display_name']
 
-        data['image_filename'] = vm_data['image']['display_name']
+        data['image_filename'] = vm_data['image']['filename']
         # check if file exists at /mnt/images/HyperV/VHDXs/
         path = '/mnt/images/HyperV/VHDXs/'
         child_span = opentracing.tracer.start_span('vm_image_file_download', child_of=span)

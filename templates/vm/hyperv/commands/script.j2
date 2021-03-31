@@ -24,7 +24,7 @@ function VMBuilder {
 {% set vhd_path = [[[[vm_path, vm_identifier]|join(), vm_identifier]|join("\\"), storage_type, storage_id]|join("_"), ".vhdx"]|join() %}
 {# IMAGE VHDX Path #}
     [ValidateScript({Test-Path $_ })]
-    [string]$VHDXPath = "$drive_letter\HyperV\VHDXs\{{ image_name }} Gen 2.vhdx"
+    [string]$VHDXPath = "$drive_letter\HyperV\VHDXs\{{ image_filename }}"
 {# Unattend XML file path #}
     [ValidateScript({Test-Path $_ })]
     $unattend = "$drive_letter\HyperV\VMs\{{ vm_identifier }}\unattend.xml"
