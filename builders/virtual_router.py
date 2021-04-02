@@ -185,7 +185,7 @@ class VirtualRouter(VirtualRouterMixin):
             firewall['source_address_name'] = ADDRESS_NAME_SUB_PATTERN.sub('-', firewall['source'])
             firewall['destination_address_name'] = ADDRESS_NAME_SUB_PATTERN.sub('-', firewall['destination'])
 
-            inbound: bool = IPNetwork(firewall['source']).is_private()
+            inbound: bool = IPNetwork(firewall['destination']).is_private()
             # Handle the inbound / outbound case stuff
             if inbound:
                 # Source is public, destination is private
