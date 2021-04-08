@@ -10,9 +10,10 @@ function VMBuilder {
 {# Define Ram #}
     $ram = [int64]{{ ram }}*1MB
 {# Define primary drive #}
+{% set vars = {'storage_id': 0} %}
 {% for storage in storages %}
   {% if storage["primary"] %}
-    {% set storage_id = storage["id"] %}
+    {% set vars.update({'storage_id': storage["id"]}) %}
     $storage_size = [int64]{{ storage["gb"] }}*1GB
   {% endif %}
 {% endfor %}
@@ -21,7 +22,7 @@ function VMBuilder {
 {% set vm_path = "D:\HyperV\\" %}
     New-Item -ItemType directory -Path {{ vm_path }}{{ vm_identifier }}
 {# VHDX Path #}
-{% set vhd_path = [[[[vm_path, vm_identifier]|join(), vm_identifier]|join("\\"), storage_type, storage_id]|join("_"), ".vhdx"]|join() %}
+{% set vhd_path = [[[[vm_path, vm_identifier]|join(), vm_identifier]|join("\\"), storage_type, vars.storage_id]|join("_"), ".vhdx"]|join() %}
 {# IMAGE VHDX Path #}
     [ValidateScript({Test-Path $_ })]
     [string]$VHDXPath = "$drive_letter\HyperV\VHDXs\{{ image_filename }}"
