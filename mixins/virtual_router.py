@@ -51,7 +51,7 @@ class VirtualRouterMixin:
                             exc_info=True,
                         )
                         sleep(30 + (6 * attempt))
-                cls.logger.debug(
+                cls.logger.error(
                     f'{MAX_ATTEMPTS} attempts to lock Router {management_ip} have failed. '
                     'This request is now considered a failure.',
                 )

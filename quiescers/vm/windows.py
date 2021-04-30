@@ -103,7 +103,7 @@ class Windows(WindowsMixin):
                 msg = response.std_err.strip()
                 error = f'VM quiesce command for VM #{vm_id} generated stderr\n{msg}'
                 vm_data['errors'].append(error)
-                Windows.logger.warning(error)
+                Windows.logger.error(error)
         return quiesced
 
     @staticmethod
