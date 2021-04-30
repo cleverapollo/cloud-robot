@@ -105,7 +105,7 @@ class Linux(LinuxMixin):
                 quiesced = True
             if stderr:
                 error = f'VM quiesce command for VM #{vm_id} generated stderr.\n{stderr}.'
-                Linux.logger.warning(error)
+                Linux.logger.error(error)
                 vm_data['errors'].append(error)
         except SSHException as err:
             error = f'Exception occurred while quiescing VM #{vm_id} in {host_ip}.'

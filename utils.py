@@ -158,7 +158,7 @@ def api_list(client: Client, params: Dict[str, Any], **kwargs) -> Deque[Dict[str
             f'filters {params};\nResponse Text: {response.content.decode()}',
         )
         return deque()
-    
+
     response_data = response.json()
     objects.extend(response_data['content'])
 
@@ -212,7 +212,7 @@ def api_read(client: Client, pk: int, **kwargs) -> Dict[str, Any]:
     if response.status_code == 401 and 'token is expired' in response.detail:
         # try again to list as Token renews in response call
         return api_read(client, pk)
-        
+
     if response.status_code == 200:
         obj = response.json()['content']
     else:
