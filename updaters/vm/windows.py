@@ -10,7 +10,6 @@ import logging
 from typing import Any, Dict, Optional
 # lib
 import opentracing
-from cloudcix.api import IAAS
 from jaeger_client import Span
 from netaddr import IPAddress, IPNetwork
 from winrm.exceptions import WinRMError
@@ -33,8 +32,8 @@ class Windows(WindowsMixin, VmUpdateMixin):
     logger = logging.getLogger('robot.updaters.vm.windows')
     # Keep track of the keys necessary for the template, so we can ensure that all keys are present before updating
     template_keys = {
-        # # the admin password for the vm, unencrypted
-        # 'admin_password',
+        # changes of vm
+        'changes',
         # the default subnet gateway
         'default_gateway',
         # default ip address of the VM
@@ -45,14 +44,18 @@ class Windows(WindowsMixin, VmUpdateMixin):
         'default_vlan',
         # the dns servers for the vm
         'dns',
+        # the DNS hostname for the host machine, as WinRM cannot use IPv6
+        'host_name',
         # the non default ip addresses of the vm
         'ip_addresses',
         # a flag stating whether or not the VM should be turned back on after updating it
         'restart',
+        # storage type (HDD/SSD)
+        'storage_type'
         # an identifier that uniquely identifies the vm
         'vm_identifier',
-        # changes of vm
-        'changes',
+        # path for vm's folders files located in host
+        'vms_path',
     }
 
     @staticmethod
@@ -63,7 +66,7 @@ class Windows(WindowsMixin, VmUpdateMixin):
         :param span: The tracing span in use for this update task
         :return: A flag stating whether or not the update was successful
         """
-        vm_id = vm_data['idVM']
+        vm_id = vm_data['id']
 
         # Generate the necessary template data
         child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
@@ -72,9 +75,9 @@ class Windows(WindowsMixin, VmUpdateMixin):
 
         # Check that the data was successfully generated
         if template_data is None:
-            Windows.logger.error(
-                f'Failed to retrieve template data for VM #{vm_id}.',
-            )
+            error = f'Failed to retrieve template data for VM #{vm_id}.'
+            Windows.logger.error(error)
+            vm_data['errors'].append(error)
             span.set_tag('failed_reason', 'template_data_failed')
             return False
 
@@ -83,10 +86,10 @@ class Windows(WindowsMixin, VmUpdateMixin):
             missing_keys = [
                 f'"{key}"' for key in Windows.template_keys if template_data[key] is None
             ]
-            Windows.logger.error(
-                f'Template Data Error, the following keys were missing from the VM update data: '
-                f'{", ".join(missing_keys)}',
-            )
+            error = f'Template Data Error, the following keys were missing from the ' \
+                    f'VM update data: {", ".join(missing_keys)}.'
+            Windows.logger.error(error)
+            vm_data['errors'].append(error)
             span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
@@ -95,7 +98,7 @@ class Windows(WindowsMixin, VmUpdateMixin):
 
         # Render the update command
         child_span = opentracing.tracer.start_span('generate_command', child_of=span)
-        cmd = utils.JINJA_ENV.get_template('vm/windows/update_cmd.j2').render(**template_data)
+        cmd = utils.JINJA_ENV.get_template('vm/hyperv/commands/update.j2').render(**template_data)
         child_span.finish()
 
         # Open a client and run the two necessary commands on the host
@@ -105,11 +108,10 @@ class Windows(WindowsMixin, VmUpdateMixin):
             response = Windows.deploy(cmd, host_name, child_span)
             span.set_tag('host', host_name)
             child_span.finish()
-        except WinRMError:
-            Windows.logger.error(
-                f'Exception occurred while attempting to update VM #{vm_id} on {host_name}',
-                exc_info=True,
-            )
+        except WinRMError as err:
+            error = f'Exception occurred while attempting to update VM #{vm_id} on {host_name}.'
+            Windows.logger.error(error, exc_info=True)
+            vm_data['errors'].append(f'{error} Error: {err}')
             span.set_tag('failed_reason', 'winrm_error')
         else:
             # Check the stdout and stderr for messages
@@ -120,12 +122,12 @@ class Windows(WindowsMixin, VmUpdateMixin):
             # Check if the error was parsed to ensure we're not logging invalid std_err output
             if response.std_err and '#< CLIXML\r\n' not in response.std_err:
                 msg = response.std_err.strip()
-                Windows.logger.warning(f'VM update command for VM #{vm_id} generated stderr\n{msg}')
+                Windows.logger.error(f'VM update command for VM #{vm_id} generated stderr\n{msg}')
 
             # Check if we need to restart the VM as well
             if template_data['restart']:
                 # Also render and deploy the restart_cmd template
-                restart_cmd = utils.JINJA_ENV.get_template('vm/windows/restart_cmd.j2').render(**template_data)
+                restart_cmd = utils.JINJA_ENV.get_template('vm/hyperv/commands/restart.j2').render(**template_data)
 
                 # Attempt to execute the restart command
                 Windows.logger.debug(f'Executing restart command for VM #{vm_id}')
@@ -139,7 +141,9 @@ class Windows(WindowsMixin, VmUpdateMixin):
                 # Check if the error was parsed to ensure we're not logging invalid std_err output
                 if response.std_err and '#< CLIXML\r\n' not in response.std_err:
                     msg = response.std_err.strip()
-                    Windows.logger.warning(f'VM restart command for VM #{vm_id} generated stderr\n{msg}')
+                    error = f'VM restart command for VM #{vm_id} generated stderr\n{msg}'
+                    vm_data['errors'].append(error)
+                    Windows.logger.error(error)
         return updated
 
     @staticmethod
@@ -152,13 +156,11 @@ class Windows(WindowsMixin, VmUpdateMixin):
         :param span: The tracing span in use for this task. In this method just pass it to API calls
         :returns: The data needed for the templates to update a Windows VM
         """
-        vm_id = vm_data['idVM']
+        vm_id = vm_data['id']
         Windows.logger.debug(f'Compiling template data for VM #{vm_id}')
         data: Dict[str, Any] = {key: None for key in Windows.template_keys}
 
-        data['vm_identifier'] = f'{vm_data["idProject"]}_{vm_data["idVM"]}'
-        data['dns'] = vm_data['dns'].replace(',', '", "')
-
+        data['vm_identifier'] = f'{vm_data["project"]["id"]}_{vm_id}'
         # changes
         changes: Dict[str, Any] = {
             'ram': False,
@@ -177,45 +179,45 @@ class Windows(WindowsMixin, VmUpdateMixin):
                 changes['cpu'] = vm_data['cpu']
         except KeyError:
             pass
-
         # Fetch the drive information for the update
         try:
             if len(updates['storage_histories']) != 0:
                 Windows.logger.debug(f'Fetching drives for VM #{vm_id}')
-                hdd, ssd, drives = Windows.fetch_drive_updates(vm_data, span)
-                changes['storages'] = {
-                    'hdd': hdd,
-                    'ssd': ssd,
-                    'drives': drives,
-                }
+                child_span = opentracing.tracer.start_span('fetch_drive_updates', child_of=span)
+                changes['storages'] = Windows.fetch_drive_updates(vm_data)
+                child_span.finish()
         except KeyError:
             pass
         # Add changes to data
         data['changes'] = changes
+        data['storage_type'] = vm_data['storage_type']
 
         # Get the Networking details
         # TODO will update with multiple IPs stuff
-        Windows.logger.debug(f'Fetching networking information for VM #{vm_id}')
-        for ip_address in utils.api_list(IAAS.ipaddress, {'vm': vm_id}, span=span):
-            # The private IP for the VM will be the one we need to pass to the template
-            if not IPAddress(ip_address['address']).is_private():
-                continue
-            data['ip_address'] = ip_address['address']
-            # Read the subnet for the IPAddress to fetch information like the gateway and subnet mask
-            subnet = utils.api_read(IAAS.subnet, ip_address['idSubnet'], span=span)
-            if subnet is None:
-                return None
-            data['gateway'], _ = subnet['addressRange'].split('/')
-            data['netmask'] = IPNetwork(subnet['addressRange']).netmask
-            data['vlan'] = subnet['vLAN']
+        data['dns'] = vm_data['dns'].replace(',', '", "')
+        data['ip_addresses'] = vm_data['ip_addresses']['address']
+        net = IPNetwork(vm_data['ip_address']['subnet']['address_range'])
+        data['gateway'], data['netmask'] = str(net.ip), str(net.netmask)
+        data['vlan'] = vm_data['ip_address']['subnet']['vlan']
 
-        # Get the ip address of the host
-        for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer'], span=span):
-            if mac['status'] is True and mac['ip'] is not None:
-                data['host_name'] = mac['dnsName']
-                break
+        # Get the host name of the server
+        host_name = None
+        for interface in vm_data['server_data']['interfaces']:
+            if interface['enabled'] is True and interface['ip_address'] is not None:
+                if IPAddress(str(interface['ip_address'])).version == 6:
+                    host_name = interface['hostname']
+                    break
+        if host_name is None:
+            error = f'Host ip address not found for the server # {vm_data["server_id"]}.'
+            Windows.logger.error(error)
+            vm_data['errors'].append(error)
+            return None
+        # Add the host information to the data
+        data['host_name'] = host_name
 
         # Determine whether or not we should turn the VM back on after the update finishes
         Windows.logger.debug(f'Determining if VM #{vm_id} should be powered on after update')
-        data['restart'] = Windows.determine_should_restart(vm_data, span=span)
+        child_span = opentracing.tracer.start_span('determine_should_restart', child_of=span)
+        data['restart'] = Windows.determine_should_restart(vm_data, child_span)
+        child_span.finish()
         return data

@@ -7,48 +7,13 @@ In this file, we define the robot based tasks that will be run by celery beat
 import logging
 from datetime import datetime, timedelta
 # lib
-from cloudcix.api import IAAS
+from cloudcix.api.iaas import IAAS
 # local
-import metrics
-import settings
+import robot
 import utils
 from celery_app import app
-from cloudcix_token import Token
-from robot import Robot
-from .vrf import debug_logs
-
-
-@app.task
-def mainloop():
-    """
-    Run one instance of the Robot mainloop if any changes in any Project of the region.
-    """
-    # Send info about uptime
-    metrics.heartbeat()
-    logger = logging.getLogger('robot.tasks.mainloop')
-    logger.info('Mainloop task check')
-    logger.debug(
-        f'Fetching the status of run_robot from api.',
-    )
-    response = IAAS.run_robot.head(token=Token.get_instance().token)
-    if response.status_code == 404:
-        logger.debug(
-            f'HTTP {response.status_code}, No Project has changed in region so Robot is sleeping.',
-        )
-        # 404, run_robot is False so nothing to do.
-        return None
-    if response.status_code != 200:
-        logger.error(
-            f'HTTP {response.status_code} error occurred when attempting to fetch run_robot _metadata;\n'
-            f'Response Text: {response.content.decode()}',
-        )
-        return None
-    # 200, run_robot is True
-    logger.debug(
-        f'HTTP {response.status_code}, There are changes in the region so calling Robot instance.',
-    )
-    robot = Robot.get_instance()
-    robot()
+from settings import IN_PRODUCTION
+from .virtual_router import debug_logs
 
 
 @app.task
@@ -58,25 +23,25 @@ def scrub():
     """
     # Add the Scrub timestamp when the region isn't Alpha
     timestamp = None
-    if settings.IN_PRODUCTION:
+    if IN_PRODUCTION:
         timestamp = (datetime.now() - timedelta(days=7)).isoformat()
-    robot = Robot.get_instance()
-    robot.scrub(timestamp)
+    robot_instance = robot.Robot([], [])
+    robot_instance.scrub(timestamp)
 
 
 @app.task
-def debug(vrf_id: int):
+def debug(virtual_router_id: int):
     """
     Waits for 15 min from the time latest updated or created for Firewall rules to reset the debug_logging field
     for all firewall rules of a Virtual router
     """
     logging.getLogger('robot.tasks.debug').debug(
-        f'Checking VRF #{vrf_id} to pass to the debug task queue',
+        f'Checking Virtual Router #{virtual_router_id} to pass to the debug task queue',
     )
-    virtual_router = utils.api_read(IAAS.vrf, vrf_id)
-    if virtual_router is None:
+    virtual_router_data = utils.api_read(IAAS.virtual_router, virtual_router_id)
+    if virtual_router_data is None:
         return
-    firewall_rules = virtual_router['firewall_rules']
+    firewall_rules = virtual_router_data['firewall_rules']
     if len(firewall_rules) == 0:
         return
     list_updated = [firewall_rule['updated'] for firewall_rule in firewall_rules]
@@ -91,6 +56,6 @@ def debug(vrf_id: int):
     delta = utc_now - latest_dt
     if delta >= timedelta(minutes=15):
         logging.getLogger('robot.tasks.debug').debug(
-            f'Passing VRF #{vrf_id} to the debug_logs task queue',
+            f'Passing virtual_router #{virtual_router_id} to the debug_logs task queue',
         )
-        debug_logs.delay(vrf_id)
+        debug_logs.delay(virtual_router_id)

@@ -3,7 +3,7 @@ import logging
 from typing import Any, Dict
 # lib
 import opentracing
-from cloudcix.api import IAAS
+from cloudcix.api.iaas import IAAS
 from jaeger_client import Span
 # local
 import metrics
@@ -27,7 +27,7 @@ def _unresource(vm: Dict[str, Any], span: Span):
     unresource the specified vm because something went wrong
     """
     logger = logging.getLogger('robot.tasks.vm.restart')
-    vm_id = vm['idVM']
+    vm_id = vm['id']
     # Send failure metric
     metrics.vm_restart_failure()
 
@@ -41,17 +41,17 @@ def _unresource(vm: Dict[str, Any], span: Span):
     )
     child_span.finish()
 
-    if response.status_code != 204:
+    if response.status_code != 200:
         logger.error(
             f'Could not update VM #{vm_id} to state UNRESOURCED. Response: {response.content.decode()}.',
         )
 
     child_span = opentracing.tracer.start_span('send_email', child_of=span)
     try:
-        EmailNotifier.failure(vm, 'restart')
+        EmailNotifier.vm_failure(vm, 'restart')
     except Exception:
         logger.error(
-            f'Failed to send failure email for VM #{vm["idVM"]}',
+            f'Failed to send failure email for VM #{vm_id}',
             exc_info=True,
         )
     child_span.finish()
@@ -91,7 +91,7 @@ def _restart_vm(vm_id: int, span: Span):
 
     # Ensure that the state of the vm is still currently RESTART
     if vm['state'] != state.RESTART:
-        logger.warn(
+        logger.warning(
             f'Cancelling restart of VM #{vm_id}. Expected state to be RESTART, found {vm["state"]}.',
         )
         # Return out of this function without doing anything
@@ -109,7 +109,7 @@ def _restart_vm(vm_id: int, span: Span):
     child_span.finish()
 
     # Ensure the update was successful
-    if response.status_code != 204:
+    if response.status_code != 200:
         logger.error(
             f'Could not update VM #{vm_id} to RESTARTING. Response: {response.content.decode()}.',
         )
@@ -118,44 +118,44 @@ def _restart_vm(vm_id: int, span: Span):
         # Update to Unresourced?
         return
 
-    # Read the VM image to get the hypervisor id
-    child_span = opentracing.tracer.start_span('read_vm_image', child_of=span)
-    image = utils.api_read(IAAS.image, vm['idImage'], span=child_span)
+    # Read the VM server to get the server type
+    child_span = opentracing.tracer.start_span('read_vm_server', child_of=span)
+    server = utils.api_read(IAAS.server, vm['server_id'], span=child_span)
     child_span.finish()
-
-    if image is None:
+    if server is None:
         logger.error(
-            f'Could not restart VM #{vm_id} as its Image was not readable',
+            f'Could not restart VM #{vm_id} as its Server was not readable',
         )
-        span.set_tag('return_reason', 'image_not_read')
         _unresource(vm, span)
+        span.set_tag('return_reason', 'server_not_read')
         return
-
-    hypervisor = image['idHypervisor']
+    server_type = server['type']['name']
+    # add server details to vm
+    vm['server_data'] = server
 
     # Do the actual restarting
+    vm['errors'] = []
     success: bool = False
     child_span = opentracing.tracer.start_span('restart', child_of=span)
     try:
-        if hypervisor == 1:  # HyperV -> Windows
+        if server_type == 'HyperV':
             success = WindowsVmRestarter.restart(vm, child_span)
-            child_span.set_tag('hypervisor', 'windows')
-        elif hypervisor == 2:  # KVM -> Linux
+            child_span.set_tag('server_type', 'windows')
+        elif server_type == 'KVM':
             success = LinuxVmRestarter.restart(vm, child_span)
-            child_span.set_tag('hypervisor', 'linux')
-        elif hypervisor == 3:  # Phantom
+            child_span.set_tag('server_type', 'linux')
+        elif server_type == 'Phantom':
             success = True
-            child_span.set_tag('hypervisor', 'phantom')
+            child_span.set_tag('server_type', 'phantom')
         else:
-            logger.error(
-                f'Unsupported Hypervisor ID #{hypervisor} for VM #{vm_id}',
-            )
-            child_span.set_tag('hypervisor', 'unsupported')
-    except Exception:
-        logger.error(
-            f'An unexpected error occurred when attempting to restart VM #{vm_id}',
-            exc_info=True,
-        )
+            error = f'Unsupported server type #{server_type} for VM #{vm_id}.'
+            logger.error(error)
+            vm['errors'].append(error)
+            child_span.set_tag('server_type', 'unsupported')
+    except Exception as err:
+        error = f'An unexpected error occurred when attempting to restart VM #{vm_id}.'
+        logger.error(error, exc_info=True)
+        vm['errors'].append(f'{error} Error: {err}')
     child_span.finish()
 
     span.set_tag('return_reason', f'success: {success}')
@@ -171,10 +171,11 @@ def _restart_vm(vm_id: int, span: Span):
             data={'state': state.RUNNING},
             span=child_span,
         )
-        if response.status_code != 204:
+        if response.status_code != 200:
             logger.error(
                 f'Could not update VM #{vm_id} to state RUNNING. Response: {response.content.decode()}.',
             )
     else:
         logger.error(f'Failed to restart VM #{vm_id}')
+        vm.pop('server_data')
         _unresource(vm, span)

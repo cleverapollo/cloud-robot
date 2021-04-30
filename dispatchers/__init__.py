@@ -1,10 +1,10 @@
-from .phantom_vrf import PhantomVrf
+from .phantom_virtual_router import PhantomVirtualRouter
 from .vm import Vm
-from .vrf import Vrf
+from .virtual_router import VirtualRouter
 
 
 __all__ = [
-    'PhantomVrf',
+    'PhantomVirtualRouter',
     'Vm',
-    'Vrf',
+    'VirtualRouter',
 ]
