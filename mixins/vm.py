@@ -5,101 +5,110 @@ methods included;
 """
 # stdlib
 import logging
+import os
 from collections import deque
-from typing import Any, Deque, Dict, Optional, Tuple
+from typing import Any, Deque, Dict, Optional
+from urllib.error import HTTPError
+from urllib.request import urlretrieve
 # lib
-from cloudcix.api import IAAS
+from cloudcix.api.iaas import IAAS
 from jaeger_client import Span
 # local
 import utils
+from state import RUNNING
 
 __all__ = [
+    'VmImageMixin',
     'VmUpdateMixin',
 ]
+
+
+class VmImageMixin:
+    logger: logging.Logger
+
+    @classmethod
+    def check_image(cls, filename: str, path: str) -> Optional[bool]:
+        """
+        Checks if file exists at path
+        :param filename: name of the file to search
+        :param path: file location
+        :return: boolean True for file exists and False for not
+        """
+        file_found = False
+        for file in os.listdir(path):
+            if file == filename:
+                cls.logger.debug(f'File {filename} is available.')
+                file_found = True
+        return file_found
+
+    @classmethod
+    def download_image(cls, filename: str, path: str) -> Optional[bool]:
+        """
+        This function downloads file_name form downloads.cloudcix.com/robot/ into concerned path at /mnt/images/
+        :param filename: name of the file to be downloaded
+        :param path: file destination location
+        :return: boolean: True for Success and False for Failure
+        """
+        downloaded = False
+        cls.logger.debug(f'File {filename} not available at {path} so downloading.')
+        url = f'https://downloads.cloudcix.com/robot/{filename}'
+        try:
+            urlretrieve(url, f'{path}{filename}')
+            downloaded = True
+            cls.logger.debug(f'File {filename} downloaded successfully into {path}{filename}.')
+        except HTTPError:
+            cls.logger.error(f'File {filename} not found at {url}')
+        return downloaded
 
 
 class VmUpdateMixin:
     logger: logging.Logger
 
     @classmethod
-    def fetch_drive_updates(cls, vm_data: Dict[str, Any], span: Span) -> Tuple[str, str, Deque[Dict[str, int]]]:
+    def fetch_drive_updates(cls, vm_data: Dict[str, Any]) -> Deque[Dict[str, str]]:
         """
         Given a VM's data, generate the data for drives that need to be updated in this update request
         :param vm_data: The data of the VM being updated
-        :param span: The tracing span in use for the current task
-        :returns: A tuple of three values, the hdd, ssd, and other drives for the update request
+        :returns: A Deque of drives for the update request
         """
-        vm_id = vm_data['idVM']
-        hdd = ''
-        ssd = ''
-        drives: Deque[Dict[str, Any]] = deque()
+        vm_id = vm_data['id']
+        drives: Deque[Dict[str, str]] = deque()
 
-        # To be changed storages
-        storage_updates = vm_data['history'][0]['storage_histories']
-        # All storages of VM
-        storages = vm_data['vm_storage']
+        # If there has been a change, grab the storage changes and use them to update the values
+        storage_changes = vm_data['changes_this_month'][0]['details'].get('storages', {})
+        if len(storage_changes) == 0:
+            # No storages were changed, return the defaults
+            return drives
 
-        # compare storages and storage_updates
-        for storage_update in storage_updates:
-            # sort out the storage_update from all storages of VM
-            # (contains changes such as add new or remove existing or increase existing)
-            storage_id = storage_update['storage_id']
-            storage = [i for i in storages if i['idStorage'] == storage_id]
-            if len(storage) != 1:
+        # Read the updated storages to determine the changes that were made
+        storages = {storage['id']: storage for storage in vm_data['storages']}
+        for storage_id, storage_changes in storage_changes.items():
+            storage = storages.get(storage_id, None)
+            if storage is None:
                 cls.logger.error(f'Error fetching Storage #{storage_id} for VM #{vm_id}')
-                return hdd, ssd, drives
-            # New and old values
-            new_value = storage_update['gb_quantity']
-            old_value: Optional[int] = 0
+                return drives
 
-            # Find the storage's very previous change
-            for i in range(len(vm_data['history'])):
-                # Old value
-                old_value = None
-                # i=0 is already taken for new value
-                for storage_history in vm_data['history'][i + 1]['storage_histories']:
-                    if storage_history['storage_id'] == storage_id:
-                        old_value = int(storage_history['gb_quantity'])
-                        break
-                if old_value is not None:
-                    break
-
-            # Check if the storage is primary
-            if storage[0]['primary']:
-                # Determine which field (hdd or ssd) to populate with this storage information
-                if storage[0]['storage_type'] == 'HDD':
-                    hdd = f'{storage_id}:{new_value}:{old_value}'
-                elif storage[0]['storage_type'] == 'SSD':
-                    ssd = f'{storage_id}:{new_value}:{old_value}'
-                else:
-                    cls.logger.error(
-                        f'Invalid primary drive storage type {storage[0]["storage_type"]} for VM #{vm_id}. '
-                        'Expected either "HDD" or "SSD"',
-                    )
-                    return hdd, ssd, drives
-            else:
-                # Append the drive to the deque
-                drives.append({
-                    'id': storage_id,
-                    'type': storage[0]['storage_type'],
-                    'new_size': new_value,
-                    'old_size': old_value,
-                })
+            # Append the drive to be updated to the deque
+            drives.append({
+                'id': storage_id,
+                'new_size': storage_changes['new_value'],
+                'old_size': storage_changes['old_value'],
+            })
 
         # Finally, return the generated information
-        return hdd, ssd, drives
+        return drives
 
     @classmethod
-    def determine_should_restart(cls, vm_data: Dict[str, Any], span) -> Optional[bool]:
+    def determine_should_restart(cls, vm_data: Dict[str, Any], span: Span) -> Optional[bool]:
         """
         Check through the VM changes to see if the VM should be turned back on after the update is finished
         """
-        # Determine whether or not we should restart the VM by retrieving the previous state of the VM
+        vm_id = vm_data['id']
         params = {
             'order': '-created',
             'limit': 1,
             'state__in': (4, 6, 9),
-            'vm_id': vm_data['idVM'],
+            'vm_id': vm_id,
         }
         # Get the last two histories where state was changed, the first item returned will be the current request for
         # change and the second item will be the current status of the VM
@@ -109,5 +118,5 @@ class VmUpdateMixin:
         vm_data['return_state'] = state_changes[0]['state']
 
         # We restart the VM if the VM was in state 4 before this update
-        cls.logger.debug(f'VM #{vm_data["idVM"]} will be returned to state {vm_data["return_state"]} after update')
-        return vm_data['return_state'] == 4
+        cls.logger.debug(f'VM #{vm_id} will be returned to state {vm_data["return_state"]} after update')
+        return vm_data['return_state'] == RUNNING

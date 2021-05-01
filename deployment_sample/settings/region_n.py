@@ -16,18 +16,20 @@ __all__ = [
     'EMAIL_PORT',
     'EMAIL_REPLY_TO',
     'EMAIL_USERNAME',
-    'FREENAS_URL',
     'HYPERV_HOST_NETWORK_DRIVE_PATH',
     'HYPERV_ROBOT_NETWORK_DRIVE_PATH',
+    'HYPERV_VMS_PATH',
     'IN_PRODUCTION',
     'INFLUX_DATABASE',
     'INFLUX_PORT',
     'INFLUX_URL',
     'KVM_HOST_NETWORK_DRIVE_PATH',
     'KVM_ROBOT_NETWORK_DRIVE_PATH',
+    'KVM_VMS_PATH',
+    'LOGSTASH_ENABLE',
     'LOGSTASH_URL',
+    'NETWORK_DRIVE_URL',
     'NETWORK_PASSWORD',
-    'OS_TEMPLATE_MAP',
     'REGION_NAME',
     'ROBOT_ENV',
     'SEND_TO_FAIL',
@@ -35,9 +37,10 @@ __all__ = [
     'SUBJECT_VM_FAIL',
     'SUBJECT_VM_SCHEDULE_DELETE',
     'SUBJECT_VM_SUCCESS',
-    'SUBJECT_VPN_SUCCESS',
-    'SUBJECT_VRF_FAIL',
-    'VRFS_ENABLED',
+    'SUBJECT_VPN_BUILD_SUCCESS',
+    'SUBJECT_VPN_UPDATE_SUCCESS',
+    'SUBJECT_VIRTUAL_ROUTER_FAIL',
+    'VIRTUAL_ROUTERS_ENABLED',
 ]
 
 """
@@ -52,8 +55,8 @@ IN_PRODUCTION = False
 # Password for connecting to routers and servers
 NETWORK_PASSWORD = ''
 
-# Flag to state whether VRFs are enabled or not
-VRFS_ENABLED = True
+# Flag to state whether VIRTUAL_ROUTERs are enabled or not
+VIRTUAL_ROUTERS_ENABLED = True
 
 """
 CloudCIX API Settings
@@ -71,7 +74,7 @@ CLOUDCIX_API_URL = ''
 CLOUDCIX_API_VERSION = 2
 
 # API V2 URL
-CLOUDCIX_API_V2_URL = ''
+CLOUDCIX_API_V2_URL = CLOUDCIX_API_URL
 
 # CLoudcIX Login username
 CLOUDCIX_API_USERNAME = ''
@@ -115,14 +118,19 @@ SUBJECT_VM_SCHEDULE_DELETE = ''
 SUBJECT_VM_SUCCESS = ''
 
 # Subject for VPN tunnel build success Emails
-SUBJECT_VPN_SUCCESS = ''
+SUBJECT_VPN_BUILD_SUCCESS = ''
 
-# Subject for VRF build fail Emails
-SUBJECT_VRF_FAIL = ''
+# Subject for VPN tunnel update success Emails
+SUBJECT_VPN_UPDATE_SUCCESS = ''
+
+# Subject for VIRTUAL_ROUTER build fail Emails
+SUBJECT_VIRTUAL_ROUTER_FAIL = ''
 
 """
 Logging Settings
 """
+LOGSTASH_ENABLE = False  # set to True for logging to Collector
+
 # Hostname of logstash for centralised logging
 LOGSTASH_URL = ''
 
@@ -136,7 +144,7 @@ ROBOT_ENV = os.environ.get('ROBOT_ENV', 'dev')
  Real Time Monitoring Settings
  """
 # Database in influx to send to
-INFLUX_DATABASE = 'robot'
+INFLUX_DATABASE = None
 
 # Port of influx endpoint
 INFLUX_PORT = 443
@@ -150,17 +158,14 @@ Configuration settings
 # KVM path
 KVM_ROBOT_NETWORK_DRIVE_PATH = ''
 KVM_HOST_NETWORK_DRIVE_PATH = ''
+# KVM vms path
+KVM_VMS_PATH = ''
 
 # HyperV path
 HYPERV_ROBOT_NETWORK_DRIVE_PATH = ''
 HYPERV_HOST_NETWORK_DRIVE_PATH = ''
+# HyperV vms path
+HYPERV_VMS_PATH = ''
 
-# FreeNas mount url
-FREENAS_URL = ''
-
-# Images Dictionary e.g 'Linux: {image_id: 'image_type'} e.g. Linux: {1: 'ubntu', 2: 'centos'}
-OS_TEMPLATE_MAP = {
-    'Linux': {},
-    'Windows': {},
-    'Phantom': {},
-}
+# Nas drive mount url
+NETWORK_DRIVE_URL = ''

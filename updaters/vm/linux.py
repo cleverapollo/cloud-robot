@@ -10,8 +10,8 @@ import logging
 from typing import Any, Dict, Optional
 # lib
 import opentracing
-from cloudcix.api import IAAS
 from jaeger_client import Span
+from netaddr import IPAddress
 from paramiko import AutoAddPolicy, SSHClient, SSHException
 # local
 import settings
@@ -33,16 +33,22 @@ class Linux(LinuxMixin, VmUpdateMixin):
     logger = logging.getLogger('robot.updaters.vm.linux')
     # Keep track of the keys necessary for the template, so we can ensure that all keys are present before updating
     template_keys = {
+        # changes for updates
+        'changes',
         # the ip address of the host that the VM is running on
         'host_ip',
         # the sudo password of the host, used to run some commands
         'host_sudo_passwd',
         # a flag stating whether or not the VM should be turned back on after updating it
         'restart',
+        # storage type (HDD/SSD)
+        'storage_type'
+        # Total drives count is needed for drive names
+        'total_drives'
         # an identifier that uniquely identifies the vm
         'vm_identifier',
-        # changes for updates
-        'changes',
+        # path for vm's .img files located in host
+        'vms_path',
     }
 
     @staticmethod
@@ -53,7 +59,7 @@ class Linux(LinuxMixin, VmUpdateMixin):
         :param span: The tracing span in use for this update task
         :return: A flag stating whether or not the update was successful
         """
-        vm_id = vm_data['idVM']
+        vm_id = vm_data['id']
 
         # Generate the necessary template data
         child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
@@ -62,9 +68,9 @@ class Linux(LinuxMixin, VmUpdateMixin):
 
         # Check that the data was successfully generated
         if template_data is None:
-            Linux.logger.error(
-                f'Failed to retrieve template data for VM #{vm_id}.',
-            )
+            error = f'Failed to retrieve template data for VM #{vm_id}.'
+            Linux.logger.error(error)
+            vm_data['errors'].append(error)
             span.set_tag('failed_reason', 'template_data_failed')
             return False
 
@@ -73,10 +79,9 @@ class Linux(LinuxMixin, VmUpdateMixin):
             missing_keys = [
                 f'"{key}"' for key in Linux.template_keys if template_data[key] is None
             ]
-            Linux.logger.error(
-                f'Template Data Error, the following keys were missing from the VM update data: '
-                f'{", ".join(missing_keys)}',
-            )
+            error = f'Template Data Error, the following keys were missing from the VM update ' \
+                    f'data: {", ".join(missing_keys)}.'
+            Linux.logger.error(error)
             span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
@@ -85,10 +90,10 @@ class Linux(LinuxMixin, VmUpdateMixin):
 
         # Generate the update command using the template data
         child_span = opentracing.tracer.start_span('generate_command', child_of=span)
-        cmd = utils.JINJA_ENV.get_template('vm/linux/update_cmd.j2').render(**template_data)
+        cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/update.j2').render(**template_data)
         child_span.finish()
 
-        Linux.logger.debug(f'Generated VM update command for VM #{vm_data["idVM"]}\n{cmd}')
+        Linux.logger.debug(f'Generated VM update command for VM #{vm_id}\n{cmd}')
 
         # Open a client and run the two necessary commands on the host
         updated = False
@@ -110,11 +115,11 @@ class Linux(LinuxMixin, VmUpdateMixin):
                 Linux.logger.debug(f'VM update command for VM #{vm_id} generated stdout.\n{stdout}')
                 updated = True
             if stderr:
-                Linux.logger.warning(f'VM update command for VM #{vm_id} generated stderr.\n{stderr}')
+                Linux.logger.error(f'VM update command for VM #{vm_id} generated stderr.\n{stderr}')
 
             if template_data['restart']:
                 # Also render and deploy the restart_cmd template
-                restart_cmd = utils.JINJA_ENV.get_template('vm/linux/restart_cmd.j2').render(**template_data)
+                restart_cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/restart.j2').render(**template_data)
 
                 # Attempt to execute the restart command
                 Linux.logger.debug(f'Executing restart command for VM #{vm_id}')
@@ -125,12 +130,11 @@ class Linux(LinuxMixin, VmUpdateMixin):
                 if stdout:
                     Linux.logger.debug(f'VM restart command for VM #{vm_id} generated stdout.\n{stdout}')
                 if stderr:
-                    Linux.logger.warning(f'VM restart command for VM #{vm_id} generated stderr.\n{stderr}')
-        except SSHException:
-            Linux.logger.error(
-                f'Exception occurred while updating VM #{vm_id} in {host_ip}',
-                exc_info=True,
-            )
+                    Linux.logger.error(f'VM restart command for VM #{vm_id} generated stderr.\n{stderr}')
+        except SSHException as err:
+            error = f'Exception occurred while updating VM #{vm_id} in {host_ip}.'
+            Linux.logger.error(error, exc_info=True)
+            vm_data['errors'].append(f'{error} Error: {err}')
             span.set_tag('failed_reason', 'ssh_error')
         finally:
             client.close()
@@ -146,11 +150,11 @@ class Linux(LinuxMixin, VmUpdateMixin):
         :param span: The tracing span in use for this task. In this method, just pass it to API calls.
         :returns: The data needed for the templates to update a Linux VM
         """
-        vm_id = vm_data['idVM']
+        vm_id = vm_data['id']
         Linux.logger.debug(f'Compiling template data for VM #{vm_id}')
         data: Dict[str, Any] = {key: None for key in Linux.template_keys}
 
-        data['vm_identifier'] = f'{vm_data["idProject"]}_{vm_data["idVM"]}'
+        data['vm_identifier'] = f'{vm_data["project"]["id"]}_{vm_id}'
         # changes
         changes: Dict[str, Any] = {
             'ram': False,
@@ -174,28 +178,38 @@ class Linux(LinuxMixin, VmUpdateMixin):
         try:
             if len(updates['storage_histories']) != 0:
                 Linux.logger.debug(f'Fetching drives for VM #{vm_id}')
-                hdd, ssd, drives = Linux.fetch_drive_updates(vm_data, span)
-                changes['storages'] = {
-                    'hdd': hdd,
-                    'ssd': ssd,
-                    'drives': drives,
-                }
+                child_span = opentracing.tracer.start_span('fetch_drive_updates', child_of=span)
+                changes['storages'] = Linux.fetch_drive_updates(vm_data)
+                child_span.finish()
         except KeyError:
             pass
+
         # Add changes to data
         data['changes'] = changes
+        data['storage_type'] = vm_data['storage_type']
+        data['total_drives'] = len(vm_data['storages'])
+        data['vms_path'] = settings.KVM_VMS_PATH
 
         # Get the ip address of the host
-        Linux.logger.debug(f'Fetching host address for VM #{vm_id}')
-        for mac in utils.api_list(IAAS.macaddress, {}, server_id=vm_data['idServer'], span=span):
-            if mac['status'] is True and mac['ip'] is not None:
-                data['host_ip'] = mac['ip']
-                break
+        host_ip = None
+        for interface in vm_data['server_data']['interfaces']:
+            if interface['enabled'] is True and interface['ip_address'] is not None:
+                if IPAddress(str(interface['ip_address'])).version == 6:
+                    host_ip = interface['ip_address']
+                    break
+        if host_ip is None:
+            error = f'Host ip address not found for the server # {vm_data["server_id"]}.'
+            Linux.logger.error(error)
+            vm_data['errors'].append(error)
+            return None
+        data['host_ip'] = host_ip
 
         # Add the host information to the data
         data['host_sudo_passwd'] = settings.NETWORK_PASSWORD
 
         # Determine whether or not we should turn the VM back on after the update finishes
         Linux.logger.debug(f'Determining if VM #{vm_id} should be powered on after update')
-        data['restart'] = Linux.determine_should_restart(vm_data, span=span)
+        child_span = opentracing.tracer.start_span('determine_should_restart', child_of=span)
+        data['restart'] = Linux.determine_should_restart(vm_data, child_span)
+        child_span.finish()
         return data

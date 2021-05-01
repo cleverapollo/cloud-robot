@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict
 # lib
 import opentracing
-from cloudcix.api import IAAS
+from cloudcix.api.iaas import IAAS
 from jaeger_client import Span
 # local
 import metrics
@@ -27,7 +27,7 @@ def _unresource(vm: Dict[str, Any], span: Span):
     """
     unresource the specified vm because something went wrong
     """
-    vm_id = vm['idVM']
+    vm_id = vm['id']
     metrics.vm_build_failure()
 
     # Update state to UNRESOURCED in the API
@@ -40,16 +40,16 @@ def _unresource(vm: Dict[str, Any], span: Span):
     )
     child_span.finish()
 
-    if response.status_code != 204:
+    if response.status_code != 200:
         logging.getLogger('robot.tasks.vm.build').error(
             f'Could not update VM #{vm_id} to state UNRESOURCED. Response: {response.content.decode()}.',
         )
     child_span = opentracing.tracer.start_span('send_email', child_of=span)
     try:
-        EmailNotifier.build_failure(vm)
+        EmailNotifier.vm_build_failure(vm)
     except Exception:
         logging.getLogger('robot.tasks.vm.build').error(
-            f'Failed to send build failure email for VM #{vm["idVM"]}',
+            f'Failed to send build failure email for VM #{vm_id}',
             exc_info=True,
         )
     child_span.finish()
@@ -90,32 +90,37 @@ def _build_vm(vm_id: int, span: Span):
 
     # Ensure that the state of the vm is still currently REQUESTED (it hasn't been picked up by another runner)
     if vm['state'] != state.REQUESTED:
-        logger.warn(f'Cancelling build of VM #{vm_id}. Expected state to be {state.REQUESTED}, found {vm["state"]}.')
+        logger.warning(f'Cancelling build of VM #{vm_id}. Expected state to be {state.REQUESTED}, found {vm["state"]}.')
         # Return out of this function without doing anything as it was already handled
         span.set_tag('return_reason', 'not_in_correct_state')
         return
 
-    # Also ensure that the VRF is built for the VM
-    child_span = opentracing.tracer.start_span('read_project_vrf', child_of=span)
-    vrf_request_data = {'project': vm['idProject']}
-    vm_vrf = utils.api_list(IAAS.vrf, vrf_request_data, span=child_span)[0]
+    # catch all the errors if any
+    vm['errors'] = []
+
+    # Also ensure that the VR is built for the VM
+    child_span = opentracing.tracer.start_span('read_project_vr', child_of=span)
+    vr_id = vm['project']['virtual_router_id']
+    # need to read so to get the current state of virtual_router
+    vm_vr = utils.api_read(IAAS.virtual_router, pk=vr_id, span=child_span)
     child_span.finish()
 
-    if vm_vrf['state'] == 3:
-        # If the VRF is UNRESOURCED, we cannot build the VM
-        logger.error(
-            f'VRF #{vm_vrf["idVRF"]} is UNRESOURCED so we cannot build VM #{vm_id}',
-        )
+    if vm_vr['state'] == state.UNRESOURCED:
+        # If the VR is UNRESOURCED, we cannot build the VM
+        error = f'Virtual Router #{vm_vr["id"]} is UNRESOURCED so we cannot build VM #{vm_id}'
+        logger.error(error)
+        vm['errors'].append(error)
         _unresource(vm, span)
-        span.set_tag('return_reason', 'vrf_unresourced')
+        span.set_tag('return_reason', 'vr_unresourced')
         return
-    elif vm_vrf['state'] != 4:
-        logger.warn(
-            f'VRF #{vm_vrf["idVRF"]} is not yet built, postponing build of VM #{vm_id}. '
-            f'VRF is currently in state {vm_vrf["state"]}',
+    elif vm_vr['state'] != state.RUNNING:
+        logger.warning(
+            f'Virtual Router #{vm_vr["id"]} is not yet built, postponing build of VM #{vm_id}. '
+            f'Virtual Router is currently in state {vm_vr["state"]}',
         )
-
-        # since vrf is not ready yet so wait for 10 sec and try again.
+        # Return without changing the state
+        span.set_tag('return_reason', 'vr_not_ready')
+        # since virtual_router is not ready yet so wait for 10 sec and try again.
         build_vm.s(vm_id).apply_async(eta=datetime.now() + timedelta(seconds=10))
         return
 
@@ -129,7 +134,7 @@ def _build_vm(vm_id: int, span: Span):
     )
     child_span.finish()
 
-    if response.status_code != 204:
+    if response.status_code != 200:
         logger.error(
             f'Could not update VM #{vm_id} to state BUILDING. Response: {response.content.decode()}.',
         )
@@ -137,46 +142,45 @@ def _build_vm(vm_id: int, span: Span):
         span.set_tag('return_reason', 'could_not_update_state')
         return
 
-    # Call the appropriate builder
-    success: bool = False
-    send_email = True
-
-    # Read the VM image to get the hypervisor id
-    child_span = opentracing.tracer.start_span('read_vm_image', child_of=span)
-    image = utils.api_read(IAAS.image, vm['idImage'], span=child_span)
+    # Read the VM server to get the server type
+    child_span = opentracing.tracer.start_span('read_vm_server', child_of=span)
+    server = utils.api_read(IAAS.server, vm['server_id'], span=child_span)
     child_span.finish()
-
-    if image is None:
+    if server is None:
         logger.error(
-            f'Could not build VM #{vm_id} as its Image was not readable',
+            f'Could not build VM #{vm_id} as its Server was not readable',
         )
         _unresource(vm, span)
-        span.set_tag('return_reason', 'image_not_read')
+        span.set_tag('return_reason', 'server_not_read')
         return
+    server_type = server['type']['name']
+    # add server details to vm
+    vm['server_data'] = server
 
-    hypervisor = image['idHypervisor']
+    # Call the appropriate builder
+    success: bool = False
+    send_email: bool = True
     child_span = opentracing.tracer.start_span('build', child_of=span)
     try:
-        if hypervisor == 1:  # HyperV -> Windows
-            success = WindowsVmBuilder.build(vm, image, child_span)
-            child_span.set_tag('hypervisor', 'windows')
-        elif hypervisor == 2:  # KVM -> Linux
-            success = LinuxVmBuilder.build(vm, image, child_span)
-            child_span.set_tag('hypervisor', 'linux')
-        elif hypervisor == 3:  # Phantom
+        if server_type == 'HyperV':
+            success = WindowsVmBuilder.build(vm, child_span)
+            child_span.set_tag('server_type', 'vm')
+        elif server_type == 'KVM':
+            success = LinuxVmBuilder.build(vm, child_span)
+            child_span.set_tag('server_type', 'vm')
+        elif server_type == 'Phantom':
             success = True
             send_email = False
-            child_span.set_tag('hypervisor', 'phantom')
+            child_span.set_tag('server_type', 'phantom')
         else:
-            logger.error(
-                f'Unsupported Hypervisor ID #{hypervisor} for VM #{vm_id}',
-            )
-            child_span.set_tag('hypervisor', 'unsupported')
-    except Exception:
-        logger.error(
-            f'An unexpected error occurred when attempting to build VM #{vm_id}',
-            exc_info=True,
-        )
+            error = f'Unsupported server type #{server_type} for VM #{vm_id}.'
+            logger.error(error)
+            vm['errors'].append(error)
+            child_span.set_tag('server_type', 'unsupported')
+    except Exception as err:
+        error = f'An unexpected error occurred when attempting to build VM #{vm_id}.'
+        logger.error(error, exc_info=True)
+        vm['errors'].append(f'{error} Error: {err}')
     child_span.finish()
 
     span.set_tag('return_reason', f'success: {success}')
@@ -194,7 +198,7 @@ def _build_vm(vm_id: int, span: Span):
         )
         child_span.finish()
 
-        if response.status_code != 204:
+        if response.status_code != 200:
             logger.error(
                 f'Could not update VM #{vm_id} to state RUNNING. Response: {response.content.decode()}.',
             )
@@ -202,10 +206,10 @@ def _build_vm(vm_id: int, span: Span):
         if send_email:
             child_span = opentracing.tracer.start_span('send_email', child_of=span)
             try:
-                EmailNotifier.build_success(vm)
+                EmailNotifier.vm_build_success(vm)
             except Exception:
                 logger.error(
-                    f'Failed to send build success email for VM #{vm["idVM"]}',
+                    f'Failed to send build success email for VM #{vm_id}',
                     exc_info=True,
                 )
             child_span.finish()
@@ -217,5 +221,6 @@ def _build_vm(vm_id: int, span: Span):
         metrics.vm_build_success(total_time.seconds)
     else:
         logger.error(f'Failed to build VM #{vm_id}')
-        vm.pop('admin_password')
+        vm.pop('admin_password', None)
+        vm.pop('server_data')
         _unresource(vm, span)

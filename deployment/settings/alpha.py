@@ -16,18 +16,20 @@ __all__ = [
     'EMAIL_PORT',
     'EMAIL_REPLY_TO',
     'EMAIL_USERNAME',
-    'FREENAS_URL',
     'HYPERV_HOST_NETWORK_DRIVE_PATH',
     'HYPERV_ROBOT_NETWORK_DRIVE_PATH',
+    'HYPERV_VMS_PATH',
     'IN_PRODUCTION',
     'INFLUX_DATABASE',
     'INFLUX_PORT',
     'INFLUX_URL',
     'KVM_HOST_NETWORK_DRIVE_PATH',
     'KVM_ROBOT_NETWORK_DRIVE_PATH',
+    'KVM_VMS_PATH',
+    'LOGSTASH_ENABLE',
     'LOGSTASH_URL',
+    'NETWORK_DRIVE_URL',
     'NETWORK_PASSWORD',
-    'OS_TEMPLATE_MAP',
     'REGION_NAME',
     'ROBOT_ENV',
     'SEND_TO_FAIL',
@@ -35,9 +37,10 @@ __all__ = [
     'SUBJECT_VM_FAIL',
     'SUBJECT_VM_SCHEDULE_DELETE',
     'SUBJECT_VM_SUCCESS',
-    'SUBJECT_VPN_SUCCESS',
-    'SUBJECT_VRF_FAIL',
-    'VRFS_ENABLED',
+    'SUBJECT_VPN_BUILD_SUCCESS',
+    'SUBJECT_VPN_UPDATE_SUCCESS',
+    'SUBJECT_VIRTUAL_ROUTER_FAIL',
+    'VIRTUAL_ROUTERS_ENABLED',
 ]
 
 """
@@ -51,9 +54,6 @@ IN_PRODUCTION = False  # Alpha should never have this set to True
 
 # Password for connecting to routers and servers
 NETWORK_PASSWORD = 'C1xacc355'
-
-# Flag to state whether VRFs are enabled or not
-VRFS_ENABLED = True
 
 """
 CloudCIX API Settings
@@ -114,14 +114,18 @@ SUBJECT_VM_SCHEDULE_DELETE = '[CloudCIX] Your VM has been scheduled for deletion
 SUBJECT_VM_SUCCESS = '[CloudCIX] Your VM has been built successfully!'
 
 # Subject for VPN tunnel build success Emails
-SUBJECT_VPN_SUCCESS = '[CloudCIX] Your VPN Tunnel has been built successfully!'
+SUBJECT_VPN_BUILD_SUCCESS = '[CloudCIX] Your VPN Tunnel has been built successfully!'
 
-# Subject for VRF build fail Emails
-SUBJECT_VRF_FAIL = '[CloudCIX] VRF Failure Occurred!'
+# Subject for VPN tunnel update success Emails
+SUBJECT_VPN_UPDATE_SUCCESS = '[CloudCIX] Your VPN Tunnel has been updated successfully!'
+
+# Subject for VIRTUAL_ROUTER build fail Emails
+SUBJECT_VIRTUAL_ROUTER_FAIL = '[CloudCIX] Virtual Router Failure Occurred!'
 
 """
 Logging Settings
 """
+LOGSTASH_ENABLE = True
 # Hostname of logstash for centralised logging
 LOGSTASH_URL = 'logstash.cloudcix.com'
 
@@ -137,6 +141,9 @@ ROBOT_ENV = os.environ.get('ROBOT_ENV', 'dev')
 # Database in influx to send to
 INFLUX_DATABASE = 'robot'
 
+# Flag to state whether VIRTUAL_ROUTERs are enabled or not
+VIRTUAL_ROUTERS_ENABLED = True
+
 # Port of influx endpoint
 INFLUX_PORT = 443
 
@@ -149,34 +156,12 @@ Configuration settings
 # KVM path
 KVM_ROBOT_NETWORK_DRIVE_PATH = '/mnt/images/KVM'
 KVM_HOST_NETWORK_DRIVE_PATH = KVM_ROBOT_NETWORK_DRIVE_PATH
-
+# KVM vms path
+KVM_VMS_PATH = '/var/lib/libvirt/images/'
 # HyperV path
 HYPERV_ROBOT_NETWORK_DRIVE_PATH = '/mnt/images/HyperV'
 HYPERV_HOST_NETWORK_DRIVE_PATH = HYPERV_ROBOT_NETWORK_DRIVE_PATH
-
-# FreeNas mount url
-FREENAS_URL = f'\\\\{REGION_NAME}-freenas.cloudcix.com\\mnt\\volume\\{REGION_NAME}'
-
-# Images dict
-OS_TEMPLATE_MAP = {
-    'Linux': {
-        6: 'ubuntu',
-        7: 'ubuntu',
-        8: 'ubuntu',
-        9: 'ubuntu',
-        10: 'centos',
-        11: 'centos',
-        12: 'ubuntu',
-        15: 'centos',  # redhat is similar to centos
-        16: 'centos',
-        17: 'ubuntu',
-    },
-    'Windows': {
-        2: '2012',
-        3: '2016',
-        13: '2019',
-    },
-    'Phantom': {
-        14: 'phantom',
-    },
-}
+# HyperV vms path
+HYPERV_VMS_PATH = r'D:\HyperV\\'
+# Nas drive mount url
+NETWORK_DRIVE_URL = f'\\\\{REGION_NAME}-freenas.cloudcix.com\\mnt\\volume\\{REGION_NAME}'

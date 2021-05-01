@@ -23,23 +23,27 @@ class EmailNotifier:
     # A list of image files that need to be attached to the emails
     message_images = ['logo.png', 'twitter.png', 'website.png']
 
-    # ############################################################## #
-    #                               NOC                              #
-    # ############################################################## #
+    # ############################################################################################################# #
+    #                                                  NOC                                                          #
+    # ############################################################################################################# #
 
     @staticmethod
-    def failure(vm_data: Dict[str, Any], task: str):
+    def vm_failure(vm_data: Dict[str, Any], task: str):
         """
         Report any kind of failure to the NOC and developers emails
         """
         logger = logging.getLogger('robot.email_notifier.failure')
-        logger.debug(f'Sending failure email for VM #{vm_data["idVM"]}')
+        logger.debug(f'Sending failure email for VM #{vm_data["id"]}')
+        vm_data.pop('admin_password', None)
+        # catch errors
+        errors = vm_data.pop('errors')
         # Add the pretty printed data blob to the VM
         vm_data['data'] = dumps(vm_data, indent=2, cls=utils.DequeEncoder)
         # Render the email body
-        body = utils.JINJA_ENV.get_template('emails/failure.j2').render(
+        body = utils.JINJA_ENV.get_template('emails/vm_failure.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
             task=task,
+            errors=errors,
             **vm_data,
         )
         # Format the subject
@@ -47,97 +51,129 @@ class EmailNotifier:
         EmailNotifier._compose_email(settings.SEND_TO_FAIL, subject, body)
 
     @staticmethod
-    def vrf_failure(vrf_data: Dict[str, Any], task: str):
+    def virtual_router_failure(virtual_router_data: Dict[str, Any], task: str):
         """
         Report any kind of failure to the NOC and developers emails
         """
-        logger = logging.getLogger('robot.email_notifier.vrf_failure')
-        logger.debug(f'Sending failure email for VRF #{vrf_data["idVRF"]}')
-        # Add the pretty printed data blob to the VRF
-        vrf_data['data'] = dumps(vrf_data, indent=2, cls=utils.DequeEncoder)
+        logger = logging.getLogger('robot.email_notifier.virtual_router_failure')
+        logger.debug(f'Sending failure email for virtual_router #{virtual_router_data["id"]}')
+        # Add the pretty printed data blob to the virtual_router
+        virtual_router_data['data'] = dumps(virtual_router_data, indent=2, cls=utils.DequeEncoder)
+        # catch errors
+        errors = virtual_router_data.pop('errors')
         # Render the email body
-        body = utils.JINJA_ENV.get_template('emails/vrf_failure.j2').render(
+        body = utils.JINJA_ENV.get_template('emails/virtual_router_failure.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
             task=task,
-            **vrf_data,
+            errors=errors,
+            **virtual_router_data,
         )
         # Format the subject
-        subject = settings.SUBJECT_VRF_FAIL
+        subject = settings.SUBJECT_VIRTUAL_ROUTER_FAIL
         EmailNotifier._compose_email(settings.SEND_TO_FAIL, subject, body)
 
-    # ############################################################## #
-    #                              BUILD                             #
-    # ############################################################## #
+    # ############################################################################################################# #
+    #                                               BUILD                                                           #
+    # ############################################################################################################# #
 
     @staticmethod
-    def build_success(vm_data: Dict[str, Any]):
+    def vm_build_success(vm_data: Dict[str, Any]):
         """
         Given a VM's details, render and send a build success email
         """
         logger = logging.getLogger('robot.email_notifier.build_success')
-        logger.debug(f'Sending build success email for VM #{vm_data["idVM"]}')
+        logger.debug(f'Sending build success email for VM #{vm_data["id"]}')
         # Check that the data contains an email
-        email = vm_data.get('email', None)
-        if email is None:
-            logger.error(f'No email found for VM #{vm_data["idVM"]}. Sending to {settings.SEND_TO_FAIL} instead.')
-            email = settings.SEND_TO_FAIL
+        emails = vm_data.get('emails', None)
+        if emails is None:
+            logger.error(f'No email found for VM #{vm_data["id"]}. Sending to {settings.SEND_TO_FAIL} instead.')
+            emails = [settings.SEND_TO_FAIL]
         # Render the email body
-        body = utils.JINJA_ENV.get_template('emails/build_success.j2').render(
+        body = utils.JINJA_ENV.get_template('emails/vm_build_success.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
             **vm_data,
         )
         # Format the subject
         subject = settings.SUBJECT_VM_SUCCESS
-        EmailNotifier._compose_email(email, subject, body)
+        for email in emails:
+            EmailNotifier._compose_email(email, subject, body)
 
     @staticmethod
-    def vrf_build_success(vrf_data: Dict[str, Any]):
+    def vpn_build_success(vpn_data: Dict[str, Any]):
         """
-        Given a VRF's details, render and send a build success email
+        Given a VPN's details, render and send a build success email
         """
-        logger = logging.getLogger('robot.email_notifier.vrf_build_success')
-        logger.debug(f'Sending build success email for VRF #{vrf_data["idVRF"]}')
+        vpn_id = vpn_data['id']
+        logger = logging.getLogger('robot.email_notifier.vpn_build_success')
+        logger.debug(f'Sending build success email for VPN #{vpn_id}')
         # Check that the data contains an email
-        email = vrf_data.get('email', None)
-        if email is None:
-            logger.error(f'No email found for VRF #{vrf_data["idVRF"]}. Sending to {settings.SEND_TO_FAIL} instead.')
-            email = settings.SEND_TO_FAIL
+        emails = vpn_data.get('emails', None)
+        if emails is None:
+            logger.error(f'No email found for VPN #{vpn_id}. Sending to {settings.SEND_TO_FAIL} instead.')
+            emails = [settings.SEND_TO_FAIL]
         # Render the email body
-        body = utils.JINJA_ENV.get_template('emails/vrf_build_success.j2').render(
+        body = utils.JINJA_ENV.get_template('emails/vpn_success.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
-            **vrf_data,
+            build=True,
+            **vpn_data,
         )
         # Format the subject
-        subject = settings.SUBJECT_VPN_SUCCESS
-        EmailNotifier._compose_email(email, subject, body)
+        subject = settings.SUBJECT_VPN_BUILD_SUCCESS
+        for email in emails:
+            EmailNotifier._compose_email(email, subject, body)
 
     @staticmethod
-    def build_failure(vm_data: Dict[str, Any]):
+    def vpn_update_success(vpn_data: Dict[str, Any]):
+        """
+        Given a VPN's details, render and send a update success email
+        """
+        vpn_id = vpn_data['id']
+        logger = logging.getLogger('robot.email_notifier.vpn_update_success')
+        logger.debug(f'Sending update success email for VPN #{vpn_id}')
+        # Check that the data contains an email
+        emails = vpn_data.get('emails', None)
+        if emails is None:
+            logger.error(f'No email found for VPN #{vpn_id}. Sending to {settings.SEND_TO_FAIL} instead.')
+            emails = [settings.SEND_TO_FAIL]
+        # Render the email body
+        body = utils.JINJA_ENV.get_template('emails/vpn_success.j2').render(
+            compute_url=settings.COMPUTE_UI_URL,
+            build=False,
+            **vpn_data,
+        )
+        # Format the subject
+        subject = settings.SUBJECT_VPN_UPDATE_SUCCESS
+        for email in emails:
+            EmailNotifier._compose_email(email, subject, body)
+
+    @staticmethod
+    def vm_build_failure(vm_data: Dict[str, Any]):
         """
         Given a VM's details, render and send a build failure email
         """
         logger = logging.getLogger('robot.email_notifier.build_failure')
-        logger.debug(f'Sending build failure email for VM #{vm_data["idVM"]}')
+        logger.debug(f'Sending build failure email for VM #{vm_data["id"]}')
         # Check that the data contains an email
-        email = vm_data.get('email', None)
-        if email is None:
-            logger.error(f'No email found for VM #{vm_data["idVM"]}. Sending to {settings.SEND_TO_FAIL} instead.')
-            email = settings.SEND_TO_FAIL
+        emails = vm_data.get('emails', None)
+        if emails is None:
+            logger.error(f'No email found for VM #{vm_data["id"]}. Sending to {settings.SEND_TO_FAIL} instead.')
+            emails = [settings.SEND_TO_FAIL]
         # Render the email body
-        body = utils.JINJA_ENV.get_template('emails/build_failure.j2').render(
+        body = utils.JINJA_ENV.get_template('emails/vm_build_failure.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
             **vm_data,
         )
         # Format the subject
         subject = settings.SUBJECT_VM_FAIL
-        EmailNotifier._compose_email(email, subject, body)
+        for email in emails:
+            EmailNotifier._compose_email(email, subject, body)
 
         # Also run the generic failure method to pass failures to us
-        EmailNotifier.failure(vm_data, 'build')
+        EmailNotifier.vm_failure(vm_data, 'build')
 
-    # ############################################################## #
-    #                             QUIESCE                            #
-    # ############################################################## #
+    # ############################################################################################################# #
+    #                                               QUIESCE                                                         #
+    # ############################################################################################################# #
 
     @staticmethod
     def delete_schedule_success(vm_data: Dict[str, Any]):
@@ -145,12 +181,12 @@ class EmailNotifier:
         Given a VM's details, render and send a delete_schedule success email
         """
         logger = logging.getLogger('robot.email_notifier.delete_schedule_success')
-        logger.debug(f'Sending delete scheduled email for VM #{vm_data["idVM"]}')
+        logger.debug(f'Sending delete scheduled email for VM #{vm_data["id"]}')
         # Check that the data contains an email
-        email = vm_data.get('email', None)
-        if email is None:
-            logger.error(f'No email found for VM #{vm_data["idVM"]}. Sending to {settings.SEND_TO_FAIL} instead.')
-            email = settings.SEND_TO_FAIL
+        emails = vm_data.get('emails', None)
+        if emails is None:
+            logger.error(f'No email found for VM #{vm_data["id"]}. Sending to {settings.SEND_TO_FAIL} instead.')
+            emails = [settings.SEND_TO_FAIL]
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/scheduled_delete_success.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
@@ -158,11 +194,12 @@ class EmailNotifier:
         )
         # Format the subject
         subject = settings.SUBJECT_VM_SCHEDULE_DELETE
-        EmailNotifier._compose_email(email, subject, body)
+        for email in emails:
+            EmailNotifier._compose_email(email, subject, body)
 
-    # ############################################################## #
-    #                     Email Specific Methods                     #
-    # ############################################################## #
+    # ############################################################################################################# #
+    #                                           Email Specific Methods                                              #
+    # ############################################################################################################# #
 
     @staticmethod
     def _compose_email(email: str, subject: str, body: str):

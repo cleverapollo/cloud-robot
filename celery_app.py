@@ -43,11 +43,9 @@ app = Celery(
 app.conf.timezone = 'Europe/Dublin'
 # Route heartbeat tasks to a different queue than the other tasks
 app.conf.task_routes = {
-    # Send heartbeat tasks to their own queue
-    'tasks.mainloop': {'queue': 'heartbeat'},
     'tasks.scrub': {'queue': 'heartbeat'},
-    # Also send VRF tasks to a separate queue vrf
-    'tasks.vrf.*': {'queue': 'vrf'},
+    # Also send virtual router tasks to a separate queue
+    'tasks.virtual_router.*': {'queue': 'virtual_router'},
     # All other tasks will be sent to the default queue named 'celery'
 }
 
@@ -56,10 +54,6 @@ app.conf.beat_schedule = {
     'scrub-at-midnight': {
         'task': 'tasks.scrub',
         'schedule': crontab(minute=0, hour=0),  # daily at midnight, like Jerry asked
-    },
-    'mainloop': {
-        'task': 'tasks.mainloop',
-        'schedule': crontab(),  # every minute
     },
 }
 
@@ -71,6 +65,9 @@ def setup_logger_and_tracer(*args, **kwargs):
     Set up the logger before each task is run, in the hopes that it will fix our logging issue.
     Also ensure that the opentracing.tracer is setup for this environment
     """
+    if not settings.LOGSTASH_ENABLE:
+        logging.disable(logging.CRITICAL)
+        return
     # Ensure the root logger is set up
     utils.setup_root_logger()
     # Also check to ensure we have a opentracing.tracer initialized in the forked process
@@ -85,7 +82,8 @@ def sleep_to_flush_spans(*args, **kwargs):
     """
     Flush spans by passing to IO loop, just to be safe
     """
-    time.sleep(5)
+    if settings.LOGSTASH_ENABLE:
+        time.sleep(5)
 
 
 # Catch all uncaught errors
@@ -97,7 +95,6 @@ def catch_uncaught_errors(task_id: str, exception: Exception, *args, **kwargs):
     )
 
 
-# Run the app if this is the main script
 if __name__ == '__main__':
     if settings.ROBOT_ENV != 'dev':
         metrics.current_commit()
