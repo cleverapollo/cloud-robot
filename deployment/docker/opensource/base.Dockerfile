@@ -15,7 +15,7 @@ WORKDIR /opt/robot
 COPY . .
 
 # Install requirements
-RUN pip3 install -U git+ssh://git@gitlab.cloudcix.com/CloudCIX/SDKs/Python.git@iaas-py3 && pip3 install -r deployment/requirements.txt 
+RUN pip3 install -r deployment/requirements.txt 
 
 # Create SSH folder for ssh keypairs
 RUN mkdir -p ~/.ssh
