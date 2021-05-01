@@ -14,13 +14,8 @@ RUN pip3 install -U pip
 WORKDIR /opt/robot
 COPY . .
 
-# Install Gitlabs private key temporarily to pull in necessary py3 branch from gitlab repo
-RUN mkdir -p ~/.ssh && mv id_rsa ~/.ssh/id_rsa && printf '\n10.1.1.2 gitlab.cloudcix.com\n' >> /etc/hosts && ssh-keyscan gitlab.cloudcix.com > ~/.ssh/known_hosts && chmod 600 ~/.ssh/id_rsa
-
 # Install requirements
-RUN pip3 install -U git+ssh://git@gitlab.cloudcix.com/CloudCIX/SDKs/Python.git@iaas-py3 && pip3 install -r deployment/requirements.txt 
-
-RUN rm -r  ~/.ssh 
+RUN pip3 install -r deployment/requirements.txt 
 
 # Create SSH folder for ssh keypairs
 RUN mkdir -p ~/.ssh
