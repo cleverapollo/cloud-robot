@@ -16,7 +16,6 @@ lint:
   except:
     - master
     - stable
-    - robot2.0
 
 mypy:
   image: python:3.7
@@ -27,7 +26,6 @@ mypy:
   except:
     - master
     - stable
-    - robot2.0
 
 ###############################################################################
 #                         Base Containers                                     #
@@ -36,13 +34,11 @@ opensource_base:
   stage: docker-base
   tags:
     - docker-build
-  before_script:
-    - echo "$GITLAB_KEY" > id_rsa
   script:
     - docker build -f deployment/docker/opensource/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/opensource-base --no-cache .
     - docker push gitlab.cloudcix.com:5005/cloudcix/robot/opensource-base
   only:
-    - robot2.0
+    - master
     - stable
 
 dev_base:
@@ -56,7 +52,6 @@ dev_base:
     - docker push gitlab.cloudcix.com:5005/cloudcix/robot/dev-base
   only:
     - master
-    - robot2.0
 
 stable_base:
   stage: docker-base
@@ -82,7 +77,6 @@ alpha_image:
     - docker push gitlab.cloudcix.com:5005/cloudcix/robot/alpha
   only:
   - master
-  - robot2.0
 
 deploy_alpha:
   image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
@@ -95,7 +89,6 @@ deploy_alpha:
     - ansible-playbook -i deployment/hosts/alpha.yml deployment/worker-playbook.yml --extra-vars="deployment_host=alpha-worker0"
   only:
     - master
-    - robot2.0
 
 ###############################################################################
 #                         Production Build and Deploy                         #
@@ -224,5 +217,5 @@ dockerhub:
     - ./deployment/docker/publish.sh
   when: manual
   only:
-    - robot2.0
+    - master
     - stable
