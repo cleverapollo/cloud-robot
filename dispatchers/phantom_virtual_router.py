@@ -60,7 +60,7 @@ class PhantomVirtualRouter:
         logger = logging.getLogger('robot.dispatchers.phantom_virtual_router.quiesce')
         # In order to change the state to the correct value we need to read the virtual_router and check its state
         virtual_router = utils.api_read(IAAS.virtual_router, virtual_router_id)
-        if virtual_router is None:
+        if not bool(virtual_router):
             return
         if virtual_router['state'] == state.QUIESCE:
             logger.info(f'Updating phantom virtual_router #{virtual_router_id} to state QUIESCING')
