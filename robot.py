@@ -3,7 +3,7 @@ new robot that uses a class, methods and instance variables to clean up the code
 """
 # stdlib
 import logging
-from typing import Optional, Union
+from typing import cast, Optional, Union
 # lib
 from cloudcix.api.iaas import IAAS
 # local
@@ -62,6 +62,13 @@ class Robot:
         self.vms = vms
         # Save the instance
         Robot.__instance = self
+
+    # Write the method that will retrieve the instance
+    @staticmethod
+    def get_instance():
+        if Robot.__instance is None:
+            Robot([], [])
+        return cast(Robot, Robot.__instance)
 
     def __call__(self):
         """

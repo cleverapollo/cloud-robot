@@ -81,8 +81,8 @@ def _build_vm(vm_id: int, span: Span):
     vm = utils.api_read(IAAS.vm, vm_id, span=child_span)
     child_span.finish()
 
-    # Ensure it is not none
-    if vm is None:
+    # Ensure it is not empty
+    if not bool(vm):
         # Rely on the utils method for logging
         metrics.vm_build_failure()
         span.set_tag('return_reason', 'invalid_vm_id')
@@ -146,7 +146,7 @@ def _build_vm(vm_id: int, span: Span):
     child_span = opentracing.tracer.start_span('read_vm_server', child_of=span)
     server = utils.api_read(IAAS.server, vm['server_id'], span=child_span)
     child_span.finish()
-    if server is None:
+    if not bool(server):
         logger.error(
             f'Could not build VM #{vm_id} as its Server was not readable',
         )
