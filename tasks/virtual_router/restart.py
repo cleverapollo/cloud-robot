@@ -44,8 +44,8 @@ def _restart_virtual_router(virtual_router_id: int, span: Span):
     virtual_router = utils.api_read(IAAS.virtual_router, virtual_router_id, span=child_span)
     child_span.finish()
 
-    # Ensure it is not none
-    if virtual_router is None:
+    # Ensure it is not empty
+    if not bool(virtual_router):
         # Rely on the utils method for logging
         metrics.virtual_router_restart_failure()
         span.set_tag('return_reason', 'invalid_virtual_router_id')
