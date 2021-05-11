@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 # lib
 from cloudcix.api.iaas import IAAS
 # local
-from robot import Robot
+import robot
 import utils
 from celery_app import app
 from settings import IN_PRODUCTION
@@ -25,7 +25,7 @@ def scrub():
     timestamp = None
     if IN_PRODUCTION:
         timestamp = (datetime.now() - timedelta(days=7)).isoformat()
-    robot_instance = Robot.get_instance()
+    robot_instance = robot.Robot.get_instance()
     robot_instance.scrub(timestamp)
 
 
