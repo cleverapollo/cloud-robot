@@ -10,7 +10,14 @@ from time import asctime, sleep
 from typing import List, Tuple
 # lib
 from jnpr.junos import Device
-from jnpr.junos.exception import CommitError, ConfigLoadError, ConnectError, LockError
+from jnpr.junos.exception import (
+    CommitError,
+    ConfigLoadError,
+    ConnectError,
+    LockError,
+    RpcError,
+    UnlockError,
+)
 from jnpr.junos.utils.config import Config
 
 __all__ = [
@@ -109,10 +116,29 @@ class VirtualRouterMixin:
                     )
                 cls.logger.debug(f'Response from commit on Router {management_ip}\n{detail}')
             except CommitError as err:
-                # Reduce device timeout so we're not waiting forever for it to close config
-                router.timeout = 2 * 60
                 error = f'Unable to commit changes onto Router {management_ip}.'
                 cls.logger.error(error, exc_info=True)
                 errors.append(f'{error} Error: {err}')
+
+                # Rollback loaded changes, No need to commit.
+                try:
+                    config.rollback()
+                    cls.logger.debug(f'Successfully rolled back the configuration on Router {management_ip}.')
+                except RpcError as err:
+                    error = f'Unable to rollback configuration changes onto Router {management_ip}, Please inform NOC.'
+                    cls.logger.error(error, exc_info=True)
+                    errors.append(f'{error} Error: {err}')
+
+                # Unlock the Router
+                try:
+                    config.unlock()
+                    cls.logger.debug(f'Successfully unlocked the Router {management_ip}.')
+                except UnlockError as err:
+                    error = f'Unable to unlock the Router {management_ip}, Please inform NOC.'
+                    cls.logger.error(error, exc_info=True)
+                    errors.append(f'{error} Error: {err}')
+
+                # Reduce device timeout so we're not waiting forever for it to close config
+                router.timeout = 2 * 60
                 return False, errors
             return True, errors

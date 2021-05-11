@@ -79,7 +79,7 @@ def _scrub_vm(vm_id: int, span: Span):
     child_span = opentracing.tracer.start_span('read_vm_server', child_of=span)
     server = utils.api_read(IAAS.server, vm['server_id'], span=child_span)
     child_span.finish()
-    if server is None:
+    if not bool(server):
         logger.error(
             f'Could not build VM #{vm_id} as its Server was not readable',
         )
