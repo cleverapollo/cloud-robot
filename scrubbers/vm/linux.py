@@ -160,10 +160,8 @@ class Linux(LinuxMixin):
 
         # Get the Networking details
         data['vlans'] = []
-        ip_addresses = [
-            ip_address for ip_address in vm_data['ip_addresses'] if IPAddress(ip_address['address']).is_private()
-        ]
-        subnet_ids = [ip['subnet']['id'] for ip in ip_addresses]
+
+        subnet_ids = [ip['subnet']['id'] for ip in vm_data['ip_addresses']]
         subnet_ids = list(set(subnet_ids))  # Removing duplicates
         subnets = utils.api_list(IAAS.subnet, {'search[subnet_id__in]': subnet_ids}, span=span)
 
@@ -220,22 +218,19 @@ class Linux(LinuxMixin):
             - sort out all the subnets of the VM being deleted
             - List the other private IP Addresses in the same Subnets (excluding this VM's id)
             - List all the VMs pointed to by the vm id fields of the returned (if any)
-            - For each VM, check if it is Windows or Linux
-            - If we find a Linux one, return False
-            - If we make it through the entire loop, return True
+            - For each VM, get the server_id of the host it is built on
+            - List servers by server_id of VMs and type_name KVM
+            - If the list is empty return True, else False
         """
         vm_id = vm_data['id']
-        # Get the details of the VM's private IP by getting all IPs associated with the VM and finding the private one
-        ip_addresses = [
-            ip_address for ip_address in vm_data['ip_addresses'] if IPAddress(ip_address['address']).is_private()
-        ]
-        subnet_ids = [ip['subnet']['id'] for ip in ip_addresses]
+        # Get the subnet_ids for the private ips configured on VM
+        subnet_ids = [ip['subnet']['id'] for ip in vm_data['ip_addresses']]
         subnet_ids = list(set(subnet_ids))  # Removing duplicates
 
         # Find the other private ip addresses in the subnets
         params = {
-            'search[exclude__vm__id]': vm_id,
-            'search[subnet__id__in]': subnet_ids,
+            'search[exclude__vm_id]': vm_id,
+            'search[subnet_id__in]': subnet_ids,
         }
         subnet_ips = utils.api_list(IAAS.ip_address, params, span=span)
 
@@ -243,11 +238,14 @@ class Linux(LinuxMixin):
         subnet_vm_ids = list(map(lambda ip: ip['vm_id'], subnet_ips))
         subnet_vms = utils.api_list(IAAS.vm, {'search[id__in]': subnet_vm_ids}, span=span)
 
-        # Get the images from the VMs and check for linux hypervisors
-        image_ids = list(set(map(lambda vm: vm['image']['id'], subnet_vms)))
-        images = utils.api_list(IAAS.image, {'search[id__in]': image_ids}, span=span)
+        # Get the server_id from the VMs and check for KVM hosts
+        server_ids = list(set(map(lambda vm: vm['server_id'], subnet_vms)))
 
-        # Check the list of images for any linux hypervisor
-        # any returns True if any item in the iterable is True
-        # make an iterable that checks if the image's hypervisor is KVM
-        return not any(image['server_type']['name'] == 'KVM' for image in images)
+        params = {
+            'search[id__in]': server_ids,
+            'search[type__name]': 'KVM',
+        }
+        servers = utils.api_list(IAAS.server, params, span=span)
+
+        # If the list of servers is empty we can delete the bridge
+        return not bool(servers)

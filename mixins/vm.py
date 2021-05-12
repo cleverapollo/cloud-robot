@@ -15,7 +15,7 @@ from cloudcix.api.iaas import IAAS
 from jaeger_client import Span
 # local
 import utils
-from state import RUNNING
+from state import RUNNING, QUIESCED, SCRUB_QUEUE
 
 __all__ = [
     'VmImageMixin',
@@ -107,11 +107,10 @@ class VmUpdateMixin:
         params = {
             'order': '-created',
             'limit': 1,
-            'state__in': (4, 6, 9),
+            'state__in': (RUNNING, QUIESCED, SCRUB_QUEUE),
             'vm_id': vm_id,
         }
-        # Get the last two histories where state was changed, the first item returned will be the current request for
-        # change and the second item will be the current status of the VM
+        # Get the last historiy where state was in a stable state of Running, Quiesced or Scrub Queue
         state_changes = utils.api_list(IAAS.vm_history, params, span=span)
 
         # Update the vm_data to retain the state to go back to
