@@ -4,6 +4,7 @@ builder class for windows vms
 - gathers template data
 - generates necessary files
 - connects to the vm's server and deploys the vm to it
+
 """
 # stdlib
 import logging
