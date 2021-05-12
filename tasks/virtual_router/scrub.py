@@ -77,11 +77,11 @@ def _scrub_virtual_router(virtual_router_id: int, span: Span):
 
     # Also ensure that all the VMs under this project are scrubbed
     child_span = opentracing.tracer.start_span('read_project_vms', child_of=span)
-    vms_request_data = {
+    params = {
         'search[project_id]': virtual_router['project']['id'],
         'exclude[state]': state.CLOSED,
     }
-    vrf_vms = utils.api_list(IAAS.vm, vms_request_data, span=child_span)
+    vrf_vms = utils.api_list(IAAS.vm, params, span=child_span)
     child_span.finish()
     vm_count = len(vrf_vms)
     if vm_count > 0:
