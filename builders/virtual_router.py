@@ -10,7 +10,7 @@ builder class for virtual_routers
 import logging
 import re
 from collections import deque
-from typing import Any, Deque, Dict, List, Optional
+from typing import Any, Deque, Dict, Optional
 # lib
 import opentracing
 from cloudcix.api.iaas import IAAS
@@ -225,12 +225,15 @@ class VirtualRouter(VirtualRouterMixin):
         virtual_router_vpns = utils.api_list(IAAS.vpn, params, span=child_span)
         child_span.finish()
         for vpn in virtual_router_vpns:
-            customer_subnets: List[str] = []
-            for customer_subnet in vpn['customer_subnets']:
-                customer_subnets.append(IPNetwork(str(customer_subnet)).cidr)
-            vpn['customer_subnets'] = customer_subnets
-            vpn['local_proxy'] = IPNetwork(vpn['local_subnet']['address_range']).cidr
-            vpn['remote_proxy'] = customer_subnets[0]
+            routes: Deque[Dict[str, str]] = deque()
+            for route in vpn['routes']:
+                routes.append(
+                    {
+                        'local': IPNetwork(str(route['local_subnet']['address_range'])).cidr,
+                        'remote': IPNetwork(str(route['remote_subnet'])).cidr,
+                    },
+                )
+            vpn['routes'] = routes
             # if send_email is true then read VPN for email addresses
             if vpn['send_email']:
                 child_span = opentracing.tracer.start_span('reading_vpn', child_of=span)
