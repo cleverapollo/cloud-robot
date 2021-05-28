@@ -70,8 +70,6 @@ set groups vrf-{{ project_id }} security ipsec policy vrf-{{ project_id }}-{{ vp
 set groups vrf-{{ project_id }} security ipsec policy vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-policy perfect-forward-secrecy keys {{ vpn['ipsec_pfs_groups'] }}
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn ike ipsec-policy vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-policy
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn ike proxy-identity local {{ vpn['local_proxy'] }}
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn ike proxy-identity remote {{ vpn['remote_proxy'] }}
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn bind-interface st0.{{ vpn['stif_number'] }}
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn establish-tunnels {{ vpn['ipsec_establish_time'] }}
 {% for route in vpn['routes'] %}
