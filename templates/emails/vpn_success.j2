@@ -19,17 +19,16 @@
 <h2>{{ description }} VPN Configuration</h2>
 <table class="align-left">
   {# Addresses #}
-  <tr><th colspan="2" class="align-center" style="font-size:1.5em;">Address Details</th></tr>
-  <tr><th>Local Router Address</th><td>{{ ike_public_ip }}</td></tr>
-  <tr><th>Remote Router Address</th><td>{{ virtual_router_ip }}</td></tr>
+  <tr><th colspan="2" class="align-center" style="font-size:1.5em;">IPAddress Details</th></tr>
+  <tr><th>Customer Router Address</th><td>{{ ike_public_ip }}</td></tr>
+  <tr><th>Project Router Address</th><td>{{ virtual_router_ip }}</td></tr>
   {# Traffic selectors or Proxy ids #}
 {% if traffic_selector %}
-  <table class="align-left">
+  <tr><th colspan="2" class="align-center" style="padding-top:1em;font-size:1.5em;">Traffic-Selector/Proxy-ID settings</th></tr>
+  <tr><th class="c1"> Project side</th><th class="c2"> Customer side</th></tr>
 {% for route in routes %}
-    <tr><th>{{ loop.index }} Local Traffic selector/Proxy ID</th><td>{{ remote }}</td></tr>
-    <tr><th>{{ loop.index }} Remote Traffic selector/Proxy ID</th><td>{{ local }}</td></tr>
+  <tr><td class="c1">{{ route['local'] }}</td><td class="c2">{{ route['remote'] }}</td></tr>
 {% endfor %}
-  </table>
 {% endif %}
   {# IKE Settings #}
   <tr><th colspan="2" class="align-center" style="padding-top:1em;font-size:1.5em;">IKE (Phase 1) Settings</th></tr>
