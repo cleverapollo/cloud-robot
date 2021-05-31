@@ -37,8 +37,8 @@ def run_robot_get():
             f'Response Data: {response.json()["content"]}',
         )
         return response.json()['content']
-    except Exception as err:
-        logger.error(f'Failed to make request to IAAS.run_robot.list service.\n Error:{err}.')
+    except Exception:
+        logger.error(f'Failed to make request to IAAS.run_robot.list service.', exc_info=True)
         return None
 
 
