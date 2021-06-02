@@ -163,7 +163,7 @@ class Linux(LinuxMixin):
 
         subnet_ids = [ip['subnet']['id'] for ip in vm_data['ip_addresses']]
         subnet_ids = list(set(subnet_ids))  # Removing duplicates
-        subnets = utils.api_list(IAAS.subnet, {'search[subnet_id__in]': subnet_ids}, span=span)
+        subnets = utils.api_list(IAAS.subnet, {'search[id__in]': subnet_ids}, span=span)
 
         for subnet in subnets:
             data['vlans'].append(subnet['vlan'])
