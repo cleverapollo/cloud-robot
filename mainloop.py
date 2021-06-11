@@ -23,7 +23,7 @@ def run_robot_get():
     try:
         response = IAAS.run_robot.list(token=Token.get_instance().token)
         # Token expire error "detail":"JWT token is expired. Please login again."
-        if response.status_code == 401 and 'token is expired' in response.detail:
+        if response.status_code == 401 and 'token is expired' in response.json()['detail']:
             run_robot_get()
         if response.status_code != 200:
             logger.error(
@@ -51,7 +51,7 @@ def run_robot_post(project_ids):
     data = {'project_ids': project_ids}
     response = IAAS.run_robot.create(token=Token.get_instance().token, data=data)
     # Token expire error "detail":"JWT token is expired. Please login again."
-    if response.status_code == 401 and 'token is expired' in response.detail:
+    if response.status_code == 401 and 'token is expired' in response.json()['detail']:
         run_robot_post(project_ids)
     if response.status_code != 200:
         logger.error(
