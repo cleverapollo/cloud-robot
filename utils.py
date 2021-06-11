@@ -148,7 +148,7 @@ def api_list(client: Client, params: Dict[str, Any], **kwargs) -> Deque[Dict[str
         **kwargs,
     )
     # Token expire error "detail":"JWT token is expired. Please login again."
-    if response.status_code == 401 and 'token is expired' in response.detail:
+    if response.status_code == 401 and 'token is expired' in response.json()['detail']:
         # try again to list as Token renews in response call
         return api_list(client, params)
 
@@ -180,6 +180,9 @@ def api_list(client: Client, params: Dict[str, Any], **kwargs) -> Deque[Dict[str
             params=params,
             **kwargs,
         )
+        # Token expire error "detail":"JWT token is expired. Please login again." so expect renew in next request.
+        if response.status_code == 401 and 'token is expired' in response.json()['detail']:
+            response.json()['content'] = []
         if response.status_code != 200:
             logger.error(
                 f'HTTP {response.status_code} error occurred when attempting to fetch {client_name} instances with '
@@ -209,7 +212,7 @@ def api_read(client: Client, pk: int, **kwargs) -> Dict[str, Any]:
         **kwargs,
     )
     # Token expire error "detail":"JWT token is expired. Please login again."
-    if response.status_code == 401 and 'token is expired' in response.detail:
+    if response.status_code == 401 and 'token is expired' in response.json()['detail']:
         # try again to list as Token renews in response call
         return api_read(client, pk)
 
