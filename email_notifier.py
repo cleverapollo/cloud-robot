@@ -49,6 +49,7 @@ class EmailNotifier:
         # Format the subject
         subject = settings.SUBJECT_PROJECT_FAIL
         EmailNotifier._compose_email(settings.SEND_TO_FAIL, subject, body)
+        logger.debug(f'Sent failure email for VM #{vm_data["id"]}.')
 
     @staticmethod
     def virtual_router_failure(virtual_router_data: Dict[str, Any], task: str):
@@ -71,6 +72,7 @@ class EmailNotifier:
         # Format the subject
         subject = settings.SUBJECT_VIRTUAL_ROUTER_FAIL
         EmailNotifier._compose_email(settings.SEND_TO_FAIL, subject, body)
+        logger.debug(f'Sent failure email for virtual router #{virtual_router_data["id"]}.')
 
     # ############################################################################################################# #
     #                                               BUILD                                                           #
@@ -97,6 +99,7 @@ class EmailNotifier:
         subject = settings.SUBJECT_VM_SUCCESS
         for email in emails:
             EmailNotifier._compose_email(email, subject, body)
+        logger.debug(f'Sent build success email for VM #{vm_data["id"]}.')
 
     @staticmethod
     def vpn_build_success(vpn_data: Dict[str, Any]):
@@ -121,6 +124,7 @@ class EmailNotifier:
         subject = settings.SUBJECT_VPN_BUILD_SUCCESS
         for email in emails:
             EmailNotifier._compose_email(email, subject, body)
+        logger.debug(f'Sent build success email for VPN #{vpn_data["id"]}.')
 
     @staticmethod
     def vpn_update_success(vpn_data: Dict[str, Any]):
@@ -145,6 +149,7 @@ class EmailNotifier:
         subject = settings.SUBJECT_VPN_UPDATE_SUCCESS
         for email in emails:
             EmailNotifier._compose_email(email, subject, body)
+        logger.debug(f'Sent update success email for VPN #{vpn_data["id"]}.')
 
     @staticmethod
     def vm_build_failure(vm_data: Dict[str, Any]):
@@ -170,6 +175,7 @@ class EmailNotifier:
 
         # Also run the generic failure method to pass failures to us
         EmailNotifier.vm_failure(vm_data, 'build')
+        logger.debug(f'Sent build failure email for VM #{vm_data["id"]}.')
 
     # ############################################################################################################# #
     #                                               QUIESCE                                                         #
@@ -196,6 +202,7 @@ class EmailNotifier:
         subject = settings.SUBJECT_VM_SCHEDULE_DELETE
         for email in emails:
             EmailNotifier._compose_email(email, subject, body)
+        logger.debug(f'Sent delete schedule success email for VM #{vm_data["id"]}.')
 
     # ############################################################################################################# #
     #                                           Email Specific Methods                                              #
@@ -241,7 +248,6 @@ class EmailNotifier:
             server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
             server.sendmail(settings.EMAIL_USERNAME, [email], message.as_string())
             server.quit()
-            logger.debug(f'Successfully sent notification to {email}')
             return True
         except Exception:
             logger.error(f'Robot failed to send an email to {email}', exc_info=True)

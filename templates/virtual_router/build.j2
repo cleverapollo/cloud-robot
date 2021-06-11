@@ -40,8 +40,11 @@ set groups vrf-{{ project_id }} security nat proxy-arp interface {{ public_inter
 {% endfor %}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 {% for vpn in vpns %}
-{# add the appropriate interfaces to it #}
+{# Define vpn secure tunnel interface(st0) to vpn #}
 set groups vrf-{{ project_id }} interfaces st0 unit {{ vpn['stif_number'] }} family inet
+{# anchor the st0 interface in routing instance and security zone #}
+set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} interface st0.{{ vpn['stif_number'] }}
+set groups vrf-{{ project_id }} security zones security-zone vrf-{{ project_id }} interfaces st0.{{ vpn['stif_number'] }}
 {# set up some VPN parameters #}
 {# Phase 1 #}
 set groups vrf-{{ project_id }} security ike proposal vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ike-proposal authentication-method pre-shared-keys
@@ -67,16 +70,17 @@ set groups vrf-{{ project_id }} security ipsec policy vrf-{{ project_id }}-{{ vp
 set groups vrf-{{ project_id }} security ipsec policy vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-policy perfect-forward-secrecy keys {{ vpn['ipsec_pfs_groups'] }}
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn ike ipsec-policy vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-policy
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn ike proxy-identity local {{ vpn['local_proxy'] }}
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn ike proxy-identity remote {{ vpn['remote_proxy'] }}
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn bind-interface st0.{{ vpn['stif_number'] }}
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn establish-tunnels {{ vpn['ipsec_establish_time'] }}
-{# anchor the relevant interfaces in their own routing instance and security zone #}
-set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} interface st0.{{ vpn['stif_number'] }}
-set groups vrf-{{ project_id }} security zones security-zone vrf-{{ project_id }} interfaces st0.{{ vpn['stif_number'] }}
-{# add a route to the other end of the IPSec tunnel with the tunnel if as the next hop #}
-{% for customer_subnet in vpn['customer_subnets'] %}
-set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} routing-options static route {{ customer_subnet }} next-hop st0.{{ vpn['stif_number'] }}
+{% for route in vpn['routes'] %}
+{% if vpn['traffic_selector'] %}
+{# Add traffic selector combinations #}
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn traffic-selector t{{ loop.index }} local-ip {{ route['local'] }}
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn traffic-selector t{{ loop.index }} remote-ip {{ route['remote'] }}
+{% else %}
+{# add a route to the IPSec tunnel with the tunnel interface as the next hop #}
+set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} routing-options static route {{ route['remote'] }} next-hop st0.{{ vpn['stif_number'] }}
+{% endif %}
 {% endfor %}
 {% endfor %}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
