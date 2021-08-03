@@ -329,7 +329,7 @@ class Windows(WindowsMixin, VMImageMixin):
             # Attempt to write
             with open(answer_file_path, 'w') as f:
                 f.write(answer_file_data)
-            Windows.logger.debug(f'Successfully wrote answer file for VM #{vm_id} to {answer_file_data}')
+            Windows.logger.debug(f'Successfully wrote answer file for VM #{vm_id} to {answer_file_log}')
         except IOError as err:
             error = f'Failed to write answer file for VM #{vm_id} to {answer_file_path}.'
             Windows.logger.error(error, exc_info=True)

@@ -39,6 +39,7 @@ __all__ = [
     'SUBJECT_VPN_BUILD_SUCCESS',
     'SUBJECT_VPN_UPDATE_SUCCESS',
     'SUBJECT_VIRTUAL_ROUTER_FAIL',
+    'SRX_GATEWAY',
     'VIRTUAL_ROUTERS_ENABLED',
 ]
 
@@ -164,3 +165,6 @@ HYPERV_VMS_PATH = r'"D:\HyperV\"'
 
 # Nas drive mount url
 NETWORK_DRIVE_URL = f'\\\\{REGION_NAME}-robothost.cloudcix.com\\var\\lib\\libvirt\\robot-drive'
+
+# SRX Gateway address or dns name
+SRX_GATEWAY = '217.74.54.62'
