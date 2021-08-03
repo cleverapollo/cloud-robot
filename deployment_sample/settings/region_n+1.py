@@ -39,6 +39,7 @@ __all__ = [
     'SUBJECT_VPN_BUILD_SUCCESS',
     'SUBJECT_VPN_UPDATE_SUCCESS',
     'SUBJECT_VIRTUAL_ROUTER_FAIL',
+    'SRX_GATEWAY',
     'VIRTUAL_ROUTERS_ENABLED',
 ]
 
@@ -165,3 +166,6 @@ HYPERV_VMS_PATH = ''
 
 # Nas drive mount url
 NETWORK_DRIVE_URL = ''
+
+# SRX Gateway address or dns name
+SRX_GATEWAY = ''

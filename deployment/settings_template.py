@@ -21,6 +21,7 @@ NETWORK_PASSWORD = os.getenv('NETWORK_PASSWORD', 'ntw_pw')
 
 PAM_NAME = os.getenv('PAM_NAME', 'pam')
 PAM_ORGANIZATION_URL = os.getenv('PAM_ORGANIZATION_URL', 'example.com')
+SRX_GATEWAY = os.getenv('SRX_GATEWAY', 'srx.example.com')
 VIRTUAL_ROUTERS_ENABLED = True
 
 __all__ = [
@@ -60,6 +61,7 @@ __all__ = [
     'SUBJECT_VPN_BUILD_SUCCESS',
     'SUBJECT_VPN_UPDATE_SUCCESS',
     'SUBJECT_VIRTUAL_ROUTER_FAIL',
+    'SRX_GATEWAY',
     'VIRTUAL_ROUTERS_ENABLED',
 ]
 
