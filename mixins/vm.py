@@ -18,12 +18,12 @@ import utils
 from state import RUNNING, QUIESCED, SCRUB_QUEUE
 
 __all__ = [
-    'VmImageMixin',
-    'VmUpdateMixin',
+    'VMImageMixin',
+    'VMUpdateMixin',
 ]
 
 
-class VmImageMixin:
+class VMImageMixin:
     logger: logging.Logger
 
     @classmethod
@@ -61,7 +61,7 @@ class VmImageMixin:
         return downloaded
 
 
-class VmUpdateMixin:
+class VMUpdateMixin:
     logger: logging.Logger
 
     @classmethod

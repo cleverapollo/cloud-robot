@@ -15,7 +15,6 @@ __all__ = [
     'EMAIL_HOST',
     'EMAIL_PORT',
     'EMAIL_REPLY_TO',
-    'EMAIL_USERNAME',
     'HYPERV_HOST_NETWORK_DRIVE_PATH',
     'HYPERV_ROBOT_NETWORK_DRIVE_PATH',
     'HYPERV_VMS_PATH',
@@ -99,9 +98,6 @@ EMAIL_PORT = 25
 
 # Reply-To Email Address
 EMAIL_REPLY_TO = 'CloudCIX <no-reply@cloudcix.net>'
-
-# Region's email id
-EMAIL_USERNAME = 'cloud@cloudcix.net'
 
 # Email to send build fail emails to
 SEND_TO_FAIL = 'developers@cloudcix.com'

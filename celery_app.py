@@ -53,7 +53,7 @@ app.conf.task_routes = {
 app.conf.beat_schedule = {
     'scrub-at-midnight': {
         'task': 'tasks.scrub',
-        'schedule': crontab(minute=0, hour=0),  # daily at midnight, like Jerry asked
+        'schedule': crontab(minute=0, hour=0),  # daily at midnight
     },
 }
 
@@ -89,10 +89,7 @@ def sleep_to_flush_spans(*args, **kwargs):
 # Catch all uncaught errors
 @task_failure.connect
 def catch_uncaught_errors(task_id: str, exception: Exception, *args, **kwargs):
-    logging.getLogger('robot.celery_app').error(
-        'Uncaught error occurred in a task.',
-        exc_info=exception,
-    )
+    logging.getLogger('robot.celery_app').error('Uncaught error occurred in a task.', exc_info=exception)
 
 
 if __name__ == '__main__':

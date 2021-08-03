@@ -3,12 +3,15 @@ import os
 ORGANIZATION_URL = os.getenv('ORGANIZATION_URL', 'example.com')
 REGION_NAME = os.getenv('POD_NAME', 'pod')
 COP_NAME = os.getenv('COP_NAME', 'cop')
+COP_ORGANIZATION_URL = os.getenv('COP_ORGANIZATION_URL', 'cop')
+
 CLOUDCIX_API_USERNAME = os.getenv('ROBOT_API_USERNAME', 'user@example.com')
 CLOUDCIX_API_KEY = os.getenv('ROBOT_API_KEY', '64_characters_max')
 CLOUDCIX_API_PASSWORD = os.getenv('ROBOT_API_PASSWORD', 'pw')
-CLOUDCIX_API_URL = f'https://legacy_api.{COP_NAME}.{ORGANIZATION_URL}/'
-CLOUDCIX_API_V2_URL = f'https://{COP_NAME}.{ORGANIZATION_URL}/'
+CLOUDCIX_API_URL = f'https://legacy_api.{COP_NAME}.{COP_ORGANIZATION_URL}/'
+CLOUDCIX_API_V2_URL = f'https://{COP_NAME}.{COP_ORGANIZATION_URL}/'
 CLOUDCIX_API_VERSION = 2
+
 EMAIL_HOST = os.getenv('EMAIL_HOST', f'mail.example.com')
 EMAIL_HOST_USER = os.getenv('EMAIL_USER', f'notifications@example.com')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_PASSWORD', 'email_pw')
@@ -16,7 +19,6 @@ EMAIL_PORT = os.getenv('EMAIL_PORT', 25)
 EMAIL_REPLY_TO = os.getenv('EMAIL_REPLY_TO', f'no-reply@example.com')
 NETWORK_PASSWORD = os.getenv('NETWORK_PASSWORD', 'ntw_pw')
 
-POD_EMAIL_USERNAME = os.getenv('POD_EMAIL_USERNAME', f'pod@example.com')
 PAM_NAME = os.getenv('PAM_NAME', 'pam')
 PAM_ORGANIZATION_URL = os.getenv('PAM_ORGANIZATION_URL', 'example.com')
 VIRTUAL_ROUTERS_ENABLED = True
@@ -35,7 +37,6 @@ __all__ = [
     'EMAIL_HOST',
     'EMAIL_PORT',
     'EMAIL_REPLY_TO',
-    'EMAIL_USERNAME',
     'HYPERV_HOST_NETWORK_DRIVE_PATH',
     'HYPERV_ROBOT_NETWORK_DRIVE_PATH',
     'HYPERV_VMS_PATH',
@@ -80,13 +81,10 @@ IN_PRODUCTION = True
 Email settings
 """
 # Compute UI URL - Required in Email Templates
-COMPUTE_UI_URL = f'https://cop.{COP_NAME}.{ORGANIZATION_URL}/compute/'
+COMPUTE_UI_URL = f'https://cop.{COP_NAME}.{COP_ORGANIZATION_URL}/compute/'
 
 # Reply-To Email Address
 EMAIL_REPLY_TO = f'{ORGANIZATION_URL} <{EMAIL_REPLY_TO}>'
-
-# Region's email id
-EMAIL_USERNAME = f'{ORGANIZATION_URL} {REGION_NAME} <{POD_EMAIL_USERNAME}>'
 
 # Email to send build fail emails to
 SEND_TO_FAIL = f'support@{ORGANIZATION_URL}.com'

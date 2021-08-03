@@ -16,7 +16,7 @@ from paramiko import AutoAddPolicy, SSHClient, SSHException
 # local
 import settings
 import utils
-from mixins import LinuxMixin, VmUpdateMixin
+from mixins import LinuxMixin, VMUpdateMixin
 
 
 __all__ = [
@@ -24,7 +24,7 @@ __all__ = [
 ]
 
 
-class Linux(LinuxMixin, VmUpdateMixin):
+class Linux(LinuxMixin, VMUpdateMixin):
     """
     Class that handles the updating of the specified VM
     When we get to this point, we can be sure that the VM is a linux VM
@@ -76,12 +76,12 @@ class Linux(LinuxMixin, VmUpdateMixin):
 
         # Check that all of the necessary keys are present
         if not all(template_data[key] is not None for key in Linux.template_keys):
-            missing_keys = [
-                f'"{key}"' for key in Linux.template_keys if template_data[key] is None
-            ]
-            error = f'Template Data Error, the following keys were missing from the VM update ' \
-                    f'data: {", ".join(missing_keys)}.'
-            Linux.logger.error(error)
+            missing_keys = [f'"{key}"' for key in Linux.template_keys if template_data[key] is None]
+            error_msg = (
+                f'Template Data Error, the following keys were missing from the VM update data: '
+                f'{", ".join(missing_keys)}.',
+            )
+            Linux.logger.error(error_msg)
             span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 

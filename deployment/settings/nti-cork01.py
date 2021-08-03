@@ -15,7 +15,6 @@ __all__ = [
     'EMAIL_HOST',
     'EMAIL_PORT',
     'EMAIL_REPLY_TO',
-    'EMAIL_USERNAME',
     'HYPERV_HOST_NETWORK_DRIVE_PATH',
     'HYPERV_ROBOT_NETWORK_DRIVE_PATH',
     'HYPERV_VMS_PATH',
@@ -86,10 +85,10 @@ Email settings
 COMPUTE_UI_URL = 'https://saas.cloudcix.com/compute/'
 
 # Login Email Address
-EMAIL_HOST_USER = 'notification@cloudcix.net'
+EMAIL_HOST_USER = 'nti-cork01@cloudcix.net'
 
 # Login Password for EMAIL_HOST_USER
-EMAIL_HOST_PASSWORD = 'C1xacc355'
+EMAIL_HOST_PASSWORD = 'Nt1R3g10n!'
 
 # URL of Email Host
 EMAIL_HOST = 'mail.cloudcix.net'
@@ -98,9 +97,6 @@ EMAIL_PORT = 25
 
 # Reply-To Email Address
 EMAIL_REPLY_TO = 'CloudCIX <no-reply@cloudcix.net>'
-
-# Region's email id
-EMAIL_USERNAME = 'NTI Cork01 <nti-cork01@cloudcix.net>'
 
 # Email to send build fail emails to
 SEND_TO_FAIL = 'developers@cloudcix.com'

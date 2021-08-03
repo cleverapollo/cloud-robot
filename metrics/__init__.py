@@ -28,9 +28,11 @@ from .vm import (
 )
 
 __all__ = [
-    # metric methods
+    # heartbeat
     'heartbeat',
+    # misc
     'current_commit',
+    # virtual router
     'virtual_router_build_failure',
     'virtual_router_build_success',
     'virtual_router_scrub_failure',
@@ -41,6 +43,7 @@ __all__ = [
     'virtual_router_quiesce_success',
     'virtual_router_restart_failure',
     'virtual_router_restart_success',
+    # vm
     'vm_build_failure',
     'vm_build_success',
     'vm_scrub_failure',
