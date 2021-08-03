@@ -76,7 +76,7 @@ def _quiesce_virtual_router(virtual_router_id: int, span: Span):
         # Ensure the update was successful
         if response.status_code != 200:
             logger.error(
-                f'Could not update VM #{virtual_router_id} to the necessary QUIESCING. '
+                f'Could not update VM #{virtual_router_id} to the necessary QUIESCING.\n'
                 f'Response: {response.content.decode()}.',
             )
             span.set_tag('return_reason', 'could_not_update_state')
@@ -96,7 +96,7 @@ def _quiesce_virtual_router(virtual_router_id: int, span: Span):
         # Ensure the update was successful
         if response.status_code != 200:
             logger.error(
-                f'Could not update VM #{virtual_router_id} to the necessary SCRUB_PREP. '
+                f'Could not update VM #{virtual_router_id} to the necessary SCRUB_PREP.\n'
                 f'Response: {response.content.decode()}.',
             )
             span.set_tag('return_reason', 'could_not_update_state')
@@ -135,7 +135,7 @@ def _quiesce_virtual_router(virtual_router_id: int, span: Span):
 
             if response.status_code != 200:
                 logger.error(
-                    f'Could not update virtual_router #{virtual_router_id} to state QUIESCED. '
+                    f'Could not update virtual_router #{virtual_router_id} to state QUIESCED.\n'
                     f'Response: {response.content.decode()}.',
                 )
         elif virtual_router['state'] == state.SCRUB:
@@ -150,7 +150,7 @@ def _quiesce_virtual_router(virtual_router_id: int, span: Span):
 
             if response.status_code != 200:
                 logger.error(
-                    f'Could not update virtual_router #{virtual_router_id} to state SCRUB_QUEUE. '
+                    f'Could not update virtual_router #{virtual_router_id} to state SCRUB_QUEUE.\n'
                     f'Response: {response.content.decode()}.',
                 )
         else:
@@ -174,7 +174,7 @@ def _quiesce_virtual_router(virtual_router_id: int, span: Span):
 
         if response.status_code != 200:
             logger.error(
-                f'Could not update virtual_router #{virtual_router_id} to state UNRESOURCED. '
+                f'Could not update virtual_router #{virtual_router_id} to state UNRESOURCED.\n'
                 f'Response: {response.content.decode()}.',
             )
 
@@ -182,8 +182,5 @@ def _quiesce_virtual_router(virtual_router_id: int, span: Span):
         try:
             EmailNotifier.virtual_router_failure(virtual_router, 'quiesce')
         except Exception:
-            logger.error(
-                f'Failed to send build failure email for virtual_router #{virtual_router_id}',
-                exc_info=True,
-            )
+            logger.error(f'Failed to send build failure email for virtual_router #{virtual_router_id}', exc_info=True)
         child_span.finish()

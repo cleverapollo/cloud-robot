@@ -16,6 +16,7 @@ from scrubbers.vm import (
     Windows as WindowsVmScrubber,
 )
 
+
 __all__ = [
     'scrub_vm',
 ]
@@ -52,9 +53,7 @@ def _scrub_vm(vm_id: int, span: Span):
     child_span.finish()
 
     if response.status_code == 404:
-        logger.info(
-            f'Received scrub task for VM #{vm_id} but it was already deleted from the API',
-        )
+        logger.info(f'Received scrub task for VM #{vm_id} but it was already deleted from the API')
         span.set_tag('return_reason', 'already_deleted')
         return
     elif response.status_code != 200:
@@ -68,9 +67,7 @@ def _scrub_vm(vm_id: int, span: Span):
 
     # Ensure that the state of the vm is still currently SCRUB_QUEUE
     if vm['state'] != state.SCRUB_QUEUE:
-        logger.warning(
-            f'Cancelling scrub of VM #{vm_id}. Expected state to be SCRUB_QUEUE, found {vm["state"]}.',
-        )
+        logger.warning(f'Cancelling scrub of VM #{vm_id}. Expected state to be SCRUB_QUEUE, found {vm["state"]}.')
         # Return out of this function without doing anything
         span.set_tag('return_reason', 'not_in_valid_state')
         return
@@ -80,9 +77,7 @@ def _scrub_vm(vm_id: int, span: Span):
     server = utils.api_read(IAAS.server, vm['server_id'], span=child_span)
     child_span.finish()
     if not bool(server):
-        logger.error(
-            f'Could not build VM #{vm_id} as its Server was not readable',
-        )
+        logger.error(f'Could not build VM #{vm_id} as its Server was not readable')
         span.set_tag('return_reason', 'server_not_read')
         return
     server_type = server['type']['name']
@@ -147,9 +142,6 @@ def _scrub_vm(vm_id: int, span: Span):
         try:
             EmailNotifier.vm_failure(vm, 'scrub')
         except Exception:
-            logger.error(
-                f'Failed to send failure email for VM #{vm_id}',
-                exc_info=True,
-            )
+            logger.error(f'Failed to send failure email for VM #{vm_id}', exc_info=True)
         child_span.finish()
         # There's no fail state here either

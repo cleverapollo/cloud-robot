@@ -74,7 +74,7 @@ def _update_virtual_router(virtual_router_id: int, span: Span):
 
     if response.status_code != 200:
         logger.error(
-            f'Could not update virtual_router #{virtual_router_id} to state UPDATING. '
+            f'Could not update virtual_router #{virtual_router_id} to state UPDATING.\n'
             f'Response: {response.content.decode()}.',
         )
         metrics.virtual_router_update_failure()
@@ -111,7 +111,7 @@ def _update_virtual_router(virtual_router_id: int, span: Span):
 
         if response.status_code != 200:
             logger.error(
-                f'Could not update virtual_router #{virtual_router_id} to state RUNNING. '
+                f'Could not update virtual_router #{virtual_router_id} to state RUNNING.\n'
                 f'Response: {response.content.decode()}.',
             )
 
@@ -134,14 +134,11 @@ def _update_virtual_router(virtual_router_id: int, span: Span):
                     child_span.finish()
                     if response.status_code != 200:
                         logger.error(
-                            f'Could not update VPN #{vpn["id"]} to reset send_email. '
+                            f'Could not update VPN #{vpn["id"]} to reset send_email.\n'
                             f'Response: {response.content.decode()}.',
                         )
                 except Exception:
-                    logger.error(
-                        f'Failed to send update success email for VPN #{vpn["id"]}',
-                        exc_info=True,
-                    )
+                    logger.error(f'Failed to send update success email for VPN #{vpn["id"]}', exc_info=True)
                 child_span.finish()
     else:
         logger.error(f'Failed to update virtual_router #{virtual_router_id}')
@@ -159,7 +156,7 @@ def _update_virtual_router(virtual_router_id: int, span: Span):
 
         if response.status_code != 200:
             logger.error(
-                f'Could not update virtual_router #{virtual_router_id} to state UNRESOURCED. '
+                f'Could not update virtual_router #{virtual_router_id} to state UNRESOURCED.\n'
                 f'Response: {response.content.decode()}.',
             )
 
@@ -167,8 +164,5 @@ def _update_virtual_router(virtual_router_id: int, span: Span):
         try:
             EmailNotifier.virtual_router_failure(virtual_router, 'update')
         except Exception:
-            logger.error(
-                f'Failed to send build failure email for virtual_router #{virtual_router_id}',
-                exc_info=True,
-            )
+            logger.error(f'Failed to send build failure email for virtual_router #{virtual_router_id}', exc_info=True)
         child_span.finish()

@@ -83,8 +83,10 @@ def _debug_logs(virtual_router_id: int, span: Span):
     try:
         success = VirtualRouterUpdater.update(virtual_router, child_span)
     except Exception as err:
-        error = f'An unexpected error occurred when attempting to disable the debug status of firewall logs ' \
-                f'for virtual_router #{virtual_router_id}.'
+        error = (
+            f'An unexpected error occurred when attempting to disable the debug status of firewall logs for '
+            f'virtual_router #{virtual_router_id}.',
+        )
         logger.error(error, exc_info=True)
         virtual_router['errors'].append(f'{error} Error: {err}')
     child_span.finish()
@@ -118,12 +120,12 @@ def _debug_logs(virtual_router_id: int, span: Span):
 
             if response.status_code != 200:
                 logger.error(
-                    f'Could not reset the debug status of firewall logs of virtual_router #{virtual_router_id}. '
+                    f'Could not reset the debug status of firewall logs of virtual_router #{virtual_router_id}.\n'
                     f'Response: {response.content.decode()}.',
                 )
     else:
         logger.error(
-            f'Failed to disable the debug status of firewall logs of virtual_router #{virtual_router_id} on router. ',
+            f'Failed to disable the debug status of firewall logs of virtual_router #{virtual_router_id} on router.',
         )
         metrics.virtual_router_update_failure()
 

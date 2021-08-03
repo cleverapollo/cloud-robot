@@ -15,7 +15,6 @@ __all__ = [
     'EMAIL_HOST',
     'EMAIL_PORT',
     'EMAIL_REPLY_TO',
-    'EMAIL_USERNAME',
     'HYPERV_HOST_NETWORK_DRIVE_PATH',
     'HYPERV_ROBOT_NETWORK_DRIVE_PATH',
     'HYPERV_VMS_PATH',
@@ -82,10 +81,10 @@ Email settings
 COMPUTE_UI_URL = f'https://stagesaas.cloudcix.com/compute/'
 
 # Login Email Address to
-EMAIL_HOST_USER = 'notification@cloudcix.net'
+EMAIL_HOST_USER = 'alpha@cloudcix.net'
 
 # Login Password for EMAIL_HOST_USER
-EMAIL_HOST_PASSWORD = 'C1xacc355'
+EMAIL_HOST_PASSWORD = 'AlphaC1xacc355'
 
 # URL of Email Host
 EMAIL_HOST = 'mail.cloudcix.net'
@@ -94,9 +93,6 @@ EMAIL_PORT = 25
 
 # Reply-To Email Address
 EMAIL_REPLY_TO = 'CloudCIX <no-reply@cloudcix.net>'
-
-# Region's email id
-EMAIL_USERNAME = 'CloudCIX Alpha <alpha@cloudcix.net>'
 
 # Email to send build fail emails to
 SEND_TO_FAIL = 'developers@cloudcix.com'

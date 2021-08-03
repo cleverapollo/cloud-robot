@@ -218,7 +218,7 @@ class EmailNotifier:
         # Populate the headers
         message['subject'] = subject
         message['To'] = email
-        message['From'] = settings.EMAIL_USERNAME
+        message['From'] = settings.EMAIL_HOST_USER
         message['Reply-To'] = settings.EMAIL_REPLY_TO
 
         # Attach the body of the email
@@ -246,7 +246,7 @@ class EmailNotifier:
             # Log in to the server
             server.starttls()
             server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
-            server.sendmail(settings.EMAIL_USERNAME, [email], message.as_string())
+            server.sendmail(settings.EMAIL_HOST_USER, [email], message.as_string())
             server.quit()
             return True
         except Exception:

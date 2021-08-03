@@ -30,7 +30,7 @@ class Robot:
     # Keep track of whether or not the script has detected a SIGTERM signal
     sigterm_recv: bool = False
     # vm dispatcher
-    vm_dispatcher: dispatchers.Vm
+    vm_dispatcher: dispatchers.VM
     # virtual_router dispatcher
     virtual_router_dispatcher: Union[dispatchers.PhantomVirtualRouter, dispatchers.VirtualRouter]
     # instance
@@ -51,7 +51,7 @@ class Robot:
         # Instantiate a logger instance
         self.logger = logging.getLogger('robot.mainloop')
         # Instantiate the dispatchers
-        self.vm_dispatcher = dispatchers.Vm(settings.NETWORK_PASSWORD)
+        self.vm_dispatcher = dispatchers.VM(settings.NETWORK_PASSWORD)
         if settings.VIRTUAL_ROUTERS_ENABLED:
             self.virtual_router_dispatcher = dispatchers.VirtualRouter(settings.NETWORK_PASSWORD)
         else:

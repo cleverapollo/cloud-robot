@@ -76,12 +76,12 @@ class Linux(LinuxMixin):
 
         # Check that all of the necessary keys are present
         if not all(template_data[key] is not None for key in Linux.template_keys):
-            missing_keys = [
-                f'"{key}"' for key in Linux.template_keys if template_data[key] is None
-            ]
-            error = f'Template Data Error, the following keys were missing from the VM scrub ' \
-                    f'data: {", ".join(missing_keys)}.'
-            Linux.logger.error(error)
+            missing_keys = [f'"{key}"' for key in Linux.template_keys if template_data[key] is None]
+            error_msg = (
+                f'Template Data Error, the following keys were missing from the VM scrub data: '
+                f'{", ".join(missing_keys)}.',
+            )
+            Linux.logger.error(error_msg)
             span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
@@ -159,14 +159,8 @@ class Linux(LinuxMixin):
         data['vms_path'] = settings.KVM_VMS_PATH
 
         # Get the Networking details
-        data['vlans'] = []
-
-        subnet_ids = [ip['subnet']['id'] for ip in vm_data['ip_addresses']]
-        subnet_ids = list(set(subnet_ids))  # Removing duplicates
-        subnets = utils.api_list(IAAS.subnet, {'search[id__in]': subnet_ids}, span=span)
-
-        for subnet in subnets:
-            data['vlans'].append(subnet['vlan'])
+        vlans = [ip['subnet']['vlan'] for ip in vm_data['ip_addresses']]
+        data['vlans'] = set(vlans)
 
         # Get the ip address of the host
         host_ip = None
