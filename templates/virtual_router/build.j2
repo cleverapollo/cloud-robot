@@ -48,11 +48,11 @@ set groups vrf-{{ project_id }} security zones security-zone vrf-{{ project_id }
 {# set up some VPN parameters #}
 {% if vpn['vpn_type'] == 'dynamic_secure_connect' %}
 {# Access Profiles and Address assignments and adding to source nat #}
-set groups vrf-{{ project_id }} security nat source rule-set vrf-{{ project_id }}-outbound rule SC-RA-outbound match source-address {{ vpn['routes'][0]['remote_subnet'] }}
-set groups vrf-{{ project_id }} security nat source rule-set vrf-{{ project_id }}-outbound rule SC-RA-outbound then source-nat pool vrf-{{ project_id }}-public
+set groups vrf-{{ project_id }} security nat source rule-set vrf-{{ project_id }}-outbound rule {{ vpn['stif_number'] }}-outbound match source-address {{ vpn['routes'][0]['remote'] }}
+set groups vrf-{{ project_id }} security nat source rule-set vrf-{{ project_id }}-outbound rule {{ vpn['stif_number'] }}-outbound then source-nat pool vrf-{{ project_id }}-public
 set groups vrf-{{ project_id }} security tcp-encap profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-SSL-VPNProfile ssl-profile SC-ssl-term-profile
 {# Note SC-ssl-term-profile is a Global profile defined on Router already #}
-set groups vrf-{{ project_id }} access address-assignment pool vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AddPool family inet network {{ vpn['routes'][0]['remote_subnet'] }}
+set groups vrf-{{ project_id }} access address-assignment pool vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AddPool family inet network {{ vpn['routes'][0]['remote'] }}
 set groups vrf-{{ project_id }} access address-assignment pool vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AddPool family inet xauth-attributes primary-dns {{ vpn['dns'] }}
 {% for client in vpn['vpn_clients'] %}
 set groups vrf-{{ project_id }} access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AccPro client {{ client['username'] }} client-group vrf-{{ project_id }}-{{ vpn['stif_number'] }}
@@ -107,26 +107,26 @@ set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn copy-outer-dscp
 {% endif %}
 {# Routes, Traffic selectors/Proxy identifier #}
+{% if vpn['vpn_type'] == 'dynamic_secure_connect' %}
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn traffic-selector ts0 local-ip 0.0.0.0/0
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn traffic-selector ts0 remote-ip 0.0.0.0/0
+{% endif %}
+{% if vpn['vpn_type'] == 'site_to_site' %}
 {% for route in vpn['routes'] %}
 {% if vpn['traffic_selector'] %}
 {# Add traffic selector combinations #}
-{% if vpn['vpn_type'] == 'site_to_site' %}
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn traffic-selector t{{ loop.index }} local-ip {{ route['local'] }}
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn traffic-selector t{{ loop.index }} remote-ip {{ route['remote'] }}
-{% endif %}
-{% if vpn['vpn_type'] == 'dynamic_secure_connect' %}
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn traffic-selector t{{ loop.index }} local-ip 0.0.0.0/0
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn traffic-selector t{{ loop.index }} remote-ip 0.0.0.0/0
-{% endif %}
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn traffic-selector ts{{ loop.index }} local-ip {{ route['local'] }}
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn traffic-selector ts{{ loop.index }} remote-ip {{ route['remote'] }}
 {% else %}
 {# add a route to the IPSec tunnel with the tunnel interface as the next hop #}
 set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} routing-options static route {{ route['remote'] }} next-hop st0.{{ vpn['stif_number'] }}
 {% endif %}
 {% endfor %}
+{% endif %}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Remote access clients #}
 {% if vpn['vpn_type'] == 'dynamic_secure_connect' %}
-set groups vrf-{{ project_id }} security remote-access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-vpn ipsec-vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-vpn
+set groups vrf-{{ project_id }} security remote-access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-vpn ipsec-vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn
 set groups vrf-{{ project_id }} security remote-access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-vpn access-profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AccPro
 set groups vrf-{{ project_id }} security remote-access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-vpn client-config vrf-{{ project_id }}-{{ vpn['stif_number'] }}-CC
 set groups vrf-{{ project_id }} security remote-access client-config vrf-{{ project_id }}-{{ vpn['stif_number'] }}-CC connection-mode manual
