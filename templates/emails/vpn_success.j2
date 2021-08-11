@@ -10,7 +10,7 @@
 <p>Before connecting to a VPN Tunnel, ensure that your Project is reachable.</p>
 <p>You can check this by pinging the Virtual Router of the Project at <b>{{ virtual_router_ip }}</b>.</p>
 <hr />
-{% if vpn['vpn_type'] == 'site_to_site' %}
+{% if vpn_type == 'site_to_site' %}
 <h3>Step 2</h3>
 <p>After ensuring the Project is accessible, configure the VPN settings on your local router with the settings in the table below.</p>
 <hr />
@@ -51,7 +51,7 @@
   <tr><th>Protocol</th><td>esp</td></tr>
 </table>
 {% endif %}
-{% if vpn['vpn_type'] == 'dynamic_secure_connect' %}
+{% if vpn_type == 'dynamic_secure_connect' %}
 <h3>Step 2</h3>
 <p>After ensuring the Project is accessible, You need to have downloaded and installed Juniper Secure Connect Client on your machine.</p>
 <p>Downloads are at [Juniper Secure Connect](https://apps.juniper.net/home/juniper-secure-connect/support)</p>
