@@ -45,8 +45,7 @@ set groups vrf-{{ project_id }} interfaces st0 unit {{ vpn['stif_number'] }} fam
 {# anchor the st0 interface in routing instance and security zone #}
 set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} interface st0.{{ vpn['stif_number'] }}
 set groups vrf-{{ project_id }} security zones security-zone vrf-{{ project_id }} interfaces st0.{{ vpn['stif_number'] }}
-{# -------------------------- #}
-{# Juniper Secure Connect #}
+{# set up some VPN parameters #}
 {% if vpn['vpn_type'] == 'dynamic_secure_connect' %}
 {# Access Profiles and Address assignments and adding to source nat #}
 set groups vrf-{{ project_id }} security nat source rule-set vrf-{{ project_id }}-outbound rule SC-RA-outbound match source-address {{ vpn['routes'][0]['remote_subnet'] }}
@@ -55,53 +54,14 @@ set groups vrf-{{ project_id }} security tcp-encap profile vrf-{{ project_id }}-
 {# Note SC-ssl-term-profile is a Global profile defined on Router already #}
 set groups vrf-{{ project_id }} access address-assignment pool vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AddPool family inet network {{ vpn['routes'][0]['remote_subnet'] }}
 set groups vrf-{{ project_id }} access address-assignment pool vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AddPool family inet xauth-attributes primary-dns {{ vpn['dns'] }}
-set groups vrf-{{ project_id }} security remote-access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-vpn ipsec-vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-vpn
-set groups vrf-{{ project_id }} security remote-access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-vpn access-profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AccPro
-set groups vrf-{{ project_id }} security remote-access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-vpn client-config vrf-{{ project_id }}-{{ vpn['stif_number'] }}-CC
-set groups vrf-{{ project_id }} security remote-access client-config vrf-{{ project_id }}-{{ vpn['stif_number'] }}-CC connection-mode manual
-set groups vrf-{{ project_id }} security remote-access client-config vrf-{{ project_id }}-{{ vpn['stif_number'] }}-CC dead-peer-detection interval 60
-set groups vrf-{{ project_id }} security remote-access client-config vrf-{{ project_id }}-{{ vpn['stif_number'] }}-CC dead-peer-detection threshold 5
-set groups vrf-{{ project_id }} access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AccPro address-assignment pool vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AddPool
-set groups vrf-{{ project_id }} access firewall-authentication web-authentication default-profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AccPro
-{# Phase1 of Juniper Secure Connect #}
-set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway dynamic user-at-hostname "vrf-{{ project_id }}-{{vpn['stif_number'] }}@cloudcix.com"
-set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway dynamic ike-user-type shared-ike-id
-set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway dead-peer-detection optimized
-set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway dead-peer-detection interval 10
-set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway dead-peer-detection threshold 5
-set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway aaa access-profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AccPro
-set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway tcp-encap-profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-SSL-VPNProfile
-{# Phase2 of Juniper Secure Connect #}
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn df-bit clear
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn copy-outer-dscp
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn traffic-selector ts1 local-ip 0.0.0.0/0
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn traffic-selector ts1 remote-ip 0.0.0.0/0
-{# Remote access clients #}
 {% for client in vpn['vpn_clients'] %}
 set groups vrf-{{ project_id }} access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AccPro client {{ client['username'] }} client-group vrf-{{ project_id }}-{{ vpn['stif_number'] }}
 set groups vrf-{{ project_id }} access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AccPro client {{ client['username'] }} firewall-user password "{{ client['password'] }}"
 {% endfor %}
-{# -------------------------- #}
-{# Site to Site           #}
-{% elif vpn['vpn_type'] == 'site_to_site' %}
-{# Phase1 and Phase2 of Site to Site #}
-set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway address {{ vpn['ike_public_ip'] }}
-set groups vrf-{{ project_id }} security ipsec proposal vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-proposal authentication-algorithm {{ vpn['ipsec_authentication'] }}
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn establish-tunnels {{ vpn['ipsec_establish_time'] }}
-{# Routes, Traffic selectors/Proxy identifier #}
-{% for route in vpn['routes'] %}
-{% if vpn['traffic_selector'] %}
-{# Add traffic selector combinations #}
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn traffic-selector ts{{ loop.index }} local-ip {{ route['local'] }}
-set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn traffic-selector ts{{ loop.index }} remote-ip {{ route['remote'] }}
-{% else %}
-{# add a route to the IPSec tunnel with the tunnel interface as the next hop #}
-set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} routing-options static route {{ route['remote'] }} next-hop st0.{{ vpn['stif_number'] }}
+set groups vrf-{{ project_id }} access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AccPro address-assignment pool vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AddPool
+set groups vrf-{{ project_id }} access firewall-authentication web-authentication default-profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AccPro
 {% endif %}
-{% endfor %}
-{% endif %}
-{# --------------------------------------#}
-{# Common Phase1 config #}
+{# Phase 1 #}
 set groups vrf-{{ project_id }} security ike proposal vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ike-proposal authentication-method pre-shared-keys
 set groups vrf-{{ project_id }} security ike proposal vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ike-proposal dh-group {{ vpn['ike_dh_groups'] }}
 set groups vrf-{{ project_id }} security ike proposal vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ike-proposal authentication-algorithm {{ vpn['ike_authentication'] }}
@@ -114,9 +74,24 @@ set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn
 set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway external-interface {{ public_interface }}.0
 set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway local-address {{ virtual_router_ip }}
 set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway version {{ vpn['ike_version'] }}
+{% if vpn['vpn_type'] == 'site_to_site' %}
+set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway address {{ vpn['ike_public_ip'] }}
+{% endif %}
+{% if vpn['vpn_type'] == 'dynamic_secure_connect' %}
+set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway dynamic user-at-hostname "vrf-{{ project_id }}-{{vpn['stif_number'] }}@cloudcix.com"
+set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway dynamic ike-user-type shared-ike-id
+set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway dead-peer-detection optimized
+set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway dead-peer-detection interval 10
+set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway dead-peer-detection threshold 5
+set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway aaa access-profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AccPro
+set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway tcp-encap-profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-SSL-VPNProfile
+{% endif %}
 {# --------------------------------------#}
-{# Common Phase 2 authentication and encryption #}
+{# Phase 2 authentication and encryption #}
 set groups vrf-{{ project_id }} security ipsec proposal vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-proposal protocol esp
+{% if vpn['vpn_type'] == 'site_to_site' %}
+set groups vrf-{{ project_id }} security ipsec proposal vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-proposal authentication-algorithm {{ vpn['ipsec_authentication'] }}
+{% endif %}
 set groups vrf-{{ project_id }} security ipsec proposal vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-proposal encryption-algorithm {{ vpn['ipsec_encryption'] }}
 set groups vrf-{{ project_id }} security ipsec proposal vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-proposal lifetime-seconds {{ vpn['ipsec_lifetime'] }}
 set groups vrf-{{ project_id }} security ipsec policy vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-policy proposals vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-proposal
@@ -124,6 +99,40 @@ set groups vrf-{{ project_id }} security ipsec policy vrf-{{ project_id }}-{{ vp
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn ike ipsec-policy vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-policy
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn bind-interface st0.{{ vpn['stif_number'] }}
+{% if vpn['vpn_type'] == 'site_to_site' %}
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn establish-tunnels {{ vpn['ipsec_establish_time'] }}
+{% endif %}
+{% if vpn['vpn_type'] == 'dynamic_secure_connect' %}
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn df-bit clear
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn copy-outer-dscp
+{% endif %}
+{# Routes, Traffic selectors/Proxy identifier #}
+{% for route in vpn['routes'] %}
+{% if vpn['traffic_selector'] %}
+{# Add traffic selector combinations #}
+{% if vpn['vpn_type'] == 'site_to_site' %}
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn traffic-selector t{{ loop.index }} local-ip {{ route['local'] }}
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn traffic-selector t{{ loop.index }} remote-ip {{ route['remote'] }}
+{% endif %}
+{% if vpn['vpn_type'] == 'dynamic_secure_connect' %}
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn traffic-selector t{{ loop.index }} local-ip 0.0.0.0/0
+set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn traffic-selector t{{ loop.index }} remote-ip 0.0.0.0/0
+{% endif %}
+{% else %}
+{# add a route to the IPSec tunnel with the tunnel interface as the next hop #}
+set groups vrf-{{ project_id }} routing-instances vrf-{{ project_id }} routing-options static route {{ route['remote'] }} next-hop st0.{{ vpn['stif_number'] }}
+{% endif %}
+{% endfor %}
+{# --------------------------------------------------------------------------------------------------------------------------------- #}
+{# Remote access clients #}
+{% if vpn['vpn_type'] == 'dynamic_secure_connect' %}
+set groups vrf-{{ project_id }} security remote-access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-vpn ipsec-vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-vpn
+set groups vrf-{{ project_id }} security remote-access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-vpn access-profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AccPro
+set groups vrf-{{ project_id }} security remote-access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-vpn client-config vrf-{{ project_id }}-{{ vpn['stif_number'] }}-CC
+set groups vrf-{{ project_id }} security remote-access client-config vrf-{{ project_id }}-{{ vpn['stif_number'] }}-CC connection-mode manual
+set groups vrf-{{ project_id }} security remote-access client-config vrf-{{ project_id }}-{{ vpn['stif_number'] }}-CC dead-peer-detection interval 60
+set groups vrf-{{ project_id }} security remote-access client-config vrf-{{ project_id }}-{{ vpn['stif_number'] }}-CC dead-peer-detection threshold 5
+{% endif %}
 {% endfor %}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Firewall rules #}
