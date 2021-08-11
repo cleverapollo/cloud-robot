@@ -55,11 +55,6 @@ set groups vrf-{{ project_id }} security tcp-encap profile vrf-{{ project_id }}-
 {# Note: `SC-ssl-term-profile` is a Global profile defined on Router already #}
 set groups vrf-{{ project_id }} access address-assignment pool vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AddPool family inet network {{ vpn['routes'][0]['remote_subnet'] }}
 set groups vrf-{{ project_id }} access address-assignment pool vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AddPool family inet xauth-attributes primary-dns {{ vpn['dns'] }}
-{# Remote access clients #}
-{% for client in vpn['vpn_clients'] %}
-set groups vrf-{{ project_id }} access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AccPro client {{ client['username'] }} client-group vrf-{{ project_id }}-{{ vpn['stif_number'] }}
-set groups vrf-{{ project_id }} access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AccPro client {{ client['username'] }} firewall-user password "{{ client['password'] }}"
-{% endfor %}
 set groups vrf-{{ project_id }} security remote-access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-vpn ipsec-vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-vpn
 set groups vrf-{{ project_id }} security remote-access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-vpn access-profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AccPro
 set groups vrf-{{ project_id }} security remote-access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-vpn client-config vrf-{{ project_id }}-{{ vpn['stif_number'] }}-CC
@@ -81,10 +76,14 @@ set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn copy-outer-dscp
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn traffic-selector ts1 local-ip 0.0.0.0/0
 set groups vrf-{{ project_id }} security ipsec vpn vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-vpn traffic-selector ts1 remote-ip 0.0.0.0/0
-{% endif %}
+{# Remote access clients #}
+{% for client in vpn['vpn_clients'] %}
+set groups vrf-{{ project_id }} access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AccPro client {{ client['username'] }} client-group vrf-{{ project_id }}-{{ vpn['stif_number'] }}
+set groups vrf-{{ project_id }} access profile vrf-{{ project_id }}-{{ vpn['stif_number'] }}-AccPro client {{ client['username'] }} firewall-user password "{{ client['password'] }}"
+{% endfor %}
 {# -------------------------- #}
 {# Site to Site           #}
-{% if vpn['vpn_type'] == 'site_to_site' %}
+{% elif vpn['vpn_type'] == 'site_to_site' %}
 {# Phase1 and Phase2 of Site to Site #}
 set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway address {{ vpn['ike_public_ip'] }}
 set groups vrf-{{ project_id }} security ipsec proposal vrf-{{ project_id }}-{{ vpn['stif_number'] }}-ipsec-proposal authentication-algorithm {{ vpn['ipsec_authentication'] }}
