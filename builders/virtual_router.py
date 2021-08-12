@@ -236,7 +236,7 @@ class VirtualRouter(VirtualRouterMixin):
                 child_span = opentracing.tracer.start_span('reading_vpn', child_of=span)
                 vpn['emails'] = utils.api_read(IAAS.vpn, pk=vpn['id'])['emails']
                 child_span.finish()
-                vpn['srx_vpn_name'] = f'https://{settings.SRX_GATEWAY}/vrf-{project_id}-{vpn["stif_number"]}-ipsec-vpn'
+                vpn['srx_vpn_name'] = f'https://{settings.SRX_GATEWAY}/vrf-{project_id}-{vpn["stif_number"]}-vpn'
             vpns.append(vpn)
         data['vpns'] = vpns
 
