@@ -24,11 +24,11 @@ from settings import (
 
 
 __all__ = [
+    'api_list',
+    'api_read',
     'flush_logstash',
     'get_current_git_sha',
     'JINJA_ENV',
-    'api_list',
-    'api_read',
     'setup_root_logger',
 ]
 
@@ -134,9 +134,7 @@ def api_list(client: Client, params: Dict[str, Any], **kwargs) -> Deque[Dict[str
     """
     logger = logging.getLogger('robot.utils.api_list')
     client_name = f'{client.application}.{client.service_uri}'
-    logger.debug(
-        f'Attempting to retrieve a list of {client_name} records with the following filters: {params}',
-    )
+    logger.debug(f'Attempting to retrieve a list of {client_name} records with the following filters: {params}')
 
     # Set up necessary stuff for fetching all of the items for the params
     params['page'] = 0
@@ -168,9 +166,7 @@ def api_list(client: Client, params: Dict[str, Any], **kwargs) -> Deque[Dict[str
         'total_records',
         response_data['_metadata']['total_records'],
     )
-    logger.debug(
-        f'{client_name}.list retrieved {total_records} records with the following filters: {params}',
-    )
+    logger.debug(f'{client_name}.list retrieved {total_records} records with the following filters: {params}')
 
     # Go fetch the rest of the objects
     while len(objects) < total_records:

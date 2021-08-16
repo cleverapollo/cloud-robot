@@ -21,7 +21,7 @@ from winrm.exceptions import WinRMError
 # local
 import settings
 import utils
-from mixins import WindowsMixin, VmImageMixin
+from mixins import VMImageMixin, WindowsMixin
 
 
 __all__ = [
@@ -29,7 +29,7 @@ __all__ = [
 ]
 
 
-class Windows(WindowsMixin, VmImageMixin):
+class Windows(WindowsMixin, VMImageMixin):
     """
     Class that handles the building of the specified VM
     When we get to this point, we can be sure that the VM is a windows VM
@@ -105,13 +105,13 @@ class Windows(WindowsMixin, VmImageMixin):
 
         # Check that all of the necessary keys are present
         if not all(template_data[key] is not None for key in Windows.template_keys):
-            missing_keys = [
-                f'"{key}"' for key in Windows.template_keys if template_data[key] is None
-            ]
-            error = f'Template Data Error, the following keys were missing from the VM build data: ' \
-                    f'{", ".join(missing_keys)}'
-            Windows.logger.error(error)
-            vm_data['errors'].append(error)
+            missing_keys = [f'"{key}"' for key in Windows.template_keys if template_data[key] is None]
+            error_msg = (
+                f'Template Data Error, the following keys were missing from the VM build data: '
+                f'{", ".join(missing_keys)}',
+            )
+            Windows.logger.error(error_msg)
+            vm_data['errors'].append(error_msg)
             span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
@@ -233,13 +233,11 @@ class Windows(WindowsMixin, VmImageMixin):
         for ip in vm_data['ip_addresses']:
             if IPAddress(ip['address']).is_private():
                 ip_addresses.append(ip)
-                subnets.append(
-                    {
-                        'address_range': ip['subnet']['address_range'],
-                        'vlan': ip['subnet']['vlan'],
-                        'id': ip['subnet']['id'],
-                    },
-                )
+                subnets.append({
+                    'address_range': ip['subnet']['address_range'],
+                    'vlan': ip['subnet']['vlan'],
+                    'id': ip['subnet']['id'],
+                })
         # Removing duplicates
         subnets = [dict(tuple_item) for tuple_item in {tuple(subnet.items()) for subnet in subnets}]
         # sorting nics (each subnet is one nic)
@@ -264,14 +262,12 @@ class Windows(WindowsMixin, VmImageMixin):
                     non_default_ips.append(address)
 
             if len(non_default_ips) > 0:
-                data['ip_addresses'].append(
-                    {
-                        'ips': non_default_ips,
-                        'gateway': gateway,
-                        'netmask_int': netmask_int,
-                        'vlan': vlan,
-                    },
-                )
+                data['ip_addresses'].append({
+                    'ips': non_default_ips,
+                    'gateway': gateway,
+                    'netmask_int': netmask_int,
+                    'vlan': vlan,
+                })
 
         # Add locale data to the VM
         data['language'] = 'en_IE'
@@ -333,7 +329,7 @@ class Windows(WindowsMixin, VmImageMixin):
             # Attempt to write
             with open(answer_file_path, 'w') as f:
                 f.write(answer_file_data)
-            Windows.logger.debug(f'Successfully wrote answer file for VM #{vm_id} to {answer_file_data}')
+            Windows.logger.debug(f'Successfully wrote answer file for VM #{vm_id} to {answer_file_log}')
         except IOError as err:
             error = f'Failed to write answer file for VM #{vm_id} to {answer_file_path}.'
             Windows.logger.error(error, exc_info=True)

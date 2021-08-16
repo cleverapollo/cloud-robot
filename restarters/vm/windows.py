@@ -63,13 +63,13 @@ class Windows(WindowsMixin):
 
         # Check that all of the necessary keys are present
         if not all(template_data[key] is not None for key in Windows.template_keys):
-            missing_keys = [
-                f'"{key}"' for key in Windows.template_keys if template_data[key] is None
-            ]
-            error = f'Template Data Error, the following keys were missing from the ' \
-                    f'VM restart data: {", ".join(missing_keys)}.'
-            Windows.logger.error(error)
-            vm_data['errors'].append(error)
+            missing_keys = [f'"{key}"' for key in Windows.template_keys if template_data[key] is None]
+            error_msg = (
+                f'Template Data Error, the following keys were missing from the VM restart data: '
+                f'{", ".join(missing_keys)}.',
+            )
+            Windows.logger.error(error_msg)
+            vm_data['errors'].append(error_msg)
             span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 

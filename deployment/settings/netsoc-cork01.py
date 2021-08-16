@@ -15,7 +15,6 @@ __all__ = [
     'EMAIL_HOST',
     'EMAIL_PORT',
     'EMAIL_REPLY_TO',
-    'EMAIL_USERNAME',
     'HYPERV_HOST_NETWORK_DRIVE_PATH',
     'HYPERV_ROBOT_NETWORK_DRIVE_PATH',
     'HYPERV_VMS_PATH',
@@ -40,6 +39,7 @@ __all__ = [
     'SUBJECT_VPN_BUILD_SUCCESS',
     'SUBJECT_VPN_UPDATE_SUCCESS',
     'SUBJECT_VIRTUAL_ROUTER_FAIL',
+    'SRX_GATEWAY',
     'VIRTUAL_ROUTERS_ENABLED',
 ]
 
@@ -86,10 +86,10 @@ Email settings
 COMPUTE_UI_URL = 'https://saas.cloudcix.com/compute/'
 
 # Login Email Address
-EMAIL_HOST_USER = 'notification@cloudcix.net'
+EMAIL_HOST_USER = 'netsoc-cork01@cloudcix.net'
 
 # Login Password for EMAIL_HOST_USER
-EMAIL_HOST_PASSWORD = 'C1xacc355'
+EMAIL_HOST_PASSWORD = 'N3t50cR3g10n'
 
 # URL of Email Host
 EMAIL_HOST = 'mail.cloudcix.net'
@@ -98,9 +98,6 @@ EMAIL_PORT = 25
 
 # Reply-To Email Address
 EMAIL_REPLY_TO = 'CloudCIX <no-reply@cloudcix.net>'
-
-# Region's email id
-EMAIL_USERNAME = 'Netsoc Cork01 <netsoc-cork01@cloudcix.net>'
 
 # Email to send build fail emails to
 SEND_TO_FAIL = 'developers@cloudcix.com'
@@ -166,3 +163,6 @@ HYPERV_HOST_NETWORK_DRIVE_PATH = '/var/lib/libvirt/ISOs/HyperV'
 HYPERV_VMS_PATH = r'D:\HyperV\\'
 # Nas drive mount url
 NETWORK_DRIVE_URL = f'\\\\{REGION_NAME}-robothost.cloudcix.com\\var\\lib\\libvirt\\robot-drive'
+
+# SRX Gateway address or dns name
+SRX_GATEWAY = ''

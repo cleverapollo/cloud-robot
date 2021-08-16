@@ -18,6 +18,7 @@ from quiescers.vm import (
     Windows as WindowsVmQuiescer,
 )
 
+
 __all__ = [
     'quiesce_vm',
 ]
@@ -43,18 +44,13 @@ def _unresource(vm: Dict[str, Any], span: Span):
     child_span.finish()
 
     if response.status_code != 200:
-        logger.error(
-            f'Could not update VM #{vm_id} to state UNRESOURCED. Response: {response.content.decode()}.',
-        )
+        logger.error(f'Could not update VM #{vm_id} to state UNRESOURCED.\nResponse: {response.content.decode()}.')
 
     child_span = opentracing.tracer.start_span('send_email', child_of=span)
     try:
         EmailNotifier.vm_failure(vm, 'quiesce')
     except Exception:
-        logger.error(
-            f'Failed to send failure email for VM #{vm_id}',
-            exc_info=True,
-        )
+        logger.error(f'Failed to send failure email for VM #{vm_id}', exc_info=True)
     child_span.finish()
 
 
@@ -114,9 +110,7 @@ def _quiesce_vm(vm_id: int, span: Span):
 
         # Ensure the update was successful
         if response.status_code != 200:
-            logger.error(
-                f'Could not update VM #{vm_id} to QUIESCING. Response: {response.content.decode()}.',
-            )
+            logger.error(f'Could not update VM #{vm_id} to QUIESCING.\nResponse: {response.content.decode()}.')
             span.set_tag('return_reason', 'could_not_update_state')
             metrics.vm_quiesce_failure()
             return
@@ -132,9 +126,7 @@ def _quiesce_vm(vm_id: int, span: Span):
         child_span.finish()
         # Ensure the update was successful
         if response.status_code != 200:
-            logger.error(
-                f'Could not update VM #{vm_id} to SCRUB_PREP. Response: {response.content.decode()}.',
-            )
+            logger.error(f'Could not update VM #{vm_id} to SCRUB_PREP.\nResponse: {response.content.decode()}.')
             span.set_tag('return_reason', 'could_not_update_state')
             metrics.vm_quiesce_failure()
             return
@@ -144,9 +136,7 @@ def _quiesce_vm(vm_id: int, span: Span):
     server = utils.api_read(IAAS.server, vm['server_id'], span=child_span)
     child_span.finish()
     if not bool(server):
-        logger.error(
-            f'Could not quiesce VM #{vm_id} as its Server was not readable',
-        )
+        logger.error(f'Could not quiesce VM #{vm_id} as its Server was not readable')
         _unresource(vm, span)
         span.set_tag('return_reason', 'server_not_read')
         return
@@ -201,9 +191,7 @@ def _quiesce_vm(vm_id: int, span: Span):
             child_span.finish()
 
             if response.status_code != 200:
-                logger.error(
-                    f'Could not update VM #{vm_id} to state QUIESCED. Response: {response.content.decode()}.',
-                )
+                logger.error(f'Could not update VM #{vm_id} to state QUIESCED.\nResponse: {response.content.decode()}.')
 
         elif vm['state'] == state.SCRUB:
             # Update state to SCRUB_QUEUE in the API
@@ -218,7 +206,7 @@ def _quiesce_vm(vm_id: int, span: Span):
 
             if response.status_code != 200:
                 logger.error(
-                    f'Could not update VM #{vm_id} to state SCRUB_QUEUE. Response: {response.content.decode()}.',
+                    f'Could not update VM #{vm_id} to state SCRUB_QUEUE.\nResponse: {response.content.decode()}.',
                 )
             # Add a deletion date in the format 'Monday September 30, 2013'
             vm['deletion_date'] = (datetime.now().date() + timedelta(days=7)).strftime('%A %B %d, %Y')
@@ -229,10 +217,7 @@ def _quiesce_vm(vm_id: int, span: Span):
                 try:
                     EmailNotifier.delete_schedule_success(vm)
                 except Exception:
-                    logger.error(
-                        f'Failed to send delete schedule success email for VM #{vm_id}',
-                        exc_info=True,
-                    )
+                    logger.error(f'Failed to send delete schedule success email for VM #{vm_id}', exc_info=True)
                 child_span.finish()
         else:
             logger.error(

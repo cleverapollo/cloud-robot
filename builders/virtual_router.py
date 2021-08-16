@@ -17,6 +17,7 @@ from cloudcix.api.iaas import IAAS
 from jaeger_client import Span
 from netaddr import IPNetwork
 # local
+import settings
 import utils
 from mixins import VirtualRouterMixin
 
@@ -88,13 +89,13 @@ class VirtualRouter(VirtualRouterMixin):
 
         # Check that all of the necessary keys are present
         if not all(template_data[key] is not None for key in VirtualRouter.template_keys):
-            missing_keys = [
-                f'"{key}"' for key in VirtualRouter.template_keys if template_data[key] is None
-            ]
-            error = f'Template Data Error, the following keys were missing from the ' \
-                    f'virtual_router build data: {", ".join(missing_keys)}'
-            VirtualRouter.logger.error(error)
-            virtual_router_data['errors'].append(error)
+            missing_keys = [f'"{key}"' for key in VirtualRouter.template_keys if template_data[key] is None]
+            error_msg = (
+                f'Template Data Error, the following keys were missing from the virtual_router build data: '
+                f'{", ".join(missing_keys)}',
+            )
+            VirtualRouter.logger.error(error_msg)
+            virtual_router_data['errors'].append(error_msg)
             span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
@@ -148,19 +149,20 @@ class VirtualRouter(VirtualRouterMixin):
             })
         data['vlans'] = vlans
 
-        # Check if there are any NAT rules needed in this subnet
-        params = {'search[subnet_id__in]': [subnet['id'] for subnet in subnets]}
+        # Check if there are any NAT rules needed in this subnet by filtering ips in subnet that have a public_ip_id
+        params = {
+            'search[subnet_id__in]': [subnet['id'] for subnet in subnets],
+            'search[public_ip_id__isnull]': False,
+        }
         child_span = opentracing.tracer.start_span('listing_ip_addresses', child_of=span)
-        subnet_ips = utils.api_list(IAAS.ip_address, params, span=child_span)
+        nat_ips = utils.api_list(IAAS.ip_address, params, span=child_span)
         child_span.finish()
-        for ip in subnet_ips:
-            public_ip = ip.get('public_ip', None)
-            if public_ip:
-                nats.append({
-                    'private_address': ip['address'],
-                    'public_address': ip['public_ip']['address'],
-                    'vlan': ip['subnet']['vlan'],
-                })
+        for ip in nat_ips:
+            nats.append({
+                'private_address': ip['address'],
+                'public_address': ip['public_ip']['address'],
+                'vlan': ip['subnet']['vlan'],
+            })
         data['nats'] = nats
 
         # Get the management ip address from the Router.
@@ -184,31 +186,28 @@ class VirtualRouter(VirtualRouterMixin):
             # Add the names of the source and destination addresses by replacing IP characters with hyphens
             firewall['source_address_name'] = ADDRESS_NAME_SUB_PATTERN.sub('-', firewall['source'])
             firewall['destination_address_name'] = ADDRESS_NAME_SUB_PATTERN.sub('-', firewall['destination'])
+            # Determine what permission string to include in the firewall rule
+            firewall['permission'] = 'permit' if firewall['allow'] else 'deny'
+            # logging
+            firewall['log'] = True if firewall['pci_logging'] else firewall['debug_logging']
 
-            inbound: bool = IPNetwork(firewall['destination']).is_private()
             # Handle the inbound / outbound case stuff
-            if inbound:
+            if IPNetwork(firewall['destination']).is_private():
                 # Source is public, destination is private
+                data['inbound_firewall'] = True
                 firewall['source_address_book'] = 'global'
                 firewall['destination_address_book'] = virtual_router_address_book_name
                 firewall['scope'] = 'inbound'
                 firewall['from_zone'] = 'PUBLIC'
                 firewall['to_zone'] = virtual_router_zone_name
-                data['inbound_firewall'] = True
             else:
                 # Source is private, destination is public
+                data['outbound_firewall'] = True
                 firewall['source_address_book'] = virtual_router_address_book_name
                 firewall['destination_address_book'] = 'global'
                 firewall['scope'] = 'outbound'
                 firewall['from_zone'] = virtual_router_zone_name
                 firewall['to_zone'] = 'PUBLIC'
-                data['outbound_firewall'] = True
-
-            # Determine what permission string to include in the firewall rule
-            firewall['permission'] = 'permit' if firewall['allow'] else 'deny'
-
-            # logging
-            firewall['log'] = True if firewall['pci_logging'] else firewall['debug_logging']
 
             # Check port and protocol to allow any port for a specific protocol
             if firewall['port'] is None:
@@ -227,18 +226,17 @@ class VirtualRouter(VirtualRouterMixin):
         for vpn in virtual_router_vpns:
             routes: Deque[Dict[str, str]] = deque()
             for route in vpn['routes']:
-                routes.append(
-                    {
-                        'local': IPNetwork(str(route['local_subnet']['address_range'])).cidr,
-                        'remote': IPNetwork(str(route['remote_subnet'])).cidr,
-                    },
-                )
+                routes.append({
+                    'local': IPNetwork(str(route['local_subnet']['address_range'])).cidr,
+                    'remote': IPNetwork(str(route['remote_subnet'])).cidr,
+                })
             vpn['routes'] = routes
             # if send_email is true then read VPN for email addresses
             if vpn['send_email']:
                 child_span = opentracing.tracer.start_span('reading_vpn', child_of=span)
                 vpn['emails'] = utils.api_read(IAAS.vpn, pk=vpn['id'])['emails']
                 child_span.finish()
+                vpn['srx_vpn_name'] = f'https://{settings.SRX_GATEWAY}/vrf-{project_id}-{vpn["stif_number"]}-vpn'
             vpns.append(vpn)
         data['vpns'] = vpns
 

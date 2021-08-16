@@ -13,6 +13,7 @@ from celery_app import app
 from cloudcix_token import Token
 from email_notifier import EmailNotifier
 
+
 __all__ = [
     'build_virtual_router',
 ]
@@ -77,7 +78,7 @@ def _build_virtual_router(virtual_router_id: int, span: Span):
     if response.status_code != 200:
         logger.error(
             f'Could not update virtual_router #{virtual_router_id} to state BUILDING. '
-            f'With error code {response.status_code} , Response: {response.content.decode()}.',
+            f'With error code {response.status_code}.\nResponse: {response.content.decode()}.',
         )
         metrics.virtual_router_build_failure()
         span.set_tag('return_reason', 'could_not_update_state')
@@ -112,7 +113,7 @@ def _build_virtual_router(virtual_router_id: int, span: Span):
 
         if response.status_code != 200:
             logger.error(
-                f'Could not update virtual_router #{virtual_router_id} to state RUNNING. '
+                f'Could not update virtual_router #{virtual_router_id} to state RUNNING.\n'
                 f'Response: {response.content.decode()}.',
             )
 
@@ -135,17 +136,14 @@ def _build_virtual_router(virtual_router_id: int, span: Span):
                     child_span.finish()
                     if response.status_code != 200:
                         logger.error(
-                            f'Could not update VPN #{vpn["id"]} to reset send_email. '
+                            f'Could not update VPN #{vpn["id"]} to reset send_email.\n'
                             f'Response: {response.content.decode()}.',
                         )
                 except Exception:
-                    logger.error(
-                        f'Failed to send build success email for VPN #{vpn["id"]}',
-                        exc_info=True,
-                    )
+                    logger.error(f'Failed to send build success email for VPN #{vpn["id"]}', exc_info=True)
                 child_span.finish()
     else:
-        logger.error(f'Failed to build virtual_router #{virtual_router_id}')
+        logger.error(f'Failed to build virtual_router #{virtual_router_id}, placing in a unresourced state.')
         metrics.virtual_router_build_failure()
 
         # Update state to UNRESOURCED in the API
@@ -160,7 +158,7 @@ def _build_virtual_router(virtual_router_id: int, span: Span):
 
         if response.status_code != 200:
             logger.error(
-                f'Could not update virtual_router #{virtual_router_id} to state UNRESOURCED. '
+                f'Could not update virtual_router #{virtual_router_id} to state UNRESOURCED.\n'
                 f'Response: {response.content.decode()}.',
             )
 
@@ -168,8 +166,5 @@ def _build_virtual_router(virtual_router_id: int, span: Span):
         try:
             EmailNotifier.virtual_router_failure(virtual_router, 'build')
         except Exception:
-            logger.error(
-                f'Failed to send build failure email for virtual_router #{virtual_router_id}',
-                exc_info=True,
-            )
+            logger.error(f'Failed to send build failure email for virtual_router #{virtual_router_id}', exc_info=True)
         child_span.finish()

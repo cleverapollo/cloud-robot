@@ -42,7 +42,7 @@ def _unresource(vm: Dict[str, Any], span: Span):
 
     if response.status_code != 200:
         logging.getLogger('robot.tasks.vm.build').error(
-            f'Could not update VM #{vm_id} to state UNRESOURCED. Response: {response.content.decode()}.',
+            f'Could not update VM #{vm_id} to state UNRESOURCED.\nResponse: {response.content.decode()}.',
         )
     child_span = opentracing.tracer.start_span('send_email', child_of=span)
     try:
@@ -135,9 +135,7 @@ def _build_vm(vm_id: int, span: Span):
     child_span.finish()
 
     if response.status_code != 200:
-        logger.error(
-            f'Could not update VM #{vm_id} to state BUILDING. Response: {response.content.decode()}.',
-        )
+        logger.error(f'Could not update VM #{vm_id} to state BUILDING.\nResponse: {response.content.decode()}.')
         metrics.vm_build_failure()
         span.set_tag('return_reason', 'could_not_update_state')
         return
@@ -147,9 +145,7 @@ def _build_vm(vm_id: int, span: Span):
     server = utils.api_read(IAAS.server, vm['server_id'], span=child_span)
     child_span.finish()
     if not bool(server):
-        logger.error(
-            f'Could not build VM #{vm_id} as its Server was not readable',
-        )
+        logger.error(f'Could not build VM #{vm_id} as its Server was not readable')
         _unresource(vm, span)
         span.set_tag('return_reason', 'server_not_read')
         return
@@ -199,19 +195,14 @@ def _build_vm(vm_id: int, span: Span):
         child_span.finish()
 
         if response.status_code != 200:
-            logger.error(
-                f'Could not update VM #{vm_id} to state RUNNING. Response: {response.content.decode()}.',
-            )
+            logger.error(f'Could not update VM #{vm_id} to state RUNNING. Response: {response.content.decode()}.')
 
         if send_email:
             child_span = opentracing.tracer.start_span('send_email', child_of=span)
             try:
                 EmailNotifier.vm_build_success(vm)
             except Exception:
-                logger.error(
-                    f'Failed to send build success email for VM #{vm_id}',
-                    exc_info=True,
-                )
+                logger.error(f'Failed to send build success email for VM #{vm_id}', exc_info=True)
             child_span.finish()
 
         # Calculate the total time it took to build the VM entirely

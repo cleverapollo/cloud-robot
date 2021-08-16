@@ -49,7 +49,6 @@ def debug(virtual_router_id: int):
     latest = max(list_updated)
     # format latest string and convert to a datetime
     latest = latest.split('+')[0]  # removing timezone info
-    '2020-04-30T08:51:04.454033'
     latest_dt = datetime.strptime(latest, '%Y-%m-%dT%H:%M:%S.%f')
     # compare with 15 min from utc now time
     utc_now = datetime.utcnow()

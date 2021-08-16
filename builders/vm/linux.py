@@ -21,7 +21,7 @@ from paramiko import AutoAddPolicy, SSHClient, SSHException
 # local
 import settings
 import utils
-from mixins import LinuxMixin, VmImageMixin
+from mixins import LinuxMixin, VMImageMixin
 
 
 __all__ = [
@@ -29,7 +29,7 @@ __all__ = [
 ]
 
 
-class Linux(LinuxMixin, VmImageMixin):
+class Linux(LinuxMixin, VMImageMixin):
     """
     Class that handles the building of the specified VM
     When we get to this point, we can be sure that the VM is a linux VM
@@ -117,13 +117,13 @@ class Linux(LinuxMixin, VmImageMixin):
 
         # Check that all of the necessary keys are present
         if not all(template_data[key] is not None for key in Linux.template_keys):
-            missing_keys = [
-                f'"{key}"' for key in Linux.template_keys if template_data[key] is None
-            ]
-            error = f'Template Data Error, the following keys were missing from the VM build data: ' \
-                    f'{", ".join(missing_keys)}'
-            Linux.logger.error(error)
-            vm_data['errors'].append(error)
+            missing_keys = [f'"{key}"' for key in Linux.template_keys if template_data[key] is None]
+            error_msg = (
+                f'Template Data Error, the following keys were missing from the VM build data: '
+                f'{", ".join(missing_keys)}',
+            )
+            Linux.logger.error(error_msg)
+            vm_data['errors'].append(error_msg)
             span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
@@ -269,13 +269,11 @@ class Linux(LinuxMixin, VmImageMixin):
         for ip in vm_data['ip_addresses']:
             if IPAddress(ip['address']).is_private():
                 ip_addresses.append(ip)
-                subnets.append(
-                    {
-                        'address_range': ip['subnet']['address_range'],
-                        'vlan': ip['subnet']['vlan'],
-                        'id': ip['subnet']['id'],
-                    },
-                )
+                subnets.append({
+                    'address_range': ip['subnet']['address_range'],
+                    'vlan': ip['subnet']['vlan'],
+                    'id': ip['subnet']['id'],
+                })
         # Removing duplicates
         subnets = [dict(tuple_item) for tuple_item in {tuple(subnet.items()) for subnet in subnets}]
         # sorting nics (each subnet is one nic)
@@ -303,15 +301,13 @@ class Linux(LinuxMixin, VmImageMixin):
                     non_default_ips.append(address)
 
             if len(non_default_ips) > 0:
-                data['nics'].append(
-                    {
-                        'ips': non_default_ips,
-                        'gateway': gateway,
-                        'netmask': netmask,
-                        'netmask_int': netmask_int,
-                        'vlan': vlan,
-                    },
-                )
+                data['nics'].append({
+                    'ips': non_default_ips,
+                    'gateway': gateway,
+                    'netmask': netmask,
+                    'netmask_int': netmask_int,
+                    'vlan': vlan,
+                })
         # First/Default nic
         data['first_nic_primary'] = {}
         data['first_nic_secondary'] = False

@@ -85,9 +85,7 @@ def _scrub_virtual_router(virtual_router_id: int, span: Span):
     child_span.finish()
     vm_count = len(vrf_vms)
     if vm_count > 0:
-        logger.warning(
-            f'{vm_count} VMs are still in this project, scrub of VRF #{virtual_router_id} is postponed',
-        )
+        logger.warning(f'{vm_count} VMs are still in this project, scrub of VRF #{virtual_router_id} is postponed')
         # since vms are yet in the project so wait for 1 min and try again.
         scrub_virtual_router.s(virtual_router_id).apply_async(eta=datetime.now() + timedelta(seconds=60))
         return
@@ -134,8 +132,5 @@ def _scrub_virtual_router(virtual_router_id: int, span: Span):
         try:
             EmailNotifier.virtual_router_failure(virtual_router, 'scrub')
         except Exception:
-            logger.error(
-                f'Failed to send scrub failure email for virtual_router #{virtual_router_id}',
-                exc_info=True,
-            )
+            logger.error(f'Failed to send scrub failure email for virtual_router #{virtual_router_id}', exc_info=True)
         child_span.finish()

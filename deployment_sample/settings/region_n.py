@@ -15,7 +15,6 @@ __all__ = [
     'EMAIL_HOST',
     'EMAIL_PORT',
     'EMAIL_REPLY_TO',
-    'EMAIL_USERNAME',
     'HYPERV_HOST_NETWORK_DRIVE_PATH',
     'HYPERV_ROBOT_NETWORK_DRIVE_PATH',
     'HYPERV_VMS_PATH',
@@ -40,6 +39,7 @@ __all__ = [
     'SUBJECT_VPN_BUILD_SUCCESS',
     'SUBJECT_VPN_UPDATE_SUCCESS',
     'SUBJECT_VIRTUAL_ROUTER_FAIL',
+    'SRX_GATEWAY',
     'VIRTUAL_ROUTERS_ENABLED',
 ]
 
@@ -98,9 +98,6 @@ EMAIL_PORT = 25
 
 # Reply-To Email Address
 EMAIL_REPLY_TO = ''
-
-# Region's email id
-EMAIL_USERNAME = ''
 
 # Email to send build fail emails to
 SEND_TO_FAIL = ''
@@ -169,3 +166,6 @@ HYPERV_VMS_PATH = ''
 
 # Nas drive mount url
 NETWORK_DRIVE_URL = ''
+
+# SRX Gateway address or dns name
+SRX_GATEWAY = ''

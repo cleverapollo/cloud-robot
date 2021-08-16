@@ -32,7 +32,7 @@ class PhantomVirtualRouter:
         if response.status_code != 200:
             logger.error(
                 f'HTTP {response.status_code} error occurred when updating phantom virtual_router #{virtual_router_id} '
-                f'to state BUILDING\n Response Text: {response.content.decode()}',
+                f'to state BUILDING\nResponse Text: {response.content.decode()}',
             )
             metrics.virtual_router_build_failure()
         logger.info(f'Updating virtual_router #{virtual_router_id} to state RUNNING')
@@ -45,7 +45,7 @@ class PhantomVirtualRouter:
         if response.status_code != 200:
             logger.error(
                 f'HTTP {response.status_code} error occurred when updating phantom virtual_router #{virtual_router_id} '
-                f'to state RUNNING\n Response Text: {response.content.decode()}',
+                f'to state RUNNING\nResponse Text: {response.content.decode()}',
             )
             metrics.virtual_router_build_failure()
         else:
@@ -71,7 +71,7 @@ class PhantomVirtualRouter:
             )
             if response.status_code != 200:
                 logger.error(
-                    f'Could not update phantom virtual_router #{virtual_router_id} to state QUIESCING. '
+                    f'Could not update phantom virtual_router #{virtual_router_id} to state QUIESCING.\n'
                     f'Response: {response.content.decode()}.',
                 )
                 metrics.virtual_router_quiesce_failure()
@@ -84,7 +84,7 @@ class PhantomVirtualRouter:
             )
             if response.status_code != 200:
                 logger.error(
-                    f'Could not update phantom virtual_router #{virtual_router_id} to state QUIESCED. '
+                    f'Could not update phantom virtual_router #{virtual_router_id} to state QUIESCED.\n'
                     f'Response: {response.content.decode()}.',
                 )
                 metrics.virtual_router_quiesce_failure()
@@ -99,7 +99,7 @@ class PhantomVirtualRouter:
             )
             if response.status_code != 200:
                 logger.error(
-                    f'Could not phantom update virtual_router #{virtual_router_id} to state SCRUB_PREP. '
+                    f'Could not phantom update virtual_router #{virtual_router_id} to state SCRUB_PREP.\n'
                     f'Response: {response.content.decode()}.',
                 )
                 metrics.virtual_router_quiesce_failure()
@@ -112,7 +112,7 @@ class PhantomVirtualRouter:
             )
             if response.status_code != 200:
                 logger.error(
-                    f'Could not update phantom virtual_router #{virtual_router_id} to state SCRUB_QUEUE. '
+                    f'Could not update phantom virtual_router #{virtual_router_id} to state SCRUB_QUEUE.\n'
                     f'Response: {response.content.decode()}.',
                 )
                 metrics.virtual_router_quiesce_failure()
@@ -141,7 +141,7 @@ class PhantomVirtualRouter:
         if response.status_code != 200:
             logger.error(
                 f'HTTP {response.status_code} error occurred when updating phantom virtual_router #{virtual_router_id}'
-                f'to state RESTARTING\n Response Text: {response.content.decode()}',
+                f'to state RESTARTING\nResponse Text: {response.content.decode()}',
             )
             metrics.virtual_router_restart_failure()
         logger.info(f'Updating phantom virtual_router #{virtual_router_id} to state RUNNING')
@@ -154,7 +154,7 @@ class PhantomVirtualRouter:
         if response.status_code != 200:
             logger.error(
                 f'HTTP {response.status_code} error occurred when updating virtual_router #{virtual_router_id} '
-                f'to state RUNNING\n Response Text: {response.content.decode()}',
+                f'to state RUNNING\nResponse Text: {response.content.decode()}',
             )
             metrics.virtual_router_restart_failure()
         else:
@@ -178,7 +178,7 @@ class PhantomVirtualRouter:
         if response.status_code != 200:
             logger.error(
                 f'HTTP {response.status_code} error occurred when updating virtual_router #{virtual_router_id} '
-                f'to state CLOSED\n Response Text: {response.content.decode()}',
+                f'to state CLOSED\nResponse Text: {response.content.decode()}',
             )
             metrics.virtual_router_update_failure()
         else:
@@ -200,7 +200,7 @@ class PhantomVirtualRouter:
         if response.status_code != 200:
             logger.error(
                 f'HTTP {response.status_code} error occurred when updating phantom virtual_router #{virtual_router_id} '
-                f'to state UPDATING\n Response Text: {response.content.decode()}',
+                f'to state UPDATING\nResponse Text: {response.content.decode()}',
             )
             metrics.virtual_router_update_failure()
         # Change the state of the virtual_router to RUNNING and report a success to influx
@@ -213,7 +213,7 @@ class PhantomVirtualRouter:
         if response.status_code != 200:
             logger.error(
                 f'HTTP {response.status_code} error occurred when updating phantom virtual_router #{virtual_router_id} '
-                f'to state RUNNING\n Response Text: {response.content.decode()}',
+                f'to state RUNNING\nResponse Text: {response.content.decode()}',
             )
             metrics.virtual_router_update_failure()
         else:

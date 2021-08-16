@@ -74,7 +74,7 @@ def _restart_virtual_router(virtual_router_id: int, span: Span):
     # Ensure the update was successful
     if response.status_code != 200:
         logger.error(
-            f'Could not update VM #{virtual_router_id} to the necessary RESTARTING. '
+            f'Could not update VM #{virtual_router_id} to the necessary RESTARTING.\n'
             f'Response: {response.content.decode()}.',
         )
         span.set_tag('return_reason', 'could_not_update_state')
@@ -112,7 +112,7 @@ def _restart_virtual_router(virtual_router_id: int, span: Span):
 
         if response.status_code != 200:
             logger.error(
-                f'Could not update virtual_router #{virtual_router_id} to state RUNNING. '
+                f'Could not update virtual_router #{virtual_router_id} to state RUNNING.\n'
                 f'Response: {response.content.decode()}.',
             )
     else:
@@ -131,7 +131,7 @@ def _restart_virtual_router(virtual_router_id: int, span: Span):
 
         if response.status_code != 200:
             logger.error(
-                f'Could not update virtual_router #{virtual_router_id} to state UNRESOURCED. '
+                f'Could not update virtual_router #{virtual_router_id} to state UNRESOURCED.\n'
                 f'Response: {response.content.decode()}.',
             )
 
@@ -139,8 +139,5 @@ def _restart_virtual_router(virtual_router_id: int, span: Span):
         try:
             EmailNotifier.virtual_router_failure(virtual_router, 'restart')
         except Exception:
-            logger.error(
-                f'Failed to send build failure email for virtual_router #{virtual_router_id}',
-                exc_info=True,
-            )
+            logger.error(f'Failed to send build failure email for virtual_router #{virtual_router_id}', exc_info=True)
         child_span.finish()
