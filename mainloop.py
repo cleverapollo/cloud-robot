@@ -32,11 +32,15 @@ def run_robot_get():
             )
             return None
         # 200, run_robot is True, call Robot
-        logger.debug(
-            f'HTTP {response.status_code}, There are changes in the region so call for Robot instance;\n',
-            f'Response Data: {response.json()["content"]}',
-        )
-        return response.json()['content']
+        # check for empty list right here
+        project_ids = response.json()['content']['project_ids']
+        if len(project_ids) > 0:
+            logger.debug(
+                f'HTTP {response.status_code}, There are changes in the region so call for Robot instance;\n',
+            )
+            return response.json()['content']
+        else:
+            return None
     except Exception:
         logger.error(f'Failed to make request to IAAS.run_robot.list service.', exc_info=True)
         return None
@@ -80,22 +84,22 @@ def mainloop():
             project_ids = data['project_ids']
             virtual_routers = data['virtual_routers']
             vms = data['vms']
-            if len(project_ids) > 0:
-                # data found for Robot so is waking up and preparing for run.
-                logger.debug(f'Robot so is waking up and preparing for run.')
 
-                robot = Robot(virtual_routers, vms)
-                robot()
-                # Robot started run
-                logger.debug(f'Initiating Robot for run.')
+            # data found for Robot so is waking up and preparing for run.
+            logger.debug(f'Robot so is waking up and preparing for run.')
 
-                run_robot_post(project_ids)
-                # acknowledge run_robot to reset requested projects
-                logger.debug(f'Acknowledged run_robot api that requested projects id # {project_ids} are dispatched.')
-            else:
-                logger.debug(f'No changes found for Robot so is going back to sleep.')
-                # No changes in region, Robot going to sleep for 1 min.
-                time.sleep(60)
+            robot = Robot(virtual_routers, vms)
+            robot()
+            # Robot started run
+            logger.debug(f'Initiating Robot for run.')
+
+            run_robot_post(project_ids)
+            # acknowledge run_robot to reset requested projects
+            logger.debug(f'Acknowledged run_robot api that requested projects id # {project_ids} are dispatched.')
+        else:
+            logger.debug(f'No changes found for Robot so is going back to sleep for 60 seconds.')
+            # No changes in region, Robot going to sleep for 1 min.
+            time.sleep(60)
 
 
 # mainloop starting point
