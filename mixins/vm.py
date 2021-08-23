@@ -11,11 +11,8 @@ from typing import Any, Deque, Dict, Optional
 from urllib.error import HTTPError
 from urllib.request import urlretrieve
 # lib
-from cloudcix.api.iaas import IAAS
-from jaeger_client import Span
 # local
-import utils
-from state import RUNNING, QUIESCED, SCRUB_QUEUE
+
 
 __all__ = [
     'VMImageMixin',
@@ -97,25 +94,3 @@ class VMUpdateMixin:
 
         # Finally, return the generated information
         return drives
-
-    @classmethod
-    def determine_should_restart(cls, vm_data: Dict[str, Any], span: Span) -> Optional[bool]:
-        """
-        Check through the VM changes to see if the VM should be turned back on after the update is finished
-        """
-        vm_id = vm_data['id']
-        params = {
-            'order': '-created',
-            'limit': 1,
-            'state__in': (RUNNING, QUIESCED, SCRUB_QUEUE),
-            'vm_id': vm_id,
-        }
-        # Get the last historiy where state was in a stable state of Running, Quiesced or Scrub Queue
-        state_changes = utils.api_list(IAAS.vm_history, params, span=span)
-
-        # Update the vm_data to retain the state to go back to
-        vm_data['return_state'] = state_changes[0]['state']
-
-        # We restart the VM if the VM was in state 4 before this update
-        cls.logger.debug(f'VM #{vm_id} will be returned to state {vm_data["return_state"]} after update')
-        return vm_data['return_state'] == RUNNING

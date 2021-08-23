@@ -10,13 +10,7 @@ from cloudcix.api.iaas import IAAS
 import dispatchers
 import settings
 import utils
-from state import (
-    BUILD_FILTERS,
-    QUIESCE_FILTERS,
-    RESTART_FILTERS,
-    SCRUB_QUEUE,
-    UPDATE_FILTERS,
-)
+from state import SCRUB_QUEUE
 
 
 class Robot:
@@ -78,33 +72,17 @@ class Robot:
         self.logger.info('Commencing robot loop.')
 
         # sort out as per state
-        self.virtual_routers_to_build = []
-        self.virtual_routers_to_quiesce = []
-        self.virtual_routers_to_update = []
-        self.virtual_routers_to_restart = []
-        for virtual_router in self.virtual_routers:
-            if virtual_router['state'] in BUILD_FILTERS:
-                self.virtual_routers_to_build.append(virtual_router)
-            if virtual_router['state'] in QUIESCE_FILTERS:
-                self.virtual_routers_to_quiesce.append(virtual_router)
-            if virtual_router['state'] in UPDATE_FILTERS:
-                self.virtual_routers_to_update.append(virtual_router)
-            if virtual_router['state'] in RESTART_FILTERS:
-                self.virtual_routers_to_restart.append(virtual_router)
+        self.virtual_routers_to_build = self.virtual_routers['build']
+        self.virtual_routers_to_quiesce = self.virtual_routers['quiesce'] + self.virtual_routers['scrub']
+        self.virtual_routers_to_update = (
+            self.virtual_routers['running_update'] + self.virtual_routers['quiesced_update'],
+        )
+        self.virtual_routers_to_restart = self.virtual_routers['restart']
 
-        self.vms_to_build = []
-        self.vms_to_quiesce = []
-        self.vms_to_update = []
-        self.vms_to_restart = []
-        for vm in self.vms:
-            if vm['state'] in BUILD_FILTERS:
-                self.vms_to_build.append(vm)
-            if vm['state'] in QUIESCE_FILTERS:
-                self.vms_to_quiesce.append(vm)
-            if vm['state'] in UPDATE_FILTERS:
-                self.vms_to_update.append(vm)
-            if vm['state'] in RESTART_FILTERS:
-                self.vms_to_restart.append(vm)
+        self.vms_to_build = self.vms['build']
+        self.vms_to_quiesce = self.vms['quiesce'] + self.vms['scrub']
+        self.vms_to_update = self.vms['running_update'] + self.vms['quiesced_update']
+        self.vms_to_restart = self.vms['restart']
 
         # Handle loop events in separate functions
         # ############################################################## #
@@ -142,15 +120,15 @@ class Robot:
         """
         Sends virtual_routers to build dispatcher, and asynchronously build them
         """
-        for virtual_router in self.virtual_routers_to_build:
-            self.virtual_router_dispatcher.build(virtual_router['id'])
+        for virtual_router_id in self.virtual_routers_to_build:
+            self.virtual_router_dispatcher.build(virtual_router_id)
 
     def _vm_build(self):
         """
         Sends vms to build dispatcher, and asynchronously build them
         """
-        for vm in self.vms_to_build:
-            self.vm_dispatcher.build(vm['id'])
+        for vm_id in self.vms_to_build:
+            self.vm_dispatcher.build(vm_id)
 
     # ############################################################## #
     #                             QUIESCE                            #
@@ -160,15 +138,15 @@ class Robot:
         """
         Sends virtual_routers to quiesce dispatcher, and asynchronously quiesce them
         """
-        for virtual_router in self.virtual_routers_to_quiesce:
-            self.virtual_router_dispatcher.quiesce(virtual_router['id'])
+        for virtual_router_id in self.virtual_routers_to_quiesce:
+            self.virtual_router_dispatcher.quiesce(virtual_router_id)
 
     def _vm_quiesce(self):
         """
         Sends vms to quiesce dispatcher, and asynchronously quiesce them
         """
-        for vm in self.vms_to_quiesce:
-            self.vm_dispatcher.quiesce(vm['id'])
+        for vm_id in self.vms_to_quiesce:
+            self.vm_dispatcher.quiesce(vm_id)
 
     # ############################################################## #
     #                             RESTART                            #
@@ -178,15 +156,15 @@ class Robot:
         """
         Sends virtual_routers to restart dispatcher, and asynchronously restart them
         """
-        for virtual_router in self.virtual_routers_to_restart:
-            self.virtual_router_dispatcher.restart(virtual_router['id'])
+        for virtual_router_id in self.virtual_routers_to_restart:
+            self.virtual_router_dispatcher.restart(virtual_router_id)
 
     def _vm_restart(self):
         """
         Sends vms to restart dispatcher, and asynchronously restart them
         """
-        for vm in self.vms_to_restart:
-            self.vm_dispatcher.restart(vm['id'])
+        for vm_id in self.vms_to_restart:
+            self.vm_dispatcher.restart(vm_id)
 
     # ############################################################## #
     #                             UPDATE                             #
@@ -196,16 +174,16 @@ class Robot:
         """
         Sends virtual_routers to update dispatcher, and asynchronously update them
         """
-        for virtual_router in self.virtual_routers_to_update:
-            self.virtual_router_dispatcher.update(virtual_router['id'])
+        for virtual_router_id in self.virtual_routers_to_update:
+            self.virtual_router_dispatcher.update(virtual_router_id)
 
     def _vm_update(self):
         """
         Sends vms to update dispatcher, and asynchronously update them
         """
         # Retrieve the VMs from the API and run loop to dispatch.
-        for vm in self.vms_to_update:
-            self.vm_dispatcher.update(vm['id'])
+        for vm_id in self.vms_to_update:
+            self.vm_dispatcher.update(vm_id)
 
     # ############################################################## #
     #                              SCRUB                             #

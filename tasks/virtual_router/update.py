@@ -53,28 +53,34 @@ def _update_virtual_router(virtual_router_id: int, span: Span):
 
     # Ensure that the state of the virtual_router is still currently REQUESTED
     # (it hasn't been picked up by another runner)
-    if virtual_router['state'] != state.UPDATE:
+    if virtual_router['state'] not in (state.RUNNING_UPDATE, state.QUIESCED_UPDATE):
         logger.warning(
             f'Cancelling update of virtual_router #{virtual_router_id}. '
-            f'Expected state to be UPDATE, found {virtual_router["state"]}.',
+            f'Expected state to be RUNNING_UPDATE or QUIESCED_UPDATE, found {virtual_router["state"]}.',
         )
         # Return out of this function without doing anything as it was already handled
         span.set_tag('return_reason', 'not_in_valid_state')
         return
+
+    progress_state = state.RUNNING_UPDATING
+    stable_state = state.RUNNING
+    if virtual_router['state'] == state.QUIESCED_UPDATE:
+        progress_state = state.QUIESCED_UPDATING
+        stable_state = state.QUIESCED
 
     # If all is well and good here, update the virtual_router state to UPDATING and pass the data to the updater
     child_span = opentracing.tracer.start_span('update_to_updating', child_of=span)
     response = IAAS.virtual_router.partial_update(
         token=Token.get_instance().token,
         pk=virtual_router_id,
-        data={'state': state.UPDATING},
+        data={'state': progress_state},
         span=child_span,
     )
     child_span.finish()
 
     if response.status_code != 200:
         logger.error(
-            f'Could not update virtual_router #{virtual_router_id} to state UPDATING.\n'
+            f'Could not update virtual_router #{virtual_router_id} to state #{progress_state}.\n'
             f'Response: {response.content.decode()}.',
         )
         metrics.virtual_router_update_failure()
@@ -104,14 +110,14 @@ def _update_virtual_router(virtual_router_id: int, span: Span):
         response = IAAS.virtual_router.partial_update(
             token=Token.get_instance().token,
             pk=virtual_router_id,
-            data={'state': state.RUNNING},
+            data={'state': stable_state},
             span=child_span,
         )
         child_span.finish()
 
         if response.status_code != 200:
             logger.error(
-                f'Could not update virtual_router #{virtual_router_id} to state RUNNING.\n'
+                f'Could not update virtual_router #{virtual_router_id} to state #{stable_state}.\n'
                 f'Response: {response.content.decode()}.',
             )
 
