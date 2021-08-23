@@ -87,24 +87,37 @@ def _update_vm(vm_id: int, span: Span):
         return
 
     # Ensure that the state of the vm is still currently UPDATE
-    if vm['state'] != state.UPDATE:
-        logger.warning(f'Cancelling update of VM #{vm_id}. Expected state to be UPDATE, found {vm["state"]}.')
+    if vm['state'] not in (state.RUNNING_UPDATE, state.QUIESCED_UPDATE):
+        logger.warning(
+            f'Cancelling update of VM #{vm_id}. Expected state to be RUNNING_UPDATE or QUIESCED_UPDATE,'
+            f' found {vm["state"]}.',
+        )
         # Return out of this function without doing anything
         span.set_tag('return_reason', 'not_in_valid_state')
         return
+
+    progress_state = state.RUNNING_UPDATING
+    stable_state = state.RUNNING
+    vm['restart'] = True
+    if vm['state'] == state.QUIESCED_UPDATE:
+        progress_state = state.QUIESCED_UPDATING
+        stable_state = state.QUIESCED
+        vm['restart'] = False
 
     # If all is well and good here, update the VM state to UPDATING and pass the data to the updater
     child_span = opentracing.tracer.start_span('update_to_updating', child_of=span)
     response = IAAS.vm.partial_update(
         token=Token.get_instance().token,
         pk=vm_id,
-        data={'state': state.UPDATING},
+        data={'state': progress_state},
         span=child_span,
     )
     child_span.finish()
 
     if response.status_code != 200:
-        logger.error(f'Could not update VM #{vm_id} to state UPDATING.\nResponse: {response.content.decode()}.')
+        logger.error(
+            f'Could not update VM #{vm_id} to state {progress_state}.\nResponse: {response.content.decode()}.',
+        )
         metrics.vm_update_failure()
         span.set_tag('return_reason', 'could_not_update_state')
         return
@@ -167,18 +180,17 @@ def _update_vm(vm_id: int, span: Span):
         logger.info(f'Successfully updated VM #{vm_id}.')
         # Update back to RUNNING
         child_span = opentracing.tracer.start_span('update_to_prev_state', child_of=span)
-        return_state = vm.get('return_state', state.RUNNING)
         response = IAAS.vm.partial_update(
             token=Token.get_instance().token,
             pk=vm_id,
-            data={'state': return_state},
+            data={'state': stable_state},
             span=child_span,
         )
         child_span.finish()
 
         if response.status_code != 200:
             logger.error(
-                f'Could not update VM #{vm_id} to state {return_state}.\nResponse: {response.content.decode()}.',
+                f'Could not update VM #{vm_id} to state {stable_state}.\nResponse: {response.content.decode()}.',
             )
             metrics.vm_update_failure()
             return

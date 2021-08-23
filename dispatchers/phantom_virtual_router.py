@@ -168,6 +168,22 @@ class PhantomVirtualRouter:
         """
         logger = logging.getLogger('robot.dispatchers.phantom_virtual_router.scrub')
         logger.debug(f'Scrubbing phantom virtual_router #{virtual_router_id}')
+        logger.info(f'Updating phantom virtual_router #{virtual_router_id} to state SCRUBBING')
+
+        response = IAAS.virtual_router.partial_update(
+            token=Token.get_instance().token,
+            pk=virtual_router_id,
+            data={'state': state.SCRUBBING},
+        )
+
+        if response.status_code != 200:
+            logger.error(
+                f'HTTP {response.status_code} error occurred when updating virtual_router #{virtual_router_id} '
+                f'to state CLOSED\nResponse Text: {response.content.decode()}',
+            )
+            metrics.virtual_router_scrub_failure()
+
+        logger.debug(f'Closing phantom virtual_router #{virtual_router_id}')
         logger.info(f'Updating phantom virtual_router #{virtual_router_id} to state CLOSED')
         response = IAAS.virtual_router.partial_update(
             token=Token.get_instance().token,
@@ -180,7 +196,7 @@ class PhantomVirtualRouter:
                 f'HTTP {response.status_code} error occurred when updating virtual_router #{virtual_router_id} '
                 f'to state CLOSED\nResponse Text: {response.content.decode()}',
             )
-            metrics.virtual_router_update_failure()
+            metrics.virtual_router_scrub_failure()
         else:
             metrics.virtual_router_scrub_success()
 
@@ -191,29 +207,37 @@ class PhantomVirtualRouter:
         :param virtual_router_id: The virtual_router data from the CloudCIX API
         """
         logger = logging.getLogger('robot.dispatchers.phantom_virtual_router.update')
-        logger.info(f'Updating phantom virtual_router #{virtual_router_id} to state UPDATING')
+        virtual_router = IAAS.virtual_router.read(token=Token.get_instance().token, pk=virtual_router_id)
+
+        progress_state = state.RUNNING_UPDATING
+        stable_state = state.RUNNING
+        if virtual_router['state'] == state.QUIESCED_UPDATE:
+            progress_state = state.QUIESCED_UPDATING
+            stable_state = state.QUIESCED
+
+        logger.info(f'Updating phantom virtual_router #{virtual_router_id} to in progress state.')
         response = IAAS.virtual_router.update(
             token=Token.get_instance().token,
             pk=virtual_router_id,
-            data={'state': state.UPDATING},
+            data={'state': progress_state},
         )
         if response.status_code != 200:
             logger.error(
                 f'HTTP {response.status_code} error occurred when updating phantom virtual_router #{virtual_router_id} '
-                f'to state UPDATING\nResponse Text: {response.content.decode()}',
+                f'to state #{progress_state} \nResponse Text: {response.content.decode()}',
             )
             metrics.virtual_router_update_failure()
         # Change the state of the virtual_router to RUNNING and report a success to influx
-        logger.info(f'Updating phantom virtual_router #{virtual_router_id} to state RUNNING')
+        logger.info(f'Updating phantom virtual_router #{virtual_router_id} to stable state.')
         response = IAAS.virtual_router.update(
             token=Token.get_instance().token,
             pk=virtual_router_id,
-            data={'state': state.RUNNING},
+            data={'state': stable_state},
         )
         if response.status_code != 200:
             logger.error(
                 f'HTTP {response.status_code} error occurred when updating phantom virtual_router #{virtual_router_id} '
-                f'to state RUNNING\nResponse Text: {response.content.decode()}',
+                f'to state #{stable_state}\nResponse Text: {response.content.decode()}',
             )
             metrics.virtual_router_update_failure()
         else:

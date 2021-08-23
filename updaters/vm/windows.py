@@ -216,10 +216,6 @@ class Windows(WindowsMixin, VMUpdateMixin):
             return None
         # Add the host information to the data
         data['host_name'] = host_name
-
-        # Determine whether or not we should turn the VM back on after the update finishes
-        Windows.logger.debug(f'Determining if VM #{vm_id} should be powered on after update')
-        child_span = opentracing.tracer.start_span('determine_should_restart', child_of=span)
-        data['restart'] = Windows.determine_should_restart(vm_data, child_span)
-        child_span.finish()
+        # Determine restart
+        data['restart'] = vm_data['restart']
         return data
