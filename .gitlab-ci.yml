@@ -41,6 +41,21 @@ opensource_base:
     - master
     - stable
 
+dev_test_base:
+  stage: docker-base
+  tags:
+    - docker-build
+  before_script:
+    - echo "$GITLAB_KEY" > id_rsa
+  script:
+    - docker build -f deployment/docker/dev/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/dev-test-base --no-cache .
+    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/dev-test-base
+  when:
+    manual
+  except:
+    - master
+    - stable
+
 dev_base:
   stage: docker-base
   tags:
@@ -63,6 +78,37 @@ stable_base:
     - docker build -f deployment/docker/stable/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/stable-base --no-cache .
     - docker push gitlab.cloudcix.com:5005/cloudcix/robot/stable-base
   only:
+    - stable
+
+###############################################################################
+#                           Dev Test Build and Deploy                              #
+###############################################################################
+alpha_test_image:
+  stage: docker
+  tags:
+    - docker-build
+  script:
+    - docker build -f deployment/docker/dev/alpha-test.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/alpha-test --no-cache .
+    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/alpha-test
+  when:
+    manual
+  except:
+    - master
+    - stable
+
+deploy_alpha_test:
+  image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
+  before_script:
+    - cp ~/.ssh/application_framework/stage_key ~/.ssh/id_rsa
+    - cp ~/.ssh/application_framework/stage_key.pub ~/.ssh/id_rsa.pub
+  stage: deploy
+  script:
+    - ansible-playbook -i deployment/hosts/alpha.yml deployment/playbook.yml --extra-vars="deployment_host=alpha"
+    - ansible-playbook -i deployment/hosts/alpha.yml deployment/worker-playbook.yml --extra-vars="deployment_host=alpha-worker0"
+  when:
+    manual
+  except:
+    - master
     - stable
 
 ###############################################################################
