@@ -3,7 +3,7 @@ new robot that uses a class, methods and instance variables to clean up the code
 """
 # stdlib
 import logging
-from typing import cast, Optional, Union
+from typing import Optional, Union
 # lib
 from cloudcix.api.iaas import IAAS
 # local
@@ -16,8 +16,7 @@ from state import SCRUB_QUEUE
 class Robot:
     """
     Regionally Oriented Builder of Things.
-    This is the powerhouse of CloudCIX, the script that handles all of the building of infrastructure for projects
-    Robot is a singleton style class to prevent multiple instantiations
+    This is the powerhouse of CloudCIX, the script that handles all of the building of infrastructure for projects.
     """
     # logger instance for logging information that happens during the main loop
     logger: logging.Logger
@@ -27,8 +26,6 @@ class Robot:
     vm_dispatcher: dispatchers.VM
     # virtual_router dispatcher
     virtual_router_dispatcher: Union[dispatchers.PhantomVirtualRouter, dispatchers.VirtualRouter]
-    # instance
-    __instance = None
     # virtual routers
     virtual_routers: list
     # vms
@@ -39,9 +36,6 @@ class Robot:
             virtual_routers: list,
             vms: list,
     ):
-        # Ensure we only initialise once
-        if Robot.__instance is not None:
-            raise Exception('Trying to instantiate a singleton more than once!')
         # Instantiate a logger instance
         self.logger = logging.getLogger('robot.mainloop')
         # Instantiate the dispatchers
@@ -54,15 +48,6 @@ class Robot:
         self.virtual_routers = virtual_routers
         # Instantiate vms
         self.vms = vms
-        # Save the instance
-        Robot.__instance = self
-
-    # Write the method that will retrieve the instance
-    @staticmethod
-    def get_instance():
-        if Robot.__instance is None:
-            Robot([], [])
-        return cast(Robot, Robot.__instance)
 
     def __call__(self):
         """

@@ -25,8 +25,8 @@ def scrub():
     timestamp = None
     if IN_PRODUCTION:
         timestamp = (datetime.now() - timedelta(days=7)).isoformat()
-    robot_instance = robot.Robot.get_instance()
-    robot_instance.scrub(timestamp)
+    robot_scrub = robot.Robot([], [])
+    robot_scrub.scrub(timestamp)
 
 
 @app.task
