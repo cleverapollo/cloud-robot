@@ -59,14 +59,14 @@ class Robot:
         # sort out as per state
         self.virtual_routers_to_build = self.virtual_routers['build']
         self.virtual_routers_to_quiesce = self.virtual_routers['quiesce'] + self.virtual_routers['scrub']
-        self.virtual_routers_to_update = (
-            self.virtual_routers['running_update'] + self.virtual_routers['quiesced_update'],
-        )
+        self.virtual_routers_to_update = self.virtual_routers['running_update']
+        self.virtual_routers_to_update += self.virtual_routers['quiesced_update']
         self.virtual_routers_to_restart = self.virtual_routers['restart']
 
         self.vms_to_build = self.vms['build']
         self.vms_to_quiesce = self.vms['quiesce'] + self.vms['scrub']
-        self.vms_to_update = self.vms['running_update'] + self.vms['quiesced_update']
+        self.vms_to_update = self.vms['running_update']
+        self.vms_to_update += self.vms['quiesced_update']
         self.vms_to_restart = self.vms['restart']
 
         # Handle loop events in separate functions
