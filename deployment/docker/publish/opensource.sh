@@ -24,7 +24,7 @@ printf "Successfully tagged commit as version $V"
 printf "Pulling latest docker images from Gitlab"
 docker login --username cloudcixdevelopers --password $DOCKERHUB_PW > /dev/null
 
-# Pull the latest docker image from gitlab
+# Pull the latest opensource docker image from gitlab
 IMAGE='gitlab.cloudcix.com:5005/cloudcix/robot/opensource-base:latest'
 docker pull $IMAGE
 
