@@ -48,7 +48,8 @@ class EmailNotifier:
         )
         # Format the subject
         subject = settings.SUBJECT_PROJECT_FAIL
-        EmailNotifier._compose_email(settings.SEND_TO_FAIL, subject, body)
+        for email in settings.SEND_TO_FAIL.split(','):
+            EmailNotifier._compose_email(email, subject, body)
         logger.debug(f'Sent failure email for VM #{vm_data["id"]}.')
 
     @staticmethod
@@ -71,7 +72,8 @@ class EmailNotifier:
         )
         # Format the subject
         subject = settings.SUBJECT_VIRTUAL_ROUTER_FAIL
-        EmailNotifier._compose_email(settings.SEND_TO_FAIL, subject, body)
+        for email in settings.SEND_TO_FAIL.split(','):
+            EmailNotifier._compose_email(email, subject, body)
         logger.debug(f'Sent failure email for virtual router #{virtual_router_data["id"]}.')
 
     # ############################################################################################################# #
@@ -89,7 +91,7 @@ class EmailNotifier:
         emails = vm_data.get('emails', None)
         if emails is None:
             logger.error(f'No email found for VM #{vm_data["id"]}. Sending to {settings.SEND_TO_FAIL} instead.')
-            emails = [settings.SEND_TO_FAIL]
+            emails = settings.SEND_TO_FAIL.split(',')
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/vm_build_success.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
@@ -113,7 +115,7 @@ class EmailNotifier:
         emails = vpn_data.get('emails', None)
         if emails is None:
             logger.error(f'No email found for VPN #{vpn_id}. Sending to {settings.SEND_TO_FAIL} instead.')
-            emails = [settings.SEND_TO_FAIL]
+            emails = settings.SEND_TO_FAIL.split(',')
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/vpn_success.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
@@ -138,7 +140,7 @@ class EmailNotifier:
         emails = vpn_data.get('emails', None)
         if emails is None:
             logger.error(f'No email found for VPN #{vpn_id}. Sending to {settings.SEND_TO_FAIL} instead.')
-            emails = [settings.SEND_TO_FAIL]
+            emails = settings.SEND_TO_FAIL.split(',')
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/vpn_success.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
@@ -162,7 +164,7 @@ class EmailNotifier:
         emails = vm_data.get('emails', None)
         if emails is None:
             logger.error(f'No email found for VM #{vm_data["id"]}. Sending to {settings.SEND_TO_FAIL} instead.')
-            emails = [settings.SEND_TO_FAIL]
+            emails = settings.SEND_TO_FAIL.split(',')
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/vm_build_failure.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
@@ -192,7 +194,7 @@ class EmailNotifier:
         emails = vm_data.get('emails', None)
         if emails is None:
             logger.error(f'No email found for VM #{vm_data["id"]}. Sending to {settings.SEND_TO_FAIL} instead.')
-            emails = [settings.SEND_TO_FAIL]
+            emails = settings.SEND_TO_FAIL.split(',')
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/scheduled_delete_success.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
