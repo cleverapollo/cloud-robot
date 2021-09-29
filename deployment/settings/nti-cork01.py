@@ -62,7 +62,7 @@ VIRTUAL_ROUTERS_ENABLED = True
 CloudCIX API Settings
 """
 # CloudCIX Member API Key
-CLOUDCIX_API_KEY = '3bc7cc2bddb34d78b31f1223d0a7408e'
+CLOUDCIX_API_KEY = 'e4aaf6e65eda03cc8aac20a26ea52c1d69cc904fe3cc2f296b9a6aefb84318d9'
 
 # CloudCIX Login password
 CLOUDCIX_API_PASSWORD = 'NT1C0rk01C1xacc355'
