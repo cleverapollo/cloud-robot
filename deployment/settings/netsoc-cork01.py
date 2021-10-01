@@ -33,6 +33,8 @@ __all__ = [
     'ROBOT_ENV',
     'SEND_TO_FAIL',
     'SUBJECT_PROJECT_FAIL',
+    'SUBJECT_SNAPSHOT_BUILD_FAIL',
+    'SUBJECT_SNAPSHOT_FAIL',
     'SUBJECT_VM_FAIL',
     'SUBJECT_VM_SCHEDULE_DELETE',
     'SUBJECT_VM_SUCCESS',
@@ -104,6 +106,12 @@ SEND_TO_FAIL = 'developers@cloudcix.com,noc@cix.ie'
 
 # Subject for Project build fail Emails
 SUBJECT_PROJECT_FAIL = '[CloudCIX] VM Failure Occurred!'
+
+# Subject for Snapshot build fail Emails
+SUBJECT_SNAPSHOT_BUILD_FAIL = f'[CloudCIX] Your Snapshot has failed to build.'
+
+# Subject for Snapshot fail Emails
+SUBJECT_SNAPSHOT_FAIL = f'[CloudCIX] Snapshot Failure Occurred!'
 
 # Subject for VM build fail Emails
 SUBJECT_VM_FAIL = '[CloudCIX] Your VM  has failed to build.'

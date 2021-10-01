@@ -11,9 +11,9 @@ import utils
 from celery_app import app
 from cloudcix_token import Token
 from email_notifier import EmailNotifier
-from scrubbers.vm import (
-    Linux as LinuxVmScrubber,
-    Windows as WindowsVmScrubber,
+from scrubbers import (
+    LinuxVM,
+    WindowsVM,
 )
 
 
@@ -100,10 +100,10 @@ def _scrub_vm(vm_id: int, span: Span):
     child_span = opentracing.tracer.start_span('scrub', child_of=span)
     try:
         if server_type == 'HyperV':
-            success = WindowsVmScrubber.scrub(vm, child_span)
+            success = WindowsVM.scrub(vm, child_span)
             child_span.set_tag('server_type', 'windows')
         elif server_type == 'KVM':
-            success = LinuxVmScrubber.scrub(vm, child_span)
+            success = LinuxVM.scrub(vm, child_span)
             child_span.set_tag('server_type', 'linux')
         elif server_type == 'Phantom':
             success = True

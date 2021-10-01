@@ -10,9 +10,9 @@ from jaeger_client import Span
 import metrics
 import state
 import utils
-from builders.vm import (
-    Linux as LinuxVmBuilder,
-    Windows as WindowsVmBuilder,
+from builders import (
+    LinuxVM,
+    WindowsVM,
 )
 from celery_app import app
 from cloudcix_token import Token
@@ -159,10 +159,10 @@ def _build_vm(vm_id: int, span: Span):
     child_span = opentracing.tracer.start_span('build', child_of=span)
     try:
         if server_type == 'HyperV':
-            success = WindowsVmBuilder.build(vm, child_span)
+            success = WindowsVM.build(vm, child_span)
             child_span.set_tag('server_type', 'vm')
         elif server_type == 'KVM':
-            success = LinuxVmBuilder.build(vm, child_span)
+            success = LinuxVM.build(vm, child_span)
             child_span.set_tag('server_type', 'vm')
         elif server_type == 'Phantom':
             success = True

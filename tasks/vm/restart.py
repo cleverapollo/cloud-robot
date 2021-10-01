@@ -12,9 +12,9 @@ import utils
 from celery_app import app
 from cloudcix_token import Token
 from email_notifier import EmailNotifier
-from restarters.vm import (
-    Linux as LinuxVmRestarter,
-    Windows as WindowsVmRestarter,
+from restarters import (
+    LinuxVM,
+    WindowsVM,
 )
 
 
@@ -129,10 +129,10 @@ def _restart_vm(vm_id: int, span: Span):
     child_span = opentracing.tracer.start_span('restart', child_of=span)
     try:
         if server_type == 'HyperV':
-            success = WindowsVmRestarter.restart(vm, child_span)
+            success = WindowsVM.restart(vm, child_span)
             child_span.set_tag('server_type', 'windows')
         elif server_type == 'KVM':
-            success = LinuxVmRestarter.restart(vm, child_span)
+            success = LinuxVM.restart(vm, child_span)
             child_span.set_tag('server_type', 'linux')
         elif server_type == 'Phantom':
             success = True
