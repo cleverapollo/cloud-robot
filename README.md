@@ -201,7 +201,7 @@ Copy this directory and rename `deployment`. Files named `region_n` and `region_
 1.  Replace `### SSH KEY HOST e.g. github.com ###` with an SSH Key host
 
 *`deployment_sample/docker/region_n.Dockerfile`*: 
-1.  Replace `### BASE IMAGE URL ###` with the the base image url for Robot
+1.  Replace `### BASE IMAGE URL ###` with the base image url for Robot
 2.  Replace region_n in `deployment/settings/region_n.py` with the name of the region
 
 A Dockerfile is required for each region in your COP
@@ -218,10 +218,10 @@ A host file is required for each region in your COP
 1. Replace `### Repository Registry e.g. github.com ###` with the registry for your Docker images
 2. Replace `### Repository Username ###` with the username to access to registry
 3. Replace `### Repository Password ###` with the password to access to registry
-4. Replace `### Image: https://hub.docker.com/r/jaegertracing/jaeger-agent  Version: jaegertracing/jaeger-agent:1.10.1 ###` with the url to the jaeger-agent image in the assigned Docker registry. The Version of the image supported is supported is jaegertracing/jaeger-agent:1.10.1
+4. Replace `### Image: https://hub.docker.com/r/jaegertracing/jaeger-agent  Version: jaegertracing/jaeger-agent:1.10.1 ###` with the url to the jaeger-agent image in the assigned Docker registry. The Version of the image supported is jaegertracing/jaeger-agent:1.10.1
 5. Replace `### LOGSTASH_URL:14267 e.g. logstash.com:14267' ###` with your LOGSTASH_URL
 6. Replace `### Image: https://hub.docker.com/r/mher/flower ###` with the url to the flower image in the assigned Docker registry.
-7. Replace ` ### Image: https://hub.docker.com/_/rabbitmq  Version: rabbitmq:3.7 ###` with the url to the rabbitmq image in the assigned Docker registry. The Version of the image supported is supported is rabbitmq:3.7
+7. Replace ` ### Image: https://hub.docker.com/_/rabbitmq  Version: rabbitmq:3.7 ###` with the url to the rabbitmq image in the assigned Docker registry. The Version of the image supported is rabbitmq:3.7
 8. Replace  `### BASE IMAGE URL '/robot/{{ env }} e.g. github.com/robot {{ env }} ###` with the url to the base image in the assigned Docker registry e.g. `www.github.com/robot/{{ env }}`
 
 #### `settings/`

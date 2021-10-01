@@ -12,9 +12,9 @@ import utils
 from celery_app import app
 from cloudcix_token import Token
 from email_notifier import EmailNotifier
-from updaters.vm import (
-    Linux as LinuxVmUpdater,
-    Windows as WindowsVmUpdater,
+from updaters import (
+    LinuxVM,
+    WindowsVM,
 )
 
 
@@ -151,10 +151,10 @@ def _update_vm(vm_id: int, span: Span):
         child_span = opentracing.tracer.start_span('update', child_of=span)
         try:
             if server_type == 'HyperV':
-                success = WindowsVmUpdater.update(vm, child_span)
+                success = WindowsVM.update(vm, child_span)
                 child_span.set_tag('server_type', 'windows')
             elif server_type == 'KVM':
-                success = LinuxVmUpdater.update(vm, child_span)
+                success = LinuxVM.update(vm, child_span)
                 child_span.set_tag('server_type', 'linux')
             elif server_type == 'Phantom':
                 success = True

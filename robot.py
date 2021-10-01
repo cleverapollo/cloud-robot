@@ -22,10 +22,14 @@ class Robot:
     logger: logging.Logger
     # Keep track of whether or not the script has detected a SIGTERM signal
     sigterm_recv: bool = False
+    # snapshot dispatcher
+    snapshot_dispatcher: dispatchers.Snapshot
     # vm dispatcher
     vm_dispatcher: dispatchers.VM
     # virtual_router dispatcher
     virtual_router_dispatcher: Union[dispatchers.PhantomVirtualRouter, dispatchers.VirtualRouter]
+    # snapshots
+    snapshots: list
     # virtual routers
     virtual_routers: list
     # vms
@@ -33,17 +37,21 @@ class Robot:
 
     def __init__(
             self,
+            snapshots: list,
             virtual_routers: list,
             vms: list,
     ):
         # Instantiate a logger instance
         self.logger = logging.getLogger('robot.mainloop')
         # Instantiate the dispatchers
+        self.snapshot_dispatcher = dispatchers.Snapshot(settings.NETWORK_PASSWORD)
         self.vm_dispatcher = dispatchers.VM(settings.NETWORK_PASSWORD)
         if settings.VIRTUAL_ROUTERS_ENABLED:
             self.virtual_router_dispatcher = dispatchers.VirtualRouter(settings.NETWORK_PASSWORD)
         else:
             self.virtual_router_dispatcher = dispatchers.PhantomVirtualRouter()
+        # Instantiate snapshots
+        self.snapshots = snapshots
         # Instantiate virtual routers
         self.virtual_routers = virtual_routers
         # Instantiate vms
@@ -69,10 +77,15 @@ class Robot:
         self.vms_to_update += self.vms['quiesced_update']
         self.vms_to_restart = self.vms['restart']
 
+        self.snapshots_to_build = self.snapshots['build']
+        self.snapshots_to_update = self.snapshots['running_update']
+        self.snapshots_to_scrub = self.snapshots['scrub']
+
         # Handle loop events in separate functions
         # ############################################################## #
         #                              BUILD                             #
         # ############################################################## #
+        self._snapshot_build()
         self._virtual_router_build()
         self._vm_build()
 
@@ -85,6 +98,7 @@ class Robot:
         # ############################################################## #
         #                             UPDATE                             #
         # ############################################################## #
+        self._snapshot_update()
         self._virtual_router_update()
         self._vm_update()
 
@@ -94,12 +108,26 @@ class Robot:
         self._virtual_router_restart()
         self._vm_restart()
 
+        # ############################################################## #
+        #                             SCRUB                              #
+        #           Only Snapshot scrubs are performed every loop        #
+        # ############################################################## #
+        self._snapshot_scrub()
+
         # Flush the loggers
         utils.flush_logstash()
 
     # ############################################################## #
     #                              BUILD                             #
     # ############################################################## #
+
+    def _snapshot_build(self):
+        """
+        Sends snapshots to build dispatcher, and asynchronously build them
+        """
+        for snapshot_id in self.snapshots_to_build:
+            self.logger.info('snapshot dispatcher called')
+            self.snapshot_dispatcher.build(snapshot_id)
 
     def _virtual_router_build(self):
         """
@@ -155,6 +183,13 @@ class Robot:
     #                             UPDATE                             #
     # ############################################################## #
 
+    def _snapshot_update(self):
+        """
+        Sends snapshots to update dispatcher, and asynchronously update them
+        """
+        for snapshot_id in self.snapshots_to_update:
+            self.snapshot_dispatcher.update(snapshot_id)
+
     def _virtual_router_update(self):
         """
         Sends virtual_routers to update dispatcher, and asynchronously update them
@@ -172,7 +207,7 @@ class Robot:
 
     # ############################################################## #
     #                              SCRUB                             #
-    # Scrub methods are not run every loop, they are run at midnight #
+    #  VM and V-Router not run every loop, they are run at midnight  #
     # ############################################################## #
 
     def scrub(self, timestamp: Optional[int]):
@@ -185,6 +220,13 @@ class Robot:
         self._virtual_router_scrub(timestamp)
         # Flush the loggers
         utils.flush_logstash()
+
+    def _snapshot_scrub(self):
+        """
+        Check the API for snapshots to scrub, and asynchronously scrub them
+        """
+        for snapshot_id in self.snapshots_to_scrub:
+            self.snapshot_dispatcher.scrub(snapshot_id)
 
     def _virtual_router_scrub(self, timestamp: Optional[int]):
         """
