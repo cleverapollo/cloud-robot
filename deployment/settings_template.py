@@ -55,6 +55,8 @@ __all__ = [
     'ROBOT_ENV',
     'SEND_TO_FAIL',
     'SUBJECT_PROJECT_FAIL',
+    'SUBJECT_SNAPSHOT_BUILD_FAIL',
+    'SUBJECT_SNAPSHOT_FAIL',
     'SUBJECT_VM_FAIL',
     'SUBJECT_VM_SCHEDULE_DELETE',
     'SUBJECT_VM_SUCCESS',
@@ -93,6 +95,12 @@ SEND_TO_FAIL = f'support@{ORGANIZATION_URL}.com'
 
 # Subject for Project build fail Emails
 SUBJECT_PROJECT_FAIL = f'[{ORGANIZATION_URL}] VM Failure Occurred!'
+
+# Subject for Snapshot build fail Emails
+SUBJECT_SNAPSHOT_BUILD_FAIL = f'[{ORGANIZATION_URL}] Your Snapshot has failed to build.'
+
+# Subject for Snapshot fail Emails
+SUBJECT_SNAPSHOT_FAIL = f'[{ORGANIZATION_URL}] Snapshot Failure Occurred!'
 
 # Subject for VM build fail Emails
 SUBJECT_VM_FAIL = f'[{ORGANIZATION_URL}] Your VM  has failed to build.'

@@ -28,6 +28,30 @@ class EmailNotifier:
     # ############################################################################################################# #
 
     @staticmethod
+    def snapshot_failure(snapshot_data: Dict[str, Any], task: str):
+        """
+        Report any kind of failure to the NOC and developers emails
+        """
+        logger = logging.getLogger('robot.email_notifier.failure')
+        logger.debug(f'Sending failure email for Snapshot #{snapshot_data["id"]} on VM #{snapshot_data["vm"]["id"]}')
+
+        # catch errors
+        errors = snapshot_data.pop('errors')
+        # Add the pretty printed data blob to the VM
+        snapshot_data['data'] = dumps(snapshot_data, indent=2, cls=utils.DequeEncoder)
+        # Render the email body
+        body = utils.JINJA_ENV.get_template('emails/snapshot_failure.j2').render(
+            compute_url=settings.COMPUTE_UI_URL,
+            task=task,
+            errors=errors,
+            **snapshot_data,
+        )
+        # Format the subject
+        subject = settings.SUBJECT_SNAPSHOT_FAIL
+        EmailNotifier._compose_email(settings.SEND_TO_FAIL, subject, body)
+        logger.debug(f'Sent failure email for Snapshot #{snapshot_data["id"]}.')
+
+    @staticmethod
     def vm_failure(vm_data: Dict[str, Any], task: str):
         """
         Report any kind of failure to the NOC and developers emails
@@ -48,7 +72,8 @@ class EmailNotifier:
         )
         # Format the subject
         subject = settings.SUBJECT_PROJECT_FAIL
-        EmailNotifier._compose_email(settings.SEND_TO_FAIL, subject, body)
+        for email in settings.SEND_TO_FAIL.split(','):
+            EmailNotifier._compose_email(email, subject, body)
         logger.debug(f'Sent failure email for VM #{vm_data["id"]}.')
 
     @staticmethod
@@ -71,7 +96,8 @@ class EmailNotifier:
         )
         # Format the subject
         subject = settings.SUBJECT_VIRTUAL_ROUTER_FAIL
-        EmailNotifier._compose_email(settings.SEND_TO_FAIL, subject, body)
+        for email in settings.SEND_TO_FAIL.split(','):
+            EmailNotifier._compose_email(email, subject, body)
         logger.debug(f'Sent failure email for virtual router #{virtual_router_data["id"]}.')
 
     # ############################################################################################################# #
@@ -89,7 +115,7 @@ class EmailNotifier:
         emails = vm_data.get('emails', None)
         if emails is None:
             logger.error(f'No email found for VM #{vm_data["id"]}. Sending to {settings.SEND_TO_FAIL} instead.')
-            emails = [settings.SEND_TO_FAIL]
+            emails = settings.SEND_TO_FAIL.split(',')
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/vm_build_success.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
@@ -113,7 +139,7 @@ class EmailNotifier:
         emails = vpn_data.get('emails', None)
         if emails is None:
             logger.error(f'No email found for VPN #{vpn_id}. Sending to {settings.SEND_TO_FAIL} instead.')
-            emails = [settings.SEND_TO_FAIL]
+            emails = settings.SEND_TO_FAIL.split(',')
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/vpn_success.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
@@ -138,7 +164,7 @@ class EmailNotifier:
         emails = vpn_data.get('emails', None)
         if emails is None:
             logger.error(f'No email found for VPN #{vpn_id}. Sending to {settings.SEND_TO_FAIL} instead.')
-            emails = [settings.SEND_TO_FAIL]
+            emails = settings.SEND_TO_FAIL.split(',')
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/vpn_success.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
@@ -152,6 +178,34 @@ class EmailNotifier:
         logger.debug(f'Sent update success email for VPN #{vpn_data["id"]}.')
 
     @staticmethod
+    def snapshot_build_failure(snapshot_data: Dict[str, Any]):
+        """
+        Given a Snapshots's details, render and send a build failure email
+        """
+        logger = logging.getLogger('robot.email_notifier.build_failure')
+        logger.debug(f'Sending build failure email for Snapshot #{snapshot_data["id"]}.')
+        # Check that the data contains an email
+        emails = snapshot_data.get('emails', None)
+        if emails is None:
+            logger.error(
+                f'No email found for Snapshot #{snapshot_data["id"]}. Sending to {settings.SEND_TO_FAIL} instead.',
+            )
+            emails = [settings.SEND_TO_FAIL]
+        # Render the email body
+        body = utils.JINJA_ENV.get_template('emails/snapshot_build_failure.j2').render(
+            compute_url=settings.COMPUTE_UI_URL,
+            **snapshot_data,
+        )
+        # Format the subject
+        subject = settings.SUBJECT_SNAPSHOT_BUILD_FAIL
+        for email in emails:
+            EmailNotifier._compose_email(email, subject, body)
+
+        # Also run the generic failure method to pass failures to us
+        EmailNotifier.snapshot_failure(snapshot_data, 'build')
+        logger.debug(f'Sent build failure email for Snapshot #{snapshot_data["id"]}.')
+
+    @staticmethod
     def vm_build_failure(vm_data: Dict[str, Any]):
         """
         Given a VM's details, render and send a build failure email
@@ -162,7 +216,7 @@ class EmailNotifier:
         emails = vm_data.get('emails', None)
         if emails is None:
             logger.error(f'No email found for VM #{vm_data["id"]}. Sending to {settings.SEND_TO_FAIL} instead.')
-            emails = [settings.SEND_TO_FAIL]
+            emails = settings.SEND_TO_FAIL.split(',')
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/vm_build_failure.j2').render(
             compute_url=settings.COMPUTE_UI_URL,
@@ -192,7 +246,7 @@ class EmailNotifier:
         emails = vm_data.get('emails', None)
         if emails is None:
             logger.error(f'No email found for VM #{vm_data["id"]}. Sending to {settings.SEND_TO_FAIL} instead.')
-            emails = [settings.SEND_TO_FAIL]
+            emails = settings.SEND_TO_FAIL.split(',')
         # Render the email body
         body = utils.JINJA_ENV.get_template('emails/scheduled_delete_success.j2').render(
             compute_url=settings.COMPUTE_UI_URL,

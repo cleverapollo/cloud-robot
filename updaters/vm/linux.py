@@ -155,6 +155,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
         data: Dict[str, Any] = {key: None for key in Linux.template_keys}
 
         data['vm_identifier'] = f'{vm_data["project"]["id"]}_{vm_id}'
+
         # changes
         changes: Dict[str, Any] = {
             'ram': False,
@@ -207,9 +208,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
         # Add the host information to the data
         data['host_sudo_passwd'] = settings.NETWORK_PASSWORD
 
-        # Determine whether or not we should turn the VM back on after the update finishes
-        Linux.logger.debug(f'Determining if VM #{vm_id} should be powered on after update')
-        child_span = opentracing.tracer.start_span('determine_should_restart', child_of=span)
-        data['restart'] = Linux.determine_should_restart(vm_data, child_span)
-        child_span.finish()
+        # Determine restart
+        data['restart'] = vm_data['restart']
+
         return data

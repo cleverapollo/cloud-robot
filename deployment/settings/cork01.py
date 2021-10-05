@@ -33,6 +33,8 @@ __all__ = [
     'ROBOT_ENV',
     'SEND_TO_FAIL',
     'SUBJECT_PROJECT_FAIL',
+    'SUBJECT_SNAPSHOT_BUILD_FAIL',
+    'SUBJECT_SNAPSHOT_FAIL',
     'SUBJECT_VM_FAIL',
     'SUBJECT_VM_SCHEDULE_DELETE',
     'SUBJECT_VM_SUCCESS',
@@ -62,7 +64,8 @@ VIRTUAL_ROUTERS_ENABLED = True
 CloudCIX API Settings
 """
 # CloudCIX Member API Key
-CLOUDCIX_API_KEY = '022471ac6f7948ae9385a9c510c42f73' # member 1 
+CLOUDCIX_API_KEY = '022471ac6f7948ae9385a9c510c42f73'  # member 1
+
 
 # CloudCIX Login password
 CLOUDCIX_API_PASSWORD = 'C1xC0rk01'
@@ -101,10 +104,16 @@ EMAIL_PORT = 25
 EMAIL_REPLY_TO = 'CloudCIX <no-reply@cloudcix.net>'
 
 # Email to send build fail emails to
-SEND_TO_FAIL = 'developers@cloudcix.com'
+SEND_TO_FAIL = 'developers@cloudcix.com,noc@cix.ie'
 
 # Subject for Project build fail Emails
 SUBJECT_PROJECT_FAIL = '[CloudCIX] VM Failure Occurred!'
+
+# Subject for Snapshot build fail Emails
+SUBJECT_SNAPSHOT_BUILD_FAIL = f'[CloudCIX] Your Snapshot has failed to build.'
+
+# Subject for Snapshot fail Emails
+SUBJECT_SNAPSHOT_FAIL = f'[CloudCIX] Snapshot Failure Occurred!'
 
 # Subject for VM build fail Emails
 SUBJECT_VM_FAIL = '[CloudCIX] Your VM  has failed to build.'

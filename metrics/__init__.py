@@ -2,6 +2,14 @@ from .heartbeat import heartbeat
 from .misc import (
     current_commit,
 )
+from .snapshot import (
+    build_failure as snapshot_build_failure,
+    build_success as snapshot_build_success,
+    scrub_failure as snapshot_scrub_failure,
+    scrub_success as snapshot_scrub_success,
+    update_failure as snapshot_update_failure,
+    update_success as snapshot_update_success,
+)
 from .virtual_router import (
     build_failure as virtual_router_build_failure,
     build_success as virtual_router_build_success,
@@ -32,6 +40,13 @@ __all__ = [
     'heartbeat',
     # misc
     'current_commit',
+    # snapshot
+    'snapshot_build_failure',
+    'snapshot_build_success',
+    'snapshot_scrub_failure',
+    'snapshot_scrub_success',
+    'snapshot_update_failure',
+    'snapshot_update_success',
     # virtual router
     'virtual_router_build_failure',
     'virtual_router_build_success',

@@ -136,13 +136,7 @@ set groups vrf-{{ project_id }} security remote-access client-config vrf-{{ proj
 {% endfor %}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# Firewall rules #}
-{# intra-zone #}
-set groups vrf-{{ project_id }} security policies from-zone vrf-{{ project_id }} to-zone vrf-{{ project_id }} policy vrf-{{ project_id }}-policy-intra-zone match source-address any
-set groups vrf-{{ project_id }} security policies from-zone vrf-{{ project_id }} to-zone vrf-{{ project_id }} policy vrf-{{ project_id }}-policy-intra-zone match destination-address any
-set groups vrf-{{ project_id }} security policies from-zone vrf-{{ project_id }} to-zone vrf-{{ project_id }} policy vrf-{{ project_id }}-policy-intra-zone match application any
-set groups vrf-{{ project_id }} security policies from-zone vrf-{{ project_id }} to-zone vrf-{{ project_id }} policy vrf-{{ project_id }}-policy-intra-zone then permit
-{# ---------- #}
-{# inter-zone #}
+{# CloudCIX supports inter-zone rules only and not intra-zone as it is East-West traffic overload on SRX #}
 {% for firewall in firewall_rules %}
 {# check to create an address object or not and then write policy #}
 {% if firewall['source'] != '0.0.0.0/0' %}

@@ -75,6 +75,16 @@ def _scrub_virtual_router(virtual_router_id: int, span: Span):
         span.set_tag('return_reason', 'not_in_valid_state')
         return
 
+    # Update the virtual_router state to SCRUBBING
+    child_span = opentracing.tracer.start_span('update_to_scrubbing', child_of=span)
+    response = IAAS.virtual_router.partial_update(
+        token=Token.get_instance().token,
+        pk=virtual_router_id,
+        data={'state': state.SCRUBBING},
+        span=child_span,
+    )
+    child_span.finish()
+
     # Also ensure that all the VMs under this project are scrubbed
     child_span = opentracing.tracer.start_span('read_project_vms', child_of=span)
     params = {
@@ -127,6 +137,16 @@ def _scrub_virtual_router(virtual_router_id: int, span: Span):
     else:
         logger.error(f'Failed to scrub virtual_router #{virtual_router_id}')
         metrics.virtual_router_scrub_failure()
+
+        # Update state to UNRESOURCED in the API
+        child_span = opentracing.tracer.start_span('update_to_unresourced', child_of=span)
+        response = IAAS.virtual_router.partial_update(
+            token=Token.get_instance().token,
+            pk=virtual_router_id,
+            data={'state': state.UNRESOURCED},
+            span=child_span,
+        )
+        child_span.finish()
 
         child_span = opentracing.tracer.start_span('send_email', child_of=span)
         try:

@@ -11,9 +11,9 @@ import utils
 from celery_app import app
 from cloudcix_token import Token
 from email_notifier import EmailNotifier
-from scrubbers.vm import (
-    Linux as LinuxVmScrubber,
-    Windows as WindowsVmScrubber,
+from scrubbers import (
+    LinuxVM,
+    WindowsVM,
 )
 
 
@@ -72,6 +72,16 @@ def _scrub_vm(vm_id: int, span: Span):
         span.set_tag('return_reason', 'not_in_valid_state')
         return
 
+    # Update the VM state to SCRUBBING
+    child_span = opentracing.tracer.start_span('update_to_scrubbing', child_of=span)
+    response = IAAS.vm.partial_update(
+        token=Token.get_instance().token,
+        pk=vm_id,
+        data={'state': state.SCRUBBING},
+        span=child_span,
+    )
+    child_span.finish()
+
     # Read the VM server to get the server type
     child_span = opentracing.tracer.start_span('read_vm_server', child_of=span)
     server = utils.api_read(IAAS.server, vm['server_id'], span=child_span)
@@ -90,10 +100,10 @@ def _scrub_vm(vm_id: int, span: Span):
     child_span = opentracing.tracer.start_span('scrub', child_of=span)
     try:
         if server_type == 'HyperV':
-            success = WindowsVmScrubber.scrub(vm, child_span)
+            success = WindowsVM.scrub(vm, child_span)
             child_span.set_tag('server_type', 'windows')
         elif server_type == 'KVM':
-            success = LinuxVmScrubber.scrub(vm, child_span)
+            success = LinuxVM.scrub(vm, child_span)
             child_span.set_tag('server_type', 'linux')
         elif server_type == 'Phantom':
             success = True
@@ -137,6 +147,17 @@ def _scrub_vm(vm_id: int, span: Span):
         logger.error(f'Failed to scrub VM #{vm_id}')
         vm.pop('server_data')
         metrics.vm_scrub_failure()
+
+        # Update state to UNRESOURCED in the API
+        child_span = opentracing.tracer.start_span('update_to_unresourced', child_of=span)
+        response = IAAS.vm.partial_update(
+            token=Token.get_instance().token,
+            pk=vm_id,
+            data={'state': state.UNRESOURCED},
+            span=child_span,
+        )
+        child_span.finish()
+
         # Email the user
         child_span = opentracing.tracer.start_span('send_email', child_of=span)
         try:

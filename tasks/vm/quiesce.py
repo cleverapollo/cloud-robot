@@ -13,9 +13,9 @@ import utils
 from celery_app import app
 from cloudcix_token import Token
 from email_notifier import EmailNotifier
-from quiescers.vm import (
-    Linux as LinuxVmQuiescer,
-    Windows as WindowsVmQuiescer,
+from quiescers import (
+    LinuxVM,
+    WindowsVM,
 )
 
 
@@ -151,10 +151,10 @@ def _quiesce_vm(vm_id: int, span: Span):
     child_span = opentracing.tracer.start_span('quiesce', child_of=span)
     try:
         if server_type == 'HyperV':
-            success = WindowsVmQuiescer.quiesce(vm, child_span)
+            success = WindowsVM.quiesce(vm, child_span)
             child_span.set_tag('server_type', 'windows')
         elif server_type == 'KVM':
-            success = LinuxVmQuiescer.quiesce(vm, child_span)
+            success = LinuxVM.quiesce(vm, child_span)
             child_span.set_tag('server_type', 'linux')
         elif server_type == 'Phantom':
             success = True
