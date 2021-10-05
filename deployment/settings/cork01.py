@@ -66,7 +66,6 @@ CloudCIX API Settings
 # CloudCIX Member API Key
 CLOUDCIX_API_KEY = '022471ac6f7948ae9385a9c510c42f73'  # member 1
 
-
 # CloudCIX Login password
 CLOUDCIX_API_PASSWORD = 'C1xC0rk01'
 
