@@ -4,6 +4,7 @@ ORGANIZATION_URL = os.getenv('ORGANIZATION_URL', 'example.com')
 REGION_NAME = os.getenv('POD_NAME', 'pod')
 COP_NAME = os.getenv('COP_NAME', 'cop')
 COP_ORGANIZATION_URL = os.getenv('COP_ORGANIZATION_URL', 'cop')
+COP_PORTAL = os.getenv('COP_PORTAL', 'cop')
 
 CLOUDCIX_API_USERNAME = os.getenv('ROBOT_API_USERNAME', 'user@example.com')
 CLOUDCIX_API_KEY = os.getenv('ROBOT_API_KEY', '64_characters_max')
@@ -85,7 +86,7 @@ IN_PRODUCTION = True
 Email settings
 """
 # Compute UI URL - Required in Email Templates
-COMPUTE_UI_URL = f'https://cop.{COP_NAME}.{COP_ORGANIZATION_URL}/compute/'
+COMPUTE_UI_URL = f'https://{COP_PORTAL}.{COP_ORGANIZATION_URL}/compute/'
 
 # Reply-To Email Address
 EMAIL_REPLY_TO = f'{ORGANIZATION_URL} <{EMAIL_REPLY_TO}>'
