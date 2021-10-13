@@ -95,4 +95,11 @@ openssh-server
 
 {% endif %}
 ) 1> /target/root/post_install.log 2>&1
+
+{# ------ SSH public key authentication ----- #}
+{% if ssh_public_key %}
+mkdir -m0700 -p /target/home/administrator/.ssh
+cat <<EOF >/target/home/administrator/.ssh/authorized_keys "{{ ssh_public_key }}"
+chmod 0600 /target/home/administrator/.ssh/authorized_keys
+{% endif %}
 %end
