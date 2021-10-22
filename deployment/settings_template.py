@@ -144,7 +144,7 @@ NETWORK_DRIVE_URL = f'\\\\robot.{REGION_NAME}.{ORGANIZATION_URL}\\var\\lib\\robo
 INFLUX_PORT = 443
 
 if f'{PAM_NAME}.{PAM_ORGANIZATION_URL}' == 'support.cloudcix.com':
-    INFLUX_URL = 'influx.support.cloudcix.com'
+    INFLUX_URL = 'influxdb.support.cloudcix.com'
     LOGSTASH_URL = 'logstash.support.cloudcix.com'
     ELASTICSEARCH_DSL = {
         'default': {
