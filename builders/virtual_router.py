@@ -226,9 +226,14 @@ class VirtualRouter(VirtualRouterMixin):
         for vpn in virtual_router_vpns:
             routes: Deque[Dict[str, str]] = deque()
             for route in vpn['routes']:
+                local = IPNetwork(str(route['local_subnet']['address_range'])).cidr
+                remote = IPNetwork(str(route['remote_subnet'])).cidr
                 routes.append({
-                    'local': IPNetwork(str(route['local_subnet']['address_range'])).cidr,
-                    'remote': IPNetwork(str(route['remote_subnet'])).cidr,
+                    'id': route['id'],
+                    'local': local,
+                    'local_name': ADDRESS_NAME_SUB_PATTERN.sub('-', local),
+                    'remote': remote,
+                    'remote_name': ADDRESS_NAME_SUB_PATTERN.sub('-', remote),
                 })
             vpn['routes'] = routes
             # if send_email is true then read VPN for email addresses
