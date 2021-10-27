@@ -135,7 +135,19 @@ set groups vrf-{{ project_id }} security remote-access client-config vrf-{{ proj
 {% endif %}
 {% endfor %}
 {# --------------------------------------------------------------------------------------------------------------------------------- #}
-{# Firewall rules #}
+{# Security Policies #}
+{# Intra-zone security polices only if vpn exits, each security policy (with inbound and outbound in one policy) per route #}
+{% for vpn in vpns %}
+{% for route in vpn['routes'] %}
+set groups vrf-{{ project_id }} security address-book vrf-{{ project_id }}-vpn-{{ vpn['id'] }} address {{ route['local_name'] }} {{ route['local'] }}
+set groups vrf-{{ project_id }} security address-book vrf-{{ project_id }}-vpn-{{ vpn['id'] }} address {{ route['remote_name'] }} {{ route['remote'] }}
+set groups vrf-{{ project_id }}-sp-vpn-{{ vpn['id'] }} security policies from-zone vrf-{{ project_id }} to-zone vrf-{{ project_id }} policy vrf-{{ project_id }}-vpn-{{ vpn['id'] }}-route-{{ route['id'] }} match source-address [{{ route['local_name'] }} {{ route['remote_name'] }}]
+set groups vrf-{{ project_id }}-sp-vpn-{{ vpn['id'] }} security policies from-zone vrf-{{ project_id }} to-zone vrf-{{ project_id }} policy vrf-{{ project_id }}-vpn-{{ vpn['id'] }}-route-{{ route['id'] }} match destination-address [{{ route['local_name'] }} {{ route['remote_name'] }}]
+set groups vrf-{{ project_id }}-sp-vpn-{{ vpn['id'] }} security policies from-zone vrf-{{ project_id }} to-zone vrf-{{ project_id }} policy vrf-{{ project_id }}-vpn-{{ vpn['id'] }}-route-{{ route['id'] }} match application any
+set groups vrf-{{ project_id }}-sp-vpn-{{ vpn['id'] }} security policies from-zone vrf-{{ project_id }} to-zone vrf-{{ project_id }} policy vrf-{{ project_id }}-vpn-{{ vpn['id'] }}-route-{{ route['id'] }} then permit
+{% endfor %}
+{% endfor %}
+{# --------------------------------------------------------------------------------------------------------------------------------- #}
 {# CloudCIX supports inter-zone rules only and not intra-zone as it is East-West traffic overload on SRX #}
 {% for firewall in firewall_rules %}
 {# check to create an address object or not and then write policy #}
@@ -177,7 +189,10 @@ set groups vrf-{{ project_id }}-sp-outbound security policies from-zone vrf-{{ p
 set groups vrf-{{ project_id }}-sp-outbound security policies from-zone vrf-{{ project_id }} to-zone PUBLIC policy vrf-{{ project_id }}-policy-outbound-permit-all match application any
 set groups vrf-{{ project_id }}-sp-outbound security policies from-zone vrf-{{ project_id }} to-zone PUBLIC policy vrf-{{ project_id }}-policy-outbound-permit-all then permit
 {# ----------------------------------------------------------------------------------------------------------------- #}
-{# importing robosoc  and vrf-{project_id}-sp-{firewall['scope']} security policies into actual vrf-{project_id} security policy #}
+{# importing intra-zone vpn security policies, robosoc and vrf-{project_id}-sp-{firewall['scope']} security policies into actual vrf-{project_id} security policy #}
+{% for vpn in vpns %}
+set groups vrf-{{ project_id }} security policies from-zone vrf-{{ project_id }} to-zone vrf-{{ project_id }} apply-groups vrf-{{ project_id }}-sp-vpn-{{ vpn['id'] }}
+{% endfor %}
 set groups vrf-{{ project_id }} security policies from-zone PUBLIC to-zone vrf-{{ project_id }} apply-groups PUBLIC-VRF
 set groups vrf-{{ project_id }} security policies from-zone vrf-{{ project_id }} to-zone PUBLIC apply-groups VRF-PUBLIC
 {% if inbound_firewall %}
