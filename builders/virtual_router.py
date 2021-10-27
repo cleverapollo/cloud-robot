@@ -231,9 +231,9 @@ class VirtualRouter(VirtualRouterMixin):
                 routes.append({
                     'id': route['id'],
                     'local': local,
-                    'local_name': ADDRESS_NAME_SUB_PATTERN.sub('-', local),
+                    'local_name': ADDRESS_NAME_SUB_PATTERN.sub('-', str(local)),
                     'remote': remote,
-                    'remote_name': ADDRESS_NAME_SUB_PATTERN.sub('-', remote),
+                    'remote_name': ADDRESS_NAME_SUB_PATTERN.sub('-', str(remote)),
                 })
             vpn['routes'] = routes
             # if send_email is true then read VPN for email addresses
