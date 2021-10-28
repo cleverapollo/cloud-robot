@@ -139,8 +139,8 @@ set groups vrf-{{ project_id }} security remote-access client-config vrf-{{ proj
 {# Intra-zone security polices only if vpn exits, each security policy (with inbound and outbound in one policy) per route #}
 {% for vpn in vpns %}
 {% for route in vpn['routes'] %}
-set groups vrf-{{ project_id }} security address-book vrf-{{ project_id }}-vpn-{{ vpn['id'] }} address {{ route['local_name'] }} {{ route['local'] }}
-set groups vrf-{{ project_id }} security address-book vrf-{{ project_id }}-vpn-{{ vpn['id'] }} address {{ route['remote_name'] }} {{ route['remote'] }}
+set groups vrf-{{ project_id }} security address-book vrf-{{ project_id }}-address-book address {{ route['local_name'] }} {{ route['local'] }}
+set groups vrf-{{ project_id }} security address-book vrf-{{ project_id }}-address-book address {{ route['remote_name'] }} {{ route['remote'] }}
 set groups vrf-{{ project_id }}-sp-vpn-{{ vpn['id'] }} security policies from-zone vrf-{{ project_id }} to-zone vrf-{{ project_id }} policy vrf-{{ project_id }}-vpn-{{ vpn['id'] }}-route-{{ route['id'] }} match source-address [{{ route['local_name'] }} {{ route['remote_name'] }}]
 set groups vrf-{{ project_id }}-sp-vpn-{{ vpn['id'] }} security policies from-zone vrf-{{ project_id }} to-zone vrf-{{ project_id }} policy vrf-{{ project_id }}-vpn-{{ vpn['id'] }}-route-{{ route['id'] }} match destination-address [{{ route['local_name'] }} {{ route['remote_name'] }}]
 set groups vrf-{{ project_id }}-sp-vpn-{{ vpn['id'] }} security policies from-zone vrf-{{ project_id }} to-zone vrf-{{ project_id }} policy vrf-{{ project_id }}-vpn-{{ vpn['id'] }}-route-{{ route['id'] }} match application any
