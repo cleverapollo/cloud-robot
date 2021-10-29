@@ -139,7 +139,7 @@ HYPERV_HOST_NETWORK_DRIVE_PATH = '/var/lib/libvirt/ISOs/HyperV'
 # HyperV vms path
 HYPERV_VMS_PATH = r'D:\HyperV\\'
 # Nas drive mount url
-NETWORK_DRIVE_URL = f'\\\\robot.{REGION_NAME}.{ORGANIZATION_URL}\\var\\lib\\robot'
+NETWORK_DRIVE_URL = f'\\\\robot.{REGION_NAME}.{ORGANIZATION_URL}\\etc\\cloudcix\\robot'
 
 INFLUX_PORT = 443
 
