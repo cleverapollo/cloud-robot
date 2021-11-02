@@ -31,12 +31,7 @@ class VMImageMixin:
         :param path: file location
         :return: boolean True for file exists and False for not
         """
-        file_found = False
-        for file in os.listdir(path):
-            if file == filename:
-                cls.logger.debug(f'File {filename} is available.')
-                file_found = True
-        return file_found
+        return filename in os.listdir(path)
 
     @classmethod
     def download_image(cls, filename: str, path: str) -> Optional[bool]:
@@ -70,26 +65,38 @@ class VMUpdateMixin:
         """
         vm_id = vm_data['id']
         drives: Deque[Dict[str, str]] = deque()
+        storage_changes = vm_data['history'][0]['storage_histories']
 
-        # If there has been a change, grab the storage changes and use them to update the values
-        storage_changes = vm_data['changes_this_month'][0]['details'].get('storages', {})
-        if len(storage_changes) == 0:
-            # No storages were changed, return the defaults
-            return drives
+        # First one is the latest
+        new_storages = storage_changes[0]
+        old_storages = {}
+        if len(storage_changes) >= 2:
+            # second one is the old one.
+            old_storages = {storage_changes[1]['id']: storage_change for storage_change in storage_changes[1]}
 
         # Read the updated storages to determine the changes that were made
         storages = {storage['id']: storage for storage in vm_data['storages']}
-        for storage_id, storage_changes in storage_changes.items():
+        for storage_id, new_storages in new_storages.items():
+            # check if storage exits at all
             storage = storages.get(storage_id, None)
             if storage is None:
                 cls.logger.error(f'Error fetching Storage #{storage_id} for VM #{vm_id}')
                 return drives
 
+            # get the new size
+            new_size = storage['gb']
+
+            # get the old size if any
+            old_size = '0'
+            old_storage = old_storages.get(storage_id, None)
+            if old_storage is not None:
+                old_size = old_storage['gb_quantity']
+
             # Append the drive to be updated to the deque
             drives.append({
                 'id': storage_id,
-                'new_size': storage_changes['new_value'],
-                'old_size': storage_changes['old_value'],
+                'new_size': new_size,
+                'old_size': old_size,
             })
 
         # Finally, return the generated information
