@@ -11,9 +11,10 @@ from typing import Any, Dict, Optional
 # lib
 import opentracing
 from jaeger_client import Span
-from netaddr import IPAddress, IPNetwork
+from netaddr import IPAddress
 from winrm.exceptions import WinRMError
 # local
+import settings
 import utils
 from mixins import VMUpdateMixin, WindowsMixin
 
@@ -34,20 +35,8 @@ class Windows(WindowsMixin, VMUpdateMixin):
     template_keys = {
         # changes of vm
         'changes',
-        # the default subnet gateway
-        'default_gateway',
-        # default ip address of the VM
-        'default_ip',
-        # the default subnet mask in integer form (/24)
-        'default_netmask_int',
-        # the default vlan that the vm is a part of
-        'default_vlan',
-        # the dns servers for the vm
-        'dns',
         # the DNS hostname for the host machine, as WinRM cannot use IPv6
         'host_name',
-        # the non default ip addresses of the vm
-        'ip_addresses',
         # a flag stating whether or not the VM should be turned back on after updating it
         'restart',
         # storage type (HDD/SSD)
@@ -193,14 +182,7 @@ class Windows(WindowsMixin, VMUpdateMixin):
         # Add changes to data
         data['changes'] = changes
         data['storage_type'] = vm_data['storage_type']
-
-        # Get the Networking details
-        # TODO will update with multiple IPs stuff
-        data['dns'] = vm_data['dns'].replace(',', '", "')
-        data['ip_addresses'] = vm_data['ip_addresses']['address']
-        net = IPNetwork(vm_data['ip_address']['subnet']['address_range'])
-        data['gateway'], data['netmask'] = str(net.ip), str(net.netmask)
-        data['vlan'] = vm_data['ip_address']['subnet']['vlan']
+        data['vms_path'] = settings.HYPERV_VMS_PATH
 
         # Get the host name of the server
         host_name = None
