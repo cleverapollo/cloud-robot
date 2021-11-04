@@ -19,9 +19,9 @@ __all__ = [
     'HYPERV_ROBOT_NETWORK_DRIVE_PATH',
     'HYPERV_VMS_PATH',
     'IN_PRODUCTION',
-    'INFLUX_DATABASE',
-    'INFLUX_PORT',
-    'INFLUX_URL',
+    'CLOUDCIX_INFLUX_DATABASE',
+    'CLOUDCIX_INFLUX_PORT',
+    'CLOUDCIX_INFLUX_URL',
     'KVM_HOST_NETWORK_DRIVE_PATH',
     'KVM_ROBOT_NETWORK_DRIVE_PATH',
     'KVM_VMS_PATH',
@@ -149,13 +149,13 @@ ROBOT_ENV = os.environ.get('ROBOT_ENV', 'dev')
  Real Time Monitoring Settings
  """
 # Database in influx to send to
-INFLUX_DATABASE = 'robot'
+CLOUDCIX_INFLUX_DATABASE = 'robot'
 
 # Port of influx endpoint
-INFLUX_PORT = 443
+CLOUDCIX_INFLUX_PORT = 443
 
 # Hostname of influx endpoint
-INFLUX_URL = 'influx.cloudcix.com'
+CLOUDCIX_INFLUX_URL = 'influx.cloudcix.com'
 
 """
 Configuration settings

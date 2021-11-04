@@ -43,9 +43,9 @@ __all__ = [
     'HYPERV_ROBOT_NETWORK_DRIVE_PATH',
     'HYPERV_VMS_PATH',
     'IN_PRODUCTION',
-    'INFLUX_DATABASE',
-    'INFLUX_PORT',
-    'INFLUX_URL',
+    'CLOUDCIX_INFLUX_DATABASE',
+    'CLOUDCIX_INFLUX_PORT',
+    'CLOUDCIX_INFLUX_URL',
     'KVM_HOST_NETWORK_DRIVE_PATH',
     'KVM_ROBOT_NETWORK_DRIVE_PATH',
     'KVM_VMS_PATH',
@@ -141,20 +141,26 @@ HYPERV_VMS_PATH = r'D:\HyperV\\'
 # Nas drive mount url
 NETWORK_DRIVE_URL = f'\\\\robot.{REGION_NAME}.{ORGANIZATION_URL}\\etc\\cloudcix\\robot'
 
-INFLUX_PORT = 443
+CLOUDCIX_INFLUX_PORT = 443
+
+LOGSTASH_ENABLE = os.getenv('LOGSTASH_ENABLE', 'false').lower() == 'true'
 
 if f'{PAM_NAME}.{PAM_ORGANIZATION_URL}' == 'support.cloudcix.com':
-    INFLUX_URL = 'influxdb.support.cloudcix.com'
+    LOGSTASH_ENABLE = True
+    CLOUDCIX_INFLUX_URL = 'influxdb.support.cloudcix.com'
     LOGSTASH_URL = 'logstash.support.cloudcix.com'
     ELASTICSEARCH_DSL = {
         'default': {
             'hosts': 'elasticsearch.support.cloudcix.com',
         },
     }
-    LOGSTASH_ENABLE = True
-    INFLUX_DATABASE = 'robot'
+    CLOUDCIX_INFLUX_DATABASE = 'robot'
 else:
-    LOGSTASH_ENABLE = False
-    LOGSTASH_URL = ''
-    INFLUX_URL = ''
-    INFLUX_DATABASE = None
+    LOGSTASH_URL = os.getenv('LOGSTASH_URL', '')
+    CLOUDCIX_INFLUX_URL = os.getenv('INFLUX_URL', '')
+    ELASTICSEARCH_DSL = {
+        'default': {
+            'hosts': os.getenv('ELASTICSEARCH_URL', ''),
+        },
+    }
+    CLOUDCIX_INFLUX_DATABASE = os.getenv('INFLUX_DATABASE', '')
