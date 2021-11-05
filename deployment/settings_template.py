@@ -146,7 +146,7 @@ CLOUDCIX_INFLUX_PORT = 443
 LOGSTASH_ENABLE = os.getenv('LOGSTASH_ENABLE', 'false').lower() == 'true'
 
 if f'{PAM_NAME}.{PAM_ORGANIZATION_URL}' == 'support.cloudcix.com':
-    LOGSTASH_ENABLE = True
+    # LOGSTASH_ENABLE = True
     CLOUDCIX_INFLUX_URL = 'influxdb.support.cloudcix.com'
     LOGSTASH_URL = 'logstash.support.cloudcix.com'
     ELASTICSEARCH_DSL = {
