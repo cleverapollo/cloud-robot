@@ -5,7 +5,7 @@ REGION_NAME = os.getenv('POD_NAME', 'pod')
 COP_NAME = os.getenv('COP_NAME', 'cop')
 COP_ORGANIZATION_URL = os.getenv('COP_ORGANIZATION_URL', 'cop')
 COP_PORTAL = os.getenv('COP_PORTAL', 'cop')
-
+SEND_TO_FAIL = os.getenv('SEND_TO_FAIL', '')
 CLOUDCIX_API_USERNAME = os.getenv('ROBOT_API_USERNAME', 'user@example.com')
 CLOUDCIX_API_KEY = os.getenv('ROBOT_API_KEY', '64_characters_max')
 CLOUDCIX_API_PASSWORD = os.getenv('ROBOT_API_PASSWORD', 'pw')
@@ -92,7 +92,7 @@ COMPUTE_UI_URL = f'https://{COP_PORTAL}.{COP_ORGANIZATION_URL}/compute/'
 EMAIL_REPLY_TO = f'{ORGANIZATION_URL} <{EMAIL_REPLY_TO}>'
 
 # Email to send build fail emails to
-SEND_TO_FAIL = f'support@{ORGANIZATION_URL}.com'
+SEND_TO_FAIL = SEND_TO_FAIL
 
 # Subject for Project build fail Emails
 SUBJECT_PROJECT_FAIL = f'[{ORGANIZATION_URL}] VM Failure Occurred!'
