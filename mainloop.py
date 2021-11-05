@@ -6,12 +6,23 @@ from cloudcix.api.iaas import IAAS
 from cloudcix_token import Token
 # local
 import metrics
-from celery_app import setup_logger_and_tracer
+from settings import LOGSTASH_ENABLE
 from robot import Robot
+from utils import setup_root_logger
 
 __all__ = [
     'mainloop',
 ]
+
+
+def setup_logging():
+    """
+    Setup logging for mainloop only.
+    """
+    if not LOGSTASH_ENABLE:
+        logging.disable(logging.CRITICAL)
+        return
+    setup_root_logger()
 
 
 def run_robot_get():
@@ -70,8 +81,8 @@ def mainloop():
     """
     Run once 'while mainloop' at the start.
     """
-    # setup logging and tracing
-    setup_logger_and_tracer()
+    # setup logging
+    setup_logging()
 
     while True:
         # Send info about up-time
