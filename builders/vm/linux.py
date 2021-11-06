@@ -244,7 +244,7 @@ class Linux(LinuxMixin, VMImageMixin):
         data['crypted_admin_password'] = str(crypt(admin_password, mksalt(METHOD_SHA512)))
         root_password = Linux._password_generator(size=128)
         data['crypted_root_password'] = str(crypt(root_password, mksalt(METHOD_SHA512)))
-        data['ssh_public_key'] = vm_data['public_key']
+        data['ssh_public_key'] = vm_data['public_key'] if vm_data['public_key'] not in [None, ''] else False
 
         # Check for the primary storage
         if not any(storage['primary'] for storage in vm_data['storages']):
