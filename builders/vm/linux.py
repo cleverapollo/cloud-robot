@@ -222,10 +222,11 @@ class Linux(LinuxMixin, VMImageMixin):
         child_span = opentracing.tracer.start_span('vm_image_file_download', child_of=span)
         if not Linux.check_image(data['image_filename'], path):
             # download the file
-            if not Linux.download_image(data['image_filename'], path):
-                error = f'Failed to download image file {data["image_filename"]}, 404 File Not Found.'
-                Linux.logger.error(error)
-                vm_data['errors'].append(error)
+            downloaded, errors = Linux.download_image(data['image_filename'], path)
+            if not downloaded:
+                for error in errors:
+                    Linux.logger.error(error)
+                    vm_data['errors'].append(error)
                 return None
         child_span.finish()
 
