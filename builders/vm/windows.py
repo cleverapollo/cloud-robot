@@ -191,10 +191,11 @@ class Windows(WindowsMixin, VMImageMixin):
         child_span = opentracing.tracer.start_span('vm_image_file_download', child_of=span)
         if not Windows.check_image(data['image_filename'], path):
             # download the file
-            if not Windows.download_image(data['image_filename'], path):
-                error = f'Failed to download image file {data["image_filename"]}, 404 File Not Found.'
-                Windows.logger.error(error)
-                vm_data['errors'].append(error)
+            downloaded, errors = Windows.download_image(data['image_filename'], path)
+            if not downloaded:
+                for error in errors:
+                    Windows.logger.error(error)
+                    vm_data['errors'].append(error)
                 return None
         child_span.finish()
 
