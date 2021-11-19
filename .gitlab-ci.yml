@@ -3,8 +3,8 @@ stages:
   - test
   - docker-base
   - docker
-  - deploy
   - dockerhub
+  - deploy
   - deploy_github
   
 
@@ -287,6 +287,7 @@ deploy_github:
   stage: deploy_github
   script:
     - /bin/bash deployment/github_deploy.sh
+  when: manual
   only:
     - stable
 
