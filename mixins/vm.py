@@ -61,6 +61,7 @@ class VMImageMixin:
             cls.logger.debug(f'File {filename} downloaded successfully into {path}{filename}.')
             # move the downloaded file back to destination
             shutil.move(f'{path}temp/{filename}', f'{path}{filename}')
+            shutil.chown(f'{path}{filename}', 'nobody', 'nogroup')
         except HTTPError:
             cls.logger.error(f'File {filename} not found at {url}')
             errors.append(f'File {filename} not found at {url}')
