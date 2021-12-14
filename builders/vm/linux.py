@@ -78,6 +78,8 @@ class Linux(LinuxMixin, VMImageMixin):
         'network_drive_path',
         # the amount of RAM in the VM
         'ram',
+        # ssh public key authentication
+        'ssh_public_key',
         # storage type (HDD/SSD)
         'storage_type',
         # storages of the vm
@@ -220,10 +222,11 @@ class Linux(LinuxMixin, VMImageMixin):
         child_span = opentracing.tracer.start_span('vm_image_file_download', child_of=span)
         if not Linux.check_image(data['image_filename'], path):
             # download the file
-            if not Linux.download_image(data['image_filename'], path):
-                error = f'Failed to download image file {data["image_filename"]}, 404 File Not Found.'
-                Linux.logger.error(error)
-                vm_data['errors'].append(error)
+            downloaded, errors = Linux.download_image(data['image_filename'], path)
+            if not downloaded:
+                for error in errors:
+                    Linux.logger.error(error)
+                    vm_data['errors'].append(error)
                 return None
         child_span.finish()
 
@@ -242,6 +245,7 @@ class Linux(LinuxMixin, VMImageMixin):
         data['crypted_admin_password'] = str(crypt(admin_password, mksalt(METHOD_SHA512)))
         root_password = Linux._password_generator(size=128)
         data['crypted_root_password'] = str(crypt(root_password, mksalt(METHOD_SHA512)))
+        data['ssh_public_key'] = vm_data['public_key'] if vm_data['public_key'] not in [None, ''] else False
 
         # Check for the primary storage
         if not any(storage['primary'] for storage in vm_data['storages']):

@@ -6,8 +6,9 @@ methods included;
 # stdlib
 import logging
 import os
+import shutil
 from collections import deque
-from typing import Any, Deque, Dict, Optional
+from typing import Any, Deque, Dict, List, Optional, Tuple
 from urllib.error import HTTPError
 from urllib.request import urlretrieve
 # lib
@@ -34,7 +35,7 @@ class VMImageMixin:
         return filename in os.listdir(path)
 
     @classmethod
-    def download_image(cls, filename: str, path: str) -> Optional[bool]:
+    def download_image(cls, filename: str, path: str) -> Tuple[bool, List[str]]:
         """
         This function downloads file_name form downloads.cloudcix.com/robot/ into concerned path at /mnt/images/
         :param filename: name of the file to be downloaded
@@ -42,15 +43,30 @@ class VMImageMixin:
         :return: boolean: True for Success and False for Failure
         """
         downloaded = False
+        errors: List[str] = []
+
+        # first download file into temp folder and then move to destination,
+        # other wise downloading or incomplete download can mislead other vm build task of same image.
+        try:
+            os.makedirs(f'{path}temp', exist_ok=True)
+        except OSError as error:
+            errors.append(f'Failed to create temp dir at path {path}, Error:{error}')
+            return downloaded, errors
+
         cls.logger.debug(f'File {filename} not available at {path} so downloading.')
         url = f'https://downloads.cloudcix.com/robot/{filename}'
         try:
-            urlretrieve(url, f'{path}{filename}')
+            urlretrieve(url, f'{path}temp/{filename}')
             downloaded = True
             cls.logger.debug(f'File {filename} downloaded successfully into {path}{filename}.')
+            # move the downloaded file back to destination
+            shutil.move(f'{path}temp/{filename}', f'{path}{filename}')
+            shutil.chown(f'{path}{filename}', 'nobody', 'nogroup')
         except HTTPError:
             cls.logger.error(f'File {filename} not found at {url}')
-        return downloaded
+            errors.append(f'File {filename} not found at {url}')
+
+        return downloaded, errors
 
 
 class VMUpdateMixin:

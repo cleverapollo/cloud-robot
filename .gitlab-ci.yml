@@ -3,11 +3,10 @@ stages:
   - test
   - docker-base
   - docker
-  - deploy
   - dockerhub
+  - deploy
   - deploy_github
   
-
 
 lint:
   image: gitlab.cloudcix.com:5005/utils/ci/lint
@@ -287,6 +286,7 @@ deploy_github:
   stage: deploy_github
   script:
     - /bin/bash deployment/github_deploy.sh
+  when: manual
   only:
     - stable
 
