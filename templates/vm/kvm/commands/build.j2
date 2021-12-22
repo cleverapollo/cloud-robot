@@ -1,11 +1,11 @@
 {
 {#----------------------- Storage creation------------------------- #}
 {% for storage in storages %}
-  echo {{ host_sudo_passwd }} | sudo -S qemu-img create -f qcow2 {{ vms_path }}{{ vm_identifier }}_{{ storage_type }}_{{ storage["id"] }}.img {{ storage["gb"] }}G
+  echo '{{ host_sudo_passwd }}' | sudo -S qemu-img create -f qcow2 {{ vms_path }}{{ vm_identifier }}_{{ storage_type }}_{{ storage["id"] }}.img {{ storage["gb"] }}G
 {% endfor %}
 
 {#----------------------- VM creation------------------------- #}
-  echo {{ host_sudo_passwd }} | sudo -S virt-install --name {{ vm_identifier }} \
+  echo '{{ host_sudo_passwd }}' | sudo -S virt-install --name {{ vm_identifier }} \
   --memory {{ ram }} \
   --vcpus {{ cpu }} \
 {# Primary storage first #}
