@@ -152,6 +152,10 @@ stable_base:
 ###############################################################################
 #                         Production Build and Deploy                         #
 ###############################################################################
+
+###############################################################################
+#                        Cork01 Build and Deploy.                            #
+###############################################################################
 cork01_image:
   stage: docker
   tags:
@@ -176,7 +180,9 @@ deploy_cork01:
   only:
     - stable
 
-
+###############################################################################
+#                        NTI Build and Deploy.                                #
+###############################################################################
 nti-cork01_image:
   stage: docker
   tags:
@@ -201,7 +207,9 @@ deploy_nti-cork01:
   only:
     - stable
 
-
+###############################################################################
+#                        NetSOC Build and Deploy.                            #
+###############################################################################
 # netsoc-cork01_image:
 #   stage: docker
 #   tags:
@@ -226,32 +234,9 @@ deploy_nti-cork01:
 #   only:
 #     - stable
 
-
-vodafone-cork01_image:
-  stage: docker
-  tags:
-  - docker-build
-  script:
-  - docker build -f deployment/docker/stable/vodafone-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/vodafone-cork01 --no-cache .
-  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/vodafone-cork01
-  only:
-  - stable
-
-deploy_vodafone-cork01:
-  image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
-  before_script:
-    - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
-    - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
-  stage: deploy
-  script:
-    # Deploy Heartbeat
-    - ansible-playbook -i deployment/hosts/vodafone-cork01.yml deployment/playbook.yml --extra-vars="deployment_host=vodafone-cork01"
-    # Deploy workers
-    - ansible-playbook -i deployment/hosts/vodafone-cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=vodafone-cork01-worker0"
-  only:
-    - stable
-
-
+###############################################################################
+#                        VMotion Build and Deploy.                            #
+###############################################################################
 vmotion-cork01_image:
   stage: docker
   tags:
