@@ -42,9 +42,9 @@ class Linux(LinuxMixin, VMUpdateMixin):
         # a flag stating whether or not the VM should be turned back on after updating it
         'restart',
         # storage type (HDD/SSD)
-        'storage_type'
+        'storage_type',
         # Total drives count is needed for drive names
-        'total_drives'
+        'total_drives',
         # an identifier that uniquely identifies the vm
         'vm_identifier',
         # path for vm's .img files located in host

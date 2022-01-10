@@ -40,7 +40,7 @@ class Windows(WindowsMixin, VMUpdateMixin):
         # a flag stating whether or not the VM should be turned back on after updating it
         'restart',
         # storage type (HDD/SSD)
-        'storage_type'
+        'storage_type',
         # an identifier that uniquely identifies the vm
         'vm_identifier',
         # path for vm's folders files located in host
