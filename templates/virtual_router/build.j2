@@ -75,7 +75,11 @@ set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn
 set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway local-address {{ virtual_router_ip }}
 set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway version {{ vpn['ike_version'] }}
 {% if vpn['vpn_type'] == 'site_to_site' %}
-set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway address {{ vpn['ike_public_ip'] }}
+{% if vpn['ike_gateway_type'] == 'public_ip' %}
+set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway address {{ vpn['ike_gateway_value'] }}
+{% else %}
+set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway dynamic hostname {{ vpn['ike_gateway_value'] }}
+{% endif %}
 {% endif %}
 {% if vpn['vpn_type'] == 'dynamic_secure_connect' %}
 set groups vrf-{{ project_id }} security ike gateway vrf-{{ project_id }}-{{ vpn['stif_number'] }}-gateway dynamic user-at-hostname "vrf-{{ project_id }}-{{vpn['stif_number'] }}@cloudcix.com"
