@@ -17,6 +17,7 @@ from logstash_async.handler import AsynchronousLogstashHandler
 from cloudcix_token import Token
 from cloudcix.client import Client
 from settings import (
+    LOGSTASH_PORT,
     LOGSTASH_URL,
     NETWORK_PASSWORD,
     REGION_NAME,
@@ -84,7 +85,7 @@ def setup_root_logger():
 
     # Logstash Handler
     logstash_fmt = LogstashFormatter(extra={'application': 'robot', 'region': REGION_NAME})
-    logstash_handler = AsynchronousLogstashHandler(LOGSTASH_URL, 5959, 'log.db')
+    logstash_handler = AsynchronousLogstashHandler(LOGSTASH_URL, LOGSTASH_PORT, 'log.db')
 
     logstash_handler.setFormatter(logstash_fmt)
     logger.addHandler(logstash_handler)
