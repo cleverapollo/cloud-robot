@@ -50,6 +50,7 @@ __all__ = [
     'KVM_ROBOT_NETWORK_DRIVE_PATH',
     'KVM_VMS_PATH',
     'LOGSTASH_ENABLE',
+    'LOGSTASH_PORT',
     'LOGSTASH_URL',
     'NETWORK_DRIVE_URL',
     'NETWORK_PASSWORD',
@@ -144,6 +145,7 @@ NETWORK_DRIVE_URL = f'\\\\robot.{REGION_NAME}.{ORGANIZATION_URL}\\etc\\cloudcix\
 CLOUDCIX_INFLUX_PORT = 443
 
 LOGSTASH_ENABLE = os.getenv('LOGSTASH_ENABLE', 'false').lower() == 'true'
+LOGSTASH_PORT = 5044
 
 if f'{PAM_NAME}.{PAM_ORGANIZATION_URL}' == 'support.cloudcix.com':
     # LOGSTASH_ENABLE = True

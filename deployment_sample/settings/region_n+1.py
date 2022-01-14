@@ -26,6 +26,7 @@ __all__ = [
     'KVM_ROBOT_NETWORK_DRIVE_PATH',
     'KVM_VMS_PATH',
     'LOGSTASH_ENABLE',
+    'LOGSTASH_PORT',
     'LOGSTASH_URL',
     'NETWORK_DRIVE_URL',
     'NETWORK_PASSWORD',
@@ -127,7 +128,7 @@ SUBJECT_VIRTUAL_ROUTER_FAIL = ''
 Logging Settings
 """
 LOGSTASH_ENABLE = False  # set to True for logging to Collector
-
+LOGSTASH_PORT = 5044
 # Hostname of logstash for centralised logging
 LOGSTASH_URL = ''
 
