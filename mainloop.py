@@ -93,6 +93,7 @@ def mainloop():
         data = run_robot_get()
         if data is not None:
             project_ids = data['project_ids']
+            backups = data['backups']
             snapshots = data['snapshots']
             virtual_routers = data['virtual_routers']
             vms = data['vms']
@@ -100,7 +101,7 @@ def mainloop():
             # data found for Robot so is waking up and preparing for run.
             logger.debug(f'Robot so is waking up and preparing for run.')
 
-            robot = Robot(snapshots, virtual_routers, vms)
+            robot = Robot(backups, snapshots, virtual_routers, vms)
             robot()
             # Robot started run
             logger.debug(f'Initiating Robot for run.')

@@ -48,8 +48,32 @@ class EmailNotifier:
         )
         # Format the subject
         subject = settings.SUBJECT_SNAPSHOT_FAIL
+        if EmailNotifier._compose_email(settings.SEND_TO_FAIL, subject, body):
+            logger.debug(f'Sent failure email for Snapshot #{snapshot_data["id"]} to {settings.SEND_TO_FAIL}.')
+
+    @staticmethod
+    def backup_failure(backup_data: Dict[str, Any], task: str):
+        """
+        Report any kind of failure to the NOC and developers emails
+        """
+        logger = logging.getLogger('robot.email_notifier.failure')
+        logger.debug(f'Sending failure email for Backup #{backup_data["id"]} on VM #{backup_data["vm"]["id"]}')
+
+        # catch errors
+        errors = backup_data.pop('errors')
+        # Add the pretty printed data blob to the VM
+        backup_data['data'] = dumps(backup_data, indent=2, cls=utils.DequeEncoder)
+        # Render the email body
+        body = utils.JINJA_ENV.get_template('emails/backup_failure.j2').render(
+            compute_url=settings.COMPUTE_UI_URL,
+            task=task,
+            errors=errors,
+            **backup_data,
+        )
+        # Format the subject
+        subject = settings.SUBJECT_BACKUP_FAIL
         EmailNotifier._compose_email(settings.SEND_TO_FAIL, subject, body)
-        logger.debug(f'Sent failure email for Snapshot #{snapshot_data["id"]}.')
+        logger.debug(f'Sent failure email for Backup #{backup_data["id"]}.')
 
     @staticmethod
     def vm_failure(vm_data: Dict[str, Any], task: str):
@@ -73,8 +97,8 @@ class EmailNotifier:
         # Format the subject
         subject = settings.SUBJECT_PROJECT_FAIL
         for email in settings.SEND_TO_FAIL.split(','):
-            EmailNotifier._compose_email(email, subject, body)
-        logger.debug(f'Sent failure email for VM #{vm_data["id"]}.')
+            if EmailNotifier._compose_email(email, subject, body):
+                logger.debug(f'Sent failure email for VM #{vm_data["id"]} to {email} to {settings.SEND_TO_FAIL}.')
 
     @staticmethod
     def virtual_router_failure(virtual_router_data: Dict[str, Any], task: str):
@@ -97,8 +121,8 @@ class EmailNotifier:
         # Format the subject
         subject = settings.SUBJECT_VIRTUAL_ROUTER_FAIL
         for email in settings.SEND_TO_FAIL.split(','):
-            EmailNotifier._compose_email(email, subject, body)
-        logger.debug(f'Sent failure email for virtual router #{virtual_router_data["id"]}.')
+            if EmailNotifier._compose_email(email, subject, body):
+                logger.debug(f'Sent failure email for virtual router #{virtual_router_data["id"]} to {email}.')
 
     # ############################################################################################################# #
     #                                               BUILD                                                           #
@@ -124,8 +148,8 @@ class EmailNotifier:
         # Format the subject
         subject = settings.SUBJECT_VM_SUCCESS
         for email in emails:
-            EmailNotifier._compose_email(email, subject, body)
-        logger.debug(f'Sent build success email for VM #{vm_data["id"]}.')
+            if EmailNotifier._compose_email(email, subject, body):
+                logger.debug(f'Sent build success email for VM #{vm_data["id"]} to {email}.')
 
     @staticmethod
     def vpn_build_success(vpn_data: Dict[str, Any]):
@@ -149,8 +173,8 @@ class EmailNotifier:
         # Format the subject
         subject = settings.SUBJECT_VPN_BUILD_SUCCESS
         for email in emails:
-            EmailNotifier._compose_email(email, subject, body)
-        logger.debug(f'Sent build success email for VPN #{vpn_data["id"]}.')
+            if EmailNotifier._compose_email(email, subject, body):
+                logger.debug(f'Sent build success email for VPN #{vpn_data["id"]} to {email}.')
 
     @staticmethod
     def vpn_update_success(vpn_data: Dict[str, Any]):
@@ -174,8 +198,35 @@ class EmailNotifier:
         # Format the subject
         subject = settings.SUBJECT_VPN_UPDATE_SUCCESS
         for email in emails:
+            if EmailNotifier._compose_email(email, subject, body):
+                logger.debug(f'Sent update success email for VPN #{vpn_data["id"]} to {email}.')
+
+    @staticmethod
+    def backup_build_failure(backup_data: Dict[str, Any]):
+        """
+        Given a Backup's details, render and send a build failure email
+        """
+        logger = logging.getLogger('robot.email_notifier.build_failure')
+        logger.debug(f'Sending build failure email for Backup #{backup_data["id"]}.')
+        # Check that the data contains an email
+        emails = backup_data.get('emails', None)
+        if emails is None:
+            logger.error(
+                f'No email found for Backup #{backup_data["id"]}. Sending to {settings.SEND_TO_FAIL} instead.',
+            )
+            emails = [settings.SEND_TO_FAIL]
+        # Render the email body
+        body = utils.JINJA_ENV.get_template('emails/backup_build_failure.j2').render(
+            name=backup_data['vm']['name'],
+        )
+        # Format the subject
+        subject = settings.SUBJECT_BACKUP_BUILD_FAIL
+        for email in emails:
             EmailNotifier._compose_email(email, subject, body)
-        logger.debug(f'Sent update success email for VPN #{vpn_data["id"]}.')
+
+        # Also run the generic failure method to pass failures to us
+        EmailNotifier.backup_failure(backup_data, 'build')
+        logger.debug(f'Sent build failure email for Backup #{backup_data["id"]}.')
 
     @staticmethod
     def snapshot_build_failure(snapshot_data: Dict[str, Any]):
@@ -199,11 +250,11 @@ class EmailNotifier:
         # Format the subject
         subject = settings.SUBJECT_SNAPSHOT_BUILD_FAIL
         for email in emails:
-            EmailNotifier._compose_email(email, subject, body)
+            if EmailNotifier._compose_email(email, subject, body):
+                logger.debug(f'Sent build failure email for Snapshot #{snapshot_data["id"]} to {email}.')
 
         # Also run the generic failure method to pass failures to us
         EmailNotifier.snapshot_failure(snapshot_data, 'build')
-        logger.debug(f'Sent build failure email for Snapshot #{snapshot_data["id"]}.')
 
     @staticmethod
     def vm_build_failure(vm_data: Dict[str, Any]):
@@ -225,11 +276,11 @@ class EmailNotifier:
         # Format the subject
         subject = settings.SUBJECT_VM_FAIL
         for email in emails:
-            EmailNotifier._compose_email(email, subject, body)
+            if EmailNotifier._compose_email(email, subject, body):
+                logger.debug(f'Sent build failure email for VM #{vm_data["id"]} to {email}.')
 
         # Also run the generic failure method to pass failures to us
         EmailNotifier.vm_failure(vm_data, 'build')
-        logger.debug(f'Sent build failure email for VM #{vm_data["id"]}.')
 
     # ############################################################################################################# #
     #                                               QUIESCE                                                         #
@@ -255,8 +306,8 @@ class EmailNotifier:
         # Format the subject
         subject = settings.SUBJECT_VM_SCHEDULE_DELETE
         for email in emails:
-            EmailNotifier._compose_email(email, subject, body)
-        logger.debug(f'Sent delete schedule success email for VM #{vm_data["id"]}.')
+            if EmailNotifier._compose_email(email, subject, body):
+                logger.debug(f'Sent delete schedule success email for VM #{vm_data["id"]} to {email}.')
 
     # ############################################################################################################# #
     #                                           Email Specific Methods                                              #
@@ -287,7 +338,7 @@ class EmailNotifier:
             message.attach(mime_image)
 
         # Send the email
-        EmailNotifier._send(email, message)
+        return EmailNotifier._send(email, message)
 
     @staticmethod
     def _send(email: str, message: MIMEMultipart):

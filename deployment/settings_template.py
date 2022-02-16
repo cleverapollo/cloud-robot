@@ -56,6 +56,8 @@ __all__ = [
     'NETWORK_PASSWORD',
     'ROBOT_ENV',
     'SEND_TO_FAIL',
+    'SUBJECT_BACKUP_BUILD_FAIL',
+    'SUBJECT_BACKUP_FAIL',
     'SUBJECT_PROJECT_FAIL',
     'SUBJECT_SNAPSHOT_BUILD_FAIL',
     'SUBJECT_SNAPSHOT_FAIL',
@@ -94,6 +96,12 @@ EMAIL_REPLY_TO = f'{ORGANIZATION_URL} <{EMAIL_REPLY_TO}>'
 
 # Email to send build fail emails to
 SEND_TO_FAIL = SEND_TO_FAIL
+
+# Subject for Backups build fails
+SUBJECT_BACKUP_BUILD_FAIL = f'[{ORGANIZATION_URL}] Your Backup has failed to build.'
+
+# Subject for Backup fails
+SUBJECT_BACKUP_FAIL = f'[{ORGANIZATION_URL}] Backup Failure Occurred!'
 
 # Subject for Project build fail Emails
 SUBJECT_PROJECT_FAIL = f'[{ORGANIZATION_URL}] VM Failure Occurred!'
@@ -151,18 +159,20 @@ if f'{PAM_NAME}.{PAM_ORGANIZATION_URL}' == 'support.cloudcix.com':
     # LOGSTASH_ENABLE = True
     CLOUDCIX_INFLUX_URL = 'influxdb.support.cloudcix.com'
     LOGSTASH_URL = 'logstash.support.cloudcix.com'
-    ELASTICSEARCH_DSL = {
-        'default': {
-            'hosts': 'elasticsearch.support.cloudcix.com',
-        },
-    }
     CLOUDCIX_INFLUX_DATABASE = 'robot'
 else:
     LOGSTASH_URL = os.getenv('LOGSTASH_URL', '')
     CLOUDCIX_INFLUX_URL = os.getenv('INFLUX_URL', '')
-    ELASTICSEARCH_DSL = {
-        'default': {
-            'hosts': os.getenv('ELASTICSEARCH_URL', ''),
-        },
-    }
     CLOUDCIX_INFLUX_DATABASE = os.getenv('INFLUX_DATABASE', '')
+
+"""
+Backup Settings
+"""
+# HyperV primary backup location
+HYPERV_PRIMARY_BACKUP_STORAGE_PATH = 'P:\\'
+# HyperV secondary backup location
+HYPERV_SECONDARY_BACKUP_STORAGE_PATH = 'S:\\'
+# KVM primary backup location
+KVM_PRIMARY_BACKUP_STORAGE_PATH = '/mnt/backup-p/'
+# KVM secondary backup location
+KVM_SECONDARY_BACKUP_STORAGE_PATH = '/mnt/backup-s/'
