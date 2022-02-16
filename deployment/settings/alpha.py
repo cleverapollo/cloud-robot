@@ -33,6 +33,8 @@ __all__ = [
     'REGION_NAME',
     'ROBOT_ENV',
     'SEND_TO_FAIL',
+    'SUBJECT_BACKUP_BUILD_FAIL',
+    'SUBJECT_BACKUP_FAIL',
     'SUBJECT_PROJECT_FAIL',
     'SUBJECT_SNAPSHOT_BUILD_FAIL',
     'SUBJECT_SNAPSHOT_FAIL',
@@ -100,6 +102,12 @@ EMAIL_REPLY_TO = 'CloudCIX <no-reply@cloudcix.net>'
 
 # Email to send build fail emails to
 SEND_TO_FAIL = 'developers@cloudcix.com'
+
+# Subject for Backups build fails
+SUBJECT_BACKUP_BUILD_FAIL = f'[CloudCIX] Your Backup has failed to build.'
+
+# Subject for Backup fails
+SUBJECT_BACKUP_FAIL = f'[CloudCIX] Backup Failure Occurred!'
 
 # Subject for Project build fail Emails
 SUBJECT_PROJECT_FAIL = '[CloudCIX] VM Failure Occurred!'
@@ -175,3 +183,15 @@ NETWORK_DRIVE_URL = f'\\\\{REGION_NAME}-freenas.cloudcix.com\\mnt\\volume\\{REGI
 
 # SRX Gateway address or dns name
 SRX_GATEWAY = '185.49.62.254'
+
+"""
+Backup Settings
+"""
+# HyperV primary backup location
+HYPERV_PRIMARY_BACKUP_STORAGE_PATH = 'P:\\'
+# HyperV secondary backup location
+HYPERV_SECONDARY_BACKUP_STORAGE_PATH = 'S:\\'
+# KVM primary backup location
+KVM_PRIMARY_BACKUP_STORAGE_PATH = '/mnt/backup-p/'
+# KVM secondary backup location
+KVM_SECONDARY_BACKUP_STORAGE_PATH = '/mnt/backup-s/'
