@@ -22,12 +22,16 @@ class Robot:
     logger: logging.Logger
     # Keep track of whether or not the script has detected a SIGTERM signal
     sigterm_recv: bool = False
+    # backup dispatcher
+    backup_dispatcher: dispatchers.Backup
     # snapshot dispatcher
     snapshot_dispatcher: dispatchers.Snapshot
     # vm dispatcher
     vm_dispatcher: dispatchers.VM
     # virtual_router dispatcher
     virtual_router_dispatcher: Union[dispatchers.PhantomVirtualRouter, dispatchers.VirtualRouter]
+    # backup
+    backups: list
     # snapshots
     snapshots: list
     # virtual routers
@@ -37,6 +41,7 @@ class Robot:
 
     def __init__(
             self,
+            backups: list,
             snapshots: list,
             virtual_routers: list,
             vms: list,
@@ -44,12 +49,15 @@ class Robot:
         # Instantiate a logger instance
         self.logger = logging.getLogger('robot.mainloop')
         # Instantiate the dispatchers
+        self.backup_dispatcher = dispatchers.Backup(settings.NETWORK_PASSWORD)
         self.snapshot_dispatcher = dispatchers.Snapshot(settings.NETWORK_PASSWORD)
         self.vm_dispatcher = dispatchers.VM(settings.NETWORK_PASSWORD)
         if settings.VIRTUAL_ROUTERS_ENABLED:
             self.virtual_router_dispatcher = dispatchers.VirtualRouter(settings.NETWORK_PASSWORD)
         else:
             self.virtual_router_dispatcher = dispatchers.PhantomVirtualRouter()
+        # Instantiate backups
+        self.backups = backups
         # Instantiate snapshots
         self.snapshots = snapshots
         # Instantiate virtual routers
@@ -65,6 +73,16 @@ class Robot:
         self.logger.info('Commencing robot loop.')
 
         # sort out as per state
+        self.backups_to_build = self.backups['build']
+        self.backups_to_update = self.backups['running_update']
+        self.backups_to_update += self.backups['quiesced_update']
+        self.backups_to_scrub = self.backups['scrub']
+
+        self.snapshots_to_build = self.snapshots['build']
+        self.snapshots_to_update = self.snapshots['running_update']
+        self.snapshots_to_update += self.snapshots['quiesced_update']
+        self.snapshots_to_scrub = self.snapshots['scrub']
+
         self.virtual_routers_to_build = self.virtual_routers['build']
         self.virtual_routers_to_quiesce = self.virtual_routers['quiesce'] + self.virtual_routers['scrub']
         self.virtual_routers_to_update = self.virtual_routers['running_update']
@@ -77,14 +95,11 @@ class Robot:
         self.vms_to_update += self.vms['quiesced_update']
         self.vms_to_restart = self.vms['restart']
 
-        self.snapshots_to_build = self.snapshots['build']
-        self.snapshots_to_update = self.snapshots['running_update']
-        self.snapshots_to_scrub = self.snapshots['scrub']
-
         # Handle loop events in separate functions
         # ############################################################## #
         #                              BUILD                             #
         # ############################################################## #
+        self._backup_build()
         self._snapshot_build()
         self._virtual_router_build()
         self._vm_build()
@@ -98,6 +113,7 @@ class Robot:
         # ############################################################## #
         #                             UPDATE                             #
         # ############################################################## #
+        self._backup_update()
         self._snapshot_update()
         self._virtual_router_update()
         self._vm_update()
@@ -110,8 +126,9 @@ class Robot:
 
         # ############################################################## #
         #                             SCRUB                              #
-        #           Only Snapshot scrubs are performed every loop        #
+        #         For scrubs that are performed every loop               #
         # ############################################################## #
+        self._backup_scrub()
         self._snapshot_scrub()
 
         # Flush the loggers
@@ -120,6 +137,14 @@ class Robot:
     # ############################################################## #
     #                              BUILD                             #
     # ############################################################## #
+
+    def _backup_build(self):
+        """
+        Sends backups to build dispatcher, and asynchronously builds them
+        """
+        for backup_id in self.backups_to_build:
+            self.logger.info('backup dispatcher called')
+            self.backup_dispatcher.build(backup_id)
 
     def _snapshot_build(self):
         """
@@ -183,6 +208,13 @@ class Robot:
     #                             UPDATE                             #
     # ############################################################## #
 
+    def _backup_update(self):
+        """
+        Sends backups to update dispatcher, and asynchronously updates them
+        """
+        for backup_id in self.backups_to_update:
+            self.backup_dispatcher.update(backup_id)
+
     def _snapshot_update(self):
         """
         Sends snapshots to update dispatcher, and asynchronously update them
@@ -220,6 +252,13 @@ class Robot:
         self._virtual_router_scrub(timestamp)
         # Flush the loggers
         utils.flush_logstash()
+
+    def _backup_scrub(self):
+        """
+        Check the API for backups to scrub, and asynchronously scrub them
+        """
+        for backup_id in self.backups_to_scrub:
+            self.backup_dispatcher.scrub(backup_id)
 
     def _snapshot_scrub(self):
         """
