@@ -6,6 +6,7 @@ COP_NAME = os.getenv('COP_NAME', 'cop')
 COP_ORGANIZATION_URL = os.getenv('COP_ORGANIZATION_URL', 'cop')
 COP_PORTAL = os.getenv('COP_PORTAL', 'cop')
 SEND_TO_FAIL = os.getenv('SEND_TO_FAIL', '')
+
 CLOUDCIX_API_USERNAME = os.getenv('ROBOT_API_USERNAME', 'user@example.com')
 CLOUDCIX_API_KEY = os.getenv('ROBOT_API_KEY', '64_characters_max')
 CLOUDCIX_API_PASSWORD = os.getenv('ROBOT_API_PASSWORD', 'pw')
@@ -149,6 +150,7 @@ HYPERV_HOST_NETWORK_DRIVE_PATH = '/var/lib/libvirt/ISOs/HyperV'
 HYPERV_VMS_PATH = r'D:\HyperV\\'
 # Nas drive mount url
 NETWORK_DRIVE_URL = f'\\\\robot.{REGION_NAME}.{ORGANIZATION_URL}\\etc\\cloudcix\\robot'
+
 
 CLOUDCIX_INFLUX_PORT = 443
 

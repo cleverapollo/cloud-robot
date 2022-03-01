@@ -8,7 +8,6 @@ stages:
   - deploy_github
   
 
-
 lint:
   image: gitlab.cloudcix.com:5005/utils/ci/lint
   stage: lint
