@@ -29,5 +29,6 @@
   --network bridge=br{{ vlan }},model=virtio \
   {% endif %}
 {% endfor %}
+--boot uefi \
 --autostart
 }
