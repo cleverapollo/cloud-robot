@@ -169,6 +169,7 @@ class Linux(LinuxMixin, VMImageMixin):
                 Linux.logger.debug(f'Bridge build commands for VM #{vm_id} generated stdout.\n{stdout}')
             if stderr:
                 Linux.logger.error(f'Bridge build commands for VM #{vm_id} generated stderr.\n{stderr}')
+                vm_data['errors'].append(stderr)
 
             # Now attempt to execute the vm build command
             Linux.logger.debug(f'Executing vm build command for VM #{vm_id}')
@@ -425,7 +426,7 @@ class Linux(LinuxMixin, VMImageMixin):
             template_name = 'vm/kvm/bridge/definition.j2'
             bridge_def = utils.JINJA_ENV.get_template(template_name).render(vlan=vlan)
             Linux.logger.debug(f'Generated bridge definition file for VM #{vm_id}\n{bridge_def}')
-            bridge_def_filename = f'{path}/br{vlan}.xml'
+            bridge_def_filename = f'{path}/br{vlan}.yaml'
             try:
                 # Attempt to write
                 with open(bridge_def_filename, 'w') as f:
