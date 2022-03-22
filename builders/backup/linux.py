@@ -177,6 +177,6 @@ class Linux(LinuxMixin):
         """
         # Render the backup command
         backup_cmd = utils.JINJA_ENV.get_template('backup/kvm/commands/build.j2').render(**template_data)
-        Linux.logger.debug(f'Generated backup build command for Backup #{backup_id}')
+        Linux.logger.debug(f'Generated backup build command for Backup #{backup_id}\n{backup_cmd}')
 
         return backup_cmd

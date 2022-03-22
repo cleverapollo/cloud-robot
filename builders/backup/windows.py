@@ -175,6 +175,6 @@ class Windows(WindowsMixin):
         """
         # Render the backup command
         backup_cmd = utils.JINJA_ENV.get_template('backup/hyperv/commands/build.j2').render(**template_data)
-        Windows.logger.debug(f'Generated backup build command for Backup #{backup_id}')
+        Windows.logger.debug(f'Generated backup build command for Backup #{backup_id}\n{backup_cmd}')
 
         return backup_cmd
