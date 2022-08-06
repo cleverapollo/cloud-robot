@@ -1,6 +1,6 @@
 # Robot
 
-Robot is an appliance. It is the Regional Cloud Infrastructure Provisioning Tool of CloudCIX. Robot runs Ubunto 18.04 and KVM.
+Robot is an appliance. It is the Regional Cloud Infrastructure Provisioning Tool of CloudCIX. Robot runs Ubuntu 18.04 and KVM.
 
 Robot is built on top of [celery](http://www.celeryproject.org/), using `beat` to handle the periodic tasks, and `workers` to handle the actual infrastructure jobs.
 
