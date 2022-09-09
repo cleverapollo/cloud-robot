@@ -70,6 +70,8 @@ class Linux(LinuxMixin, VMImageMixin):
         'keyboard',
         # the language of the vm
         'language',
+        # The IP Address of the Management interface of the physical Router
+        'management_ip',
         # ubuntu netplan support
         'netplan',
         # the non default ip addresses of the vm as nics
@@ -120,10 +122,8 @@ class Linux(LinuxMixin, VMImageMixin):
         # Check that all of the necessary keys are present
         if not all(template_data[key] is not None for key in Linux.template_keys):
             missing_keys = [f'"{key}"' for key in Linux.template_keys if template_data[key] is None]
-            error_msg = (
-                f'Template Data Error, the following keys were missing from the VM build data: '
-                f'{", ".join(missing_keys)}',
-            )
+            error_msg = f'Template Data Error, the following keys were missing from the VM build data: ' \
+                        f'{", ".join(missing_keys)}'
             Linux.logger.error(error_msg)
             vm_data['errors'].append(error_msg)
             span.set_tag('failed_reason', 'template_data_keys_missing')
@@ -217,6 +217,7 @@ class Linux(LinuxMixin, VMImageMixin):
 
         data['vm_identifier'] = f'{vm_data["project"]["id"]}_{vm_id}'
         data['image_filename'] = vm_data['image']['filename']
+        data['management_ip'] = settings.MGMT_IP
 
         # check if file exists at /mnt/images/KVM/ISOs/
         path = '/mnt/images/KVM/ISOs/'
@@ -250,7 +251,7 @@ class Linux(LinuxMixin, VMImageMixin):
 
         # Check for the primary storage
         if not any(storage['primary'] for storage in vm_data['storages']):
-            error = f'No primary storage drive found. Expected one primary storage drive'
+            error = 'No primary storage drive found. Expected one primary storage drive'
             Linux.logger.error(error)
             vm_data['errors'].append(error)
             return None

@@ -53,7 +53,7 @@ def run_robot_get():
         else:
             return None
     except Exception:
-        logger.error(f'Failed to make request to IAAS.run_robot.list service.', exc_info=True)
+        logger.error('Failed to make request to IAAS.run_robot.list service.', exc_info=True)
         return None
 
 
@@ -89,7 +89,7 @@ def mainloop():
         metrics.heartbeat()
         logger = logging.getLogger('robot.mainloop')
         logger.info('Mainloop check')
-        logger.debug(f'Fetching the status of run_robot from api.')
+        logger.debug('Fetching the status of run_robot from api.')
         data = run_robot_get()
         if data is not None:
             project_ids = data['project_ids']
@@ -99,20 +99,20 @@ def mainloop():
             vms = data['vms']
 
             # data found for Robot so is waking up and preparing for run.
-            logger.debug(f'Robot so is waking up and preparing for run.')
+            logger.debug('Robot so is waking up and preparing for run.')
 
             robot = Robot(backups, snapshots, virtual_routers, vms)
             robot()
             # Robot started run
-            logger.debug(f'Initiating Robot for run.')
+            logger.debug('Initiating Robot for run.')
 
             run_robot_post(project_ids)
             # acknowledge run_robot to reset requested projects
             logger.debug(f'Acknowledged run_robot api that requested projects id # {project_ids} are dispatched.')
         else:
-            logger.debug(f'No changes found for Robot so is going back to sleep for 60 seconds.')
-            # No changes in region, Robot going to sleep for 1 min.
-            time.sleep(60)
+            logger.debug('No changes found for Robot so is going back to sleep for 15 seconds.')
+            # No changes in region, Robot going to sleep for 15 seconds
+            time.sleep(15)
 
 
 # mainloop starting point

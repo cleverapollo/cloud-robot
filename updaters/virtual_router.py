@@ -12,6 +12,7 @@ from typing import Any, Dict
 # lib
 import opentracing
 from jaeger_client import Span
+from paramiko import AutoAddPolicy, RSAKey, SSHClient, SSHException
 # local
 import utils
 from builders import VirtualRouter as VirtualRouterBuilder
@@ -66,26 +67,104 @@ class VirtualRouter(VirtualRouterBuilder):
         # Check that all of the necessary keys are present
         if not all(template_data[key] is not None for key in VirtualRouter.template_keys):
             missing_keys = [f'"{key}"' for key in VirtualRouter.template_keys if template_data[key] is None]
-            error = (
-                f'Template Data Error, the following keys were missing from the virtual_router update data: '
-                f'{", ".join(missing_keys)}'
-            )
+            error = f'Template Data Error, the following keys were missing from the virtual_router update data: ' \
+                    f'{", ".join(missing_keys)}'
             VirtualRouter.logger.error(error)
             virtual_router_data['errors'].append(error)
             span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
         # If everything is okay, commence updating the virtual_router
-        child_span = opentracing.tracer.start_span('generate_setconf', child_of=span)
-        update_conf = utils.JINJA_ENV.get_template('virtual_router/update.j2').render(**template_data)
+        child_span = opentracing.tracer.start_span('generate_ip_commands', child_of=span)
+        update_bash_script = utils.JINJA_ENV.get_template('virtual_router/commands/update.j2').render(**template_data)
+        VirtualRouter.logger.debug(
+            f'Generated update bash script for virtual_router #{virtual_router_id}\n{update_bash_script}',
+        )
+
+        firewall_nft = utils.JINJA_ENV.get_template('virtual_router/features/firewall.j2').render(**template_data)
+        VirtualRouter.logger.debug(f'Generated firewall nft for virtual_router #{virtual_router_id}\n{firewall_nft}')
+
+        if len(virtual_router_data['vpns']) > 0:
+            vpn_conf = utils.JINJA_ENV.get_template('virtual_router/features/vpn.j2').render(**template_data)
+            VirtualRouter.logger.debug(f'Generated vpn conf for virtual_router #{virtual_router_id}\n{vpn_conf}')
+
         child_span.finish()
 
-        VirtualRouter.logger.debug(f'Generated update setconf for virtual_router #{virtual_router_id}\n{update_conf}')
-
-        # Deploy the generated setconf to the router
+        # Log onto PodNet box and run bash script
+        remote_path = template_data.pop('remote_path')
         management_ip = template_data.pop('management_ip')
-        child_span = opentracing.tracer.start_span('deploy_update_setconf', child_of=span)
-        success, errors = VirtualRouter.deploy(update_conf, management_ip, True)
-        virtual_router_data['errors'].extend(errors)
-        child_span.finish()
-        return success
+        updated = False
+
+        client = SSHClient()
+        client.set_missing_host_key_policy(AutoAddPolicy())
+        key = RSAKey.from_private_key_file('/root/.ssh/id_rsa')
+        try:
+            # Try connecting to the host and running the necessary commands
+            # No need for password as it should have keys
+            client.connect(hostname=management_ip, username='robot', pkey=key, timeout=300)
+            span.set_tag('host', management_ip)
+
+            # Firstly, Write Firewall rules file .nft and vpn.conf file(if any) to PodNet box
+            child_span = opentracing.tracer.start_span('write_files_to_podnet_box', child_of=span)
+            sftp = client.open_sftp()
+            firewall_filename = template_data.pop('firewall_filename')
+            try:
+                with sftp.open(f'{remote_path}{firewall_filename}', mode='w', bufsize=1) as firewall:
+                    firewall.write(firewall_nft)
+                VirtualRouter.logger.debug(f'Successfully wrote file {firewall_filename} to PodNet box#{management_ip}')
+            except IOError as err:
+                VirtualRouter.logger.error(
+                    f'Failed to write file {firewall_filename} to PodNet box#{management_ip}',
+                    exc_info=True,
+                )
+                virtual_router_data['errors'].append(err)
+                return False
+
+            if len(virtual_router_data['vpns']) > 0:
+                temp_vpn_filename = template_data.pop('temp_vpn_filename')
+                try:
+                    with sftp.open(temp_vpn_filename, mode='w', bufsize=1) as vpn:
+                        vpn.write(vpn_conf)
+                    VirtualRouter.logger.debug(
+                        f'Successfully wrote file {temp_vpn_filename} to PodNet box#{management_ip}',
+                    )
+                except IOError as err:
+                    VirtualRouter.logger.error(
+                        f'Failed to write file {temp_vpn_filename} to PodNet box#{management_ip}',
+                        exc_info=True,
+                    )
+                    virtual_router_data['errors'].append(err)
+                    return False
+            child_span.finish()
+
+            # Finally, Attempt to execute ALL of the virtual router update commands
+            # which includes deleting namespace, firewall rules and vpns(if any) and adding all of the VR at once.
+            VirtualRouter.logger.debug(
+                f'Executing Virtual Router update commands for virtual_router #{virtual_router_id}',
+            )
+
+            child_span = opentracing.tracer.start_span('update_virtual_router', child_of=span)
+            stdout, stderr = VirtualRouter.deploy(update_bash_script, client, child_span)
+            child_span.finish()
+            if stderr:
+                VirtualRouter.logger.error(
+                    f'Virtual Router update commands for virtual_router #{virtual_router_id} generated stderr.'
+                    f'\n{stderr}',
+                )
+                virtual_router_data['errors'].append(stderr)
+            else:
+                VirtualRouter.logger.debug(
+                    f'Virtual Router update commands for virtual_router #{virtual_router_id} generated stdout.'
+                    f'\n{stdout}',
+                )
+                updated = True
+
+        except (SSHException, TimeoutError):
+            error = f'Exception occurred while updating virtual_router #{virtual_router_id} in {management_ip}'
+            VirtualRouter.logger.error(error, exc_info=True)
+            virtual_router_data['errors'].append(error)
+            span.set_tag('failed_reason', 'ssh_error')
+        finally:
+            client.close()
+
+        return updated

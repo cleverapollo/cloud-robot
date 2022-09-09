@@ -65,10 +65,8 @@ class Linux(LinuxMixin):
         # Check that all of the necessary keys are present
         if not all(template_data[key] is not None for key in Linux.template_keys):
             missing_keys = [f'"{key}"' for key in Linux.template_keys if template_data[key] is None]
-            error_msg = (
-                f'Template Data Error, the following keys were missing from the Snapshot build data: '
-                f'{", ".join(missing_keys)}',
-            )
+            error_msg = f'Template Data Error, the following keys were missing from the Snapshot build data: ' \
+                        f'{", ".join(missing_keys)}'
             Linux.logger.error(error_msg)
             snapshot_data['errors'].append(error_msg)
             span.set_tag('failed_reason', 'template_data_keys_missing')
