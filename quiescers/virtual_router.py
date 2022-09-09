@@ -8,14 +8,14 @@ quiescer class for virtual_routers
 
 # stdlib
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 # lib
 import opentracing
-from cloudcix.api.iaas import IAAS
 from jaeger_client import Span
+from paramiko import AutoAddPolicy, RSAKey, SSHClient, SSHException
 # local
 import utils
-from mixins import VirtualRouterMixin
+from scrubbers import VirtualRouter as VirtualRouterScrubber
 
 
 __all__ = [
@@ -23,19 +23,22 @@ __all__ = [
 ]
 
 
-class VirtualRouter(VirtualRouterMixin):
+class VirtualRouter(VirtualRouterScrubber):
     """
     Class that handles the quiescing of the specified virtual_router
     """
     # Keep a logger for logging messages from this class
     logger = logging.getLogger('robot.quiescers.virtual_router')
-    # Keep track of the keys necessary for the template, so we can check all keys are present before quiescing
-    template_keys = {
-        # The IP Address of the Management port of the physical Router
-        'management_ip',
-        # The id of the Project that owns the virtual_router being quiesced
-        'project_id',
-    }
+
+    # Override this method to ensure that nobody calls this accidentally
+    @staticmethod
+    def scrub(virtual_router_data: Dict[str, Any], span: Span) -> bool:
+        """
+        Shadow the scrub class scrub job to make sure we don't accidentally call it in this class
+        """
+        raise NotImplementedError(
+            'If you want to scrub a virtual_router, use `scrubbers.virtual_router`, not `quiescers.virtual_router`',
+        )
 
     @staticmethod
     def quiesce(virtual_router_data: Dict[str, Any], span: Span) -> bool:
@@ -46,6 +49,7 @@ class VirtualRouter(VirtualRouterMixin):
         :return: A flag stating whether or not the quiesce was successful
         """
         virtual_router_id = virtual_router_data['id']
+        project_id = virtual_router_data['project']['id']
 
         # Start by generating the proper dict of data needed by the template
         child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
@@ -63,10 +67,8 @@ class VirtualRouter(VirtualRouterMixin):
         # Check that all of the necessary keys are present
         if not all(template_data[key] is not None for key in VirtualRouter.template_keys):
             missing_keys = [f'"{key}"' for key in VirtualRouter.template_keys if template_data[key] is None]
-            error_msg = (
-                f'Template Data Error, the following keys were missing from the virtual_router quiesce data: '
-                f'{", ".join(missing_keys)}',
-            )
+            error_msg = f'Template Data Error, the following keys were missing from the virtual_router quiesce data:' \
+                        f' {", ".join(missing_keys)}'
             VirtualRouter.logger.error(error_msg)
             virtual_router_data['errors'].append(error_msg)
             span.set_tag('failed_reason', 'template_data_keys_missing')
@@ -74,39 +76,58 @@ class VirtualRouter(VirtualRouterMixin):
 
         # If everything is okay, commence quiescing the virtual_router
         child_span = opentracing.tracer.start_span('generate_setconf', child_of=span)
-        conf = utils.JINJA_ENV.get_template('virtual_router/quiesce.j2').render(**template_data)
+        quiesce_bash_script = utils.JINJA_ENV.get_template('virtual_router/commands/quiesce.j2').render(**template_data)
+        VirtualRouter.logger.debug(
+            f'Generated quiesce bash script for virtual_router #{virtual_router_id}\n{quiesce_bash_script}',
+        )
         child_span.finish()
 
-        VirtualRouter.logger.debug(f'Generated setconf for virtual_router #{virtual_router_id}\n{conf}')
-
-        # Deploy the generated setconf to the router
+        # Log onto PodNet box and run bash script
         management_ip = template_data.pop('management_ip')
-        success, errors = VirtualRouter.deploy(conf, management_ip, True)
-        virtual_router_data['errors'].extend(errors)
-        child_span.finish()
-        return success
+        quiesced = False
+        vpn_cmds = ''
 
-    @staticmethod
-    def _get_template_data(virtual_router_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
-        """
-        Given the virtual_router data from the API, create a dictionary that contains all of the necessary keys
-        for the template.
-        The keys will be checked in the quiesce method and not here, this method is only concerned with fetching the
-        data that it can.
-        :param virtual_router_data: The data on the virtual_router that was retrieved from the API
-        :param span: The tracing span in use for this task. In this method just pass it to API calls
-        :returns: Constructed template data, or None if something went wrong
-        """
-        virtual_router_id = virtual_router_data['id']
-        VirtualRouter.logger.debug(f'Compiling template data for virtual_router #{virtual_router_id}')
-        data: Dict[str, Any] = {key: None for key in VirtualRouter.template_keys}
+        client = SSHClient()
+        client.set_missing_host_key_policy(AutoAddPolicy())
+        key = RSAKey.from_private_key_file('/root/.ssh/id_rsa')
+        try:
+            # Try connecting to the host and running the necessary commands
+            # No need for password as it should have keys
+            client.connect(hostname=management_ip, username='robot', pkey=key, timeout=300)
+            span.set_tag('host', management_ip)
 
-        data['project_id'] = virtual_router_data['project']['id']
+            # If there are VPNs, remove connections
+            if len(virtual_router_data['vpns']) > 0:
+                # First remove the file from /etc/swanctl/conf.d/ then terminate
+                vpn_filename = f'/etc/swanctl/conf.d/P{project_id}_vpns.conf'
+                vpn_cmds = f'sudo rm {vpn_filename}\n'
 
-        # Get the management ip address from Router.
-        child_span = opentracing.tracer.start_span('reading_router', child_of=span)
-        router = utils.api_read(IAAS.router, virtual_router_data['router_id'], span=child_span)
-        child_span.finish()
-        data['management_ip'] = router['management_ip']
+            # Attempt to execute ALL of the virtual router build commands
+            VirtualRouter.logger.debug(
+                f'Executing Virtual Router quiesce commands for virtual_router #{virtual_router_id}',
+            )
+            child_span = opentracing.tracer.start_span('quiesce_virtual_router', child_of=span)
+            stdout, stderr = VirtualRouter.deploy(f'{vpn_cmds}{quiesce_bash_script}', client, child_span)
+            child_span.finish()
+            if stderr:
+                VirtualRouter.logger.error(
+                    f'Virtual Router quiesce commands for virtual_router #{virtual_router_id} generated stderr.'
+                    f'\n{stderr}',
+                )
+                virtual_router_data['errors'].append(stderr)
+            else:
+                VirtualRouter.logger.debug(
+                    f'Virtual Router quiesce commands for virtual_router #{virtual_router_id} generated stdout.'
+                    f'\n{stdout}',
+                )
+                quiesced = True
 
-        return data
+        except (SSHException, TimeoutError):
+            error = f'Exception occurred while quiescing virtual_router #{virtual_router_id} in {management_ip}'
+            VirtualRouter.logger.error(error, exc_info=True)
+            virtual_router_data['errors'].append(error)
+            span.set_tag('failed_reason', 'ssh_error')
+        finally:
+            client.close()
+
+        return quiesced

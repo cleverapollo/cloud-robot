@@ -14,16 +14,20 @@ CLOUDCIX_API_URL = f'https://{COP_NAME}.{COP_ORGANIZATION_URL}/'
 CLOUDCIX_API_V2_URL = CLOUDCIX_API_URL
 CLOUDCIX_API_VERSION = 2
 
-EMAIL_HOST = os.getenv('EMAIL_HOST', f'mail.example.com')
-EMAIL_HOST_USER = os.getenv('EMAIL_USER', f'notifications@example.com')
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'mail.example.com')
+EMAIL_HOST_USER = os.getenv('EMAIL_USER', 'notifications@example.com')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_PASSWORD', 'email_pw')
 EMAIL_PORT = os.getenv('EMAIL_PORT', 25)
-EMAIL_REPLY_TO = os.getenv('EMAIL_REPLY_TO', f'no-reply@example.com')
+EMAIL_REPLY_TO = os.getenv('EMAIL_REPLY_TO', 'no-reply@example.com')
+
+MGMT_IP = os.getenv('ROUTER_MGMT_IP', '2a02:2078:3::10:0:1')
 NETWORK_PASSWORD = os.getenv('NETWORK_PASSWORD', 'ntw_pw')
 
 PAM_NAME = os.getenv('PAM_NAME', 'pam')
 PAM_ORGANIZATION_URL = os.getenv('PAM_ORGANIZATION_URL', 'example.com')
-SRX_GATEWAY = os.getenv('SRX_GATEWAY', 'srx.example.com')
+PODNET_CPE = os.getenv('PODNET_CPE', 'x.x.x.x')
+PRIVATE_INF = os.getenv('ROUTER_PRIVATE_INTERFACE', 'eth1')
+PUBLIC_INF = os.getenv('ROUTER_PUBLIC_INTERFACE', 'eth0')
 VIRTUAL_ROUTERS_ENABLED = True
 
 __all__ = [
@@ -53,8 +57,12 @@ __all__ = [
     'LOGSTASH_ENABLE',
     'LOGSTASH_PORT',
     'LOGSTASH_URL',
+    'MGMT_IP',
     'NETWORK_DRIVE_URL',
     'NETWORK_PASSWORD',
+    'PODNET_CPE',
+    'PRIVATE_INF',
+    'PUBLIC_INF',
     'ROBOT_ENV',
     'SEND_TO_FAIL',
     'SUBJECT_BACKUP_BUILD_FAIL',
@@ -68,7 +76,6 @@ __all__ = [
     'SUBJECT_VPN_BUILD_SUCCESS',
     'SUBJECT_VPN_UPDATE_SUCCESS',
     'SUBJECT_VIRTUAL_ROUTER_FAIL',
-    'SRX_GATEWAY',
     'VIRTUAL_ROUTERS_ENABLED',
 ]
 
@@ -155,10 +162,11 @@ NETWORK_DRIVE_URL = f'\\\\robot.{REGION_NAME}.{ORGANIZATION_URL}\\etc\\cloudcix\
 CLOUDCIX_INFLUX_PORT = 443
 
 LOGSTASH_ENABLE = os.getenv('LOGSTASH_ENABLE', 'false').lower() == 'true'
-LOGSTASH_PORT = 5044
+LOGSTASH_PORT = os.getenv('LOGSTASH_PORT', 5044)
+
 
 if f'{PAM_NAME}.{PAM_ORGANIZATION_URL}' == 'support.cloudcix.com':
-    # LOGSTASH_ENABLE = True
+    LOGSTASH_ENABLE = True
     CLOUDCIX_INFLUX_URL = 'influxdb.support.cloudcix.com'
     LOGSTASH_URL = 'logstash.support.cloudcix.com'
     CLOUDCIX_INFLUX_DATABASE = 'robot'

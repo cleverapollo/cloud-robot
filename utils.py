@@ -4,10 +4,11 @@ File containing some utility functions that wrap around various repeatedly used 
 # stdlib
 import atexit
 import logging
+import os
 import subprocess
 from collections import deque
 from json import JSONEncoder
-from typing import Any, Deque, Dict, Iterable
+from typing import Any, Deque, Dict, Iterable, Optional, Tuple
 # lib
 import jinja2
 import netaddr
@@ -31,6 +32,7 @@ __all__ = [
     'get_current_git_sha',
     'JINJA_ENV',
     'setup_root_logger',
+    'write_to_drive',
 ]
 
 JINJA_ENV = jinja2.Environment(
@@ -221,3 +223,41 @@ def api_read(client: Client, pk: int, **kwargs) -> Dict[str, Any]:
             f'Response Text: {response.content.decode()}',
         )
     return obj
+
+
+def write_to_drive(
+    conf: str,
+    filename: str,
+    obj_id: int,
+    obj_type: str,
+    path: str,
+) -> Tuple[bool, Optional['str']]:
+    """
+    Generate and write files into the network drive so they are on the host for the build scripts to utilise.
+    :param conf: The contents of the file you want to add the the path
+    :param filename: The name of the file to write the template_data to on the path given.
+    :param obj_id: The ID of the object you are writing the file to.
+    :param obj_type: The type of object that the file is for e.g. vm or virtual router
+    :param path: Network drive location to create above files for Virtual Router build
+    :returns: A flag stating whether the job was successful
+    :return errors: The error that occurred while writing the file
+    """
+    # Create the folder in the network drive to store files in
+    logger = logging.getLogger('robot.utils.write_to_drive')
+    try:
+        os.mkdir(path)
+    except FileExistsError:
+        pass
+    except OSError as err:
+        logger.error(f'Failed to create directory for {obj_type} #{obj_id} at {path}.', exc_info=True)
+        return False, f'{err}'
+
+    try:
+        with open(f'{path}/{filename}', 'w') as f:
+            f.write(conf)
+        logger.debug(f'Successfully wrote file {filename} for {obj_type} #{obj_id}')
+    except IOError as err:
+        logger.error(f'Failed to write file {filename} for {obj_type} #{obj_id}', exc_info=True)
+        return False, f'{err}'
+
+    return True, None

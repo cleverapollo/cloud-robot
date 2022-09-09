@@ -65,10 +65,8 @@ class Windows(WindowsMixin):
             missing_keys = [
                 f'"{key}"' for key in Windows.template_keys if template_data[key] is None
             ]
-            error_msg = (
-                f'Template Data Error, the following keys were missing from the Backup update data: '
-                f'{", ".join(missing_keys)}.',
-            )
+            error_msg = f'Template Data Error, the following keys were missing from the Backup update data: ' \
+                        f'{", ".join(missing_keys)}.'
             Windows.logger.error(error_msg)
             backup_data['errors'].append(error_msg)
             span.set_tag('failed_reason', 'template_data_keys_missing')

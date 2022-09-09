@@ -51,7 +51,7 @@ class LinuxMixin:
         :return: The messages retrieved from stdout and stderr of the command
         """
         hostname = client.get_transport().sock.getpeername()[0]
-        cls.logger.debug(f'Deploying command to Linux Host {hostname}')
+        cls.logger.debug(f'Deploying command {command} to Linux Host {hostname}')
 
         # Run the command via the client
         child_span = opentracing.tracer.start_span('exec_command', child_of=span)

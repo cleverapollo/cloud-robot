@@ -1,7 +1,0 @@
-delete groups vrf-{{ project_id }}
-{% for vpn in vpns %}
-delete groups vrf-{{ project_id }}-sp-vpn-{{ vpn['id'] }}
-{% endfor %}
-delete groups vrf-{{ project_id }}-sp-inbound
-delete groups vrf-{{ project_id }}-sp-outbound
-delete apply-groups vrf-{{ project_id }}

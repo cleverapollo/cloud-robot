@@ -28,8 +28,12 @@ __all__ = [
     'LOGSTASH_ENABLE',
     'LOGSTASH_PORT',
     'LOGSTASH_URL',
+    'MGMT_IP',
     'NETWORK_DRIVE_URL',
     'NETWORK_PASSWORD',
+    'PODNET_CPE',
+    'PRIVATE_INF',
+    'PUBLIC_INF',
     'REGION_NAME',
     'ROBOT_ENV',
     'SEND_TO_FAIL',
@@ -40,7 +44,6 @@ __all__ = [
     'SUBJECT_VPN_BUILD_SUCCESS',
     'SUBJECT_VPN_UPDATE_SUCCESS',
     'SUBJECT_VIRTUAL_ROUTER_FAIL',
-    'SRX_GATEWAY',
     'VIRTUAL_ROUTERS_ENABLED',
 ]
 
@@ -58,6 +61,11 @@ NETWORK_PASSWORD = ''
 
 # Flag to state whether VIRTUAL_ROUTERs are enabled or not
 VIRTUAL_ROUTERS_ENABLED = True
+
+# Router settings
+MGMT_IP = ''
+PRIVATE_INF = ''
+PUBLIC_INF = ''
 
 """
 CloudCIX API Settings
@@ -168,5 +176,5 @@ HYPERV_VMS_PATH = ''
 # Nas drive mount url
 NETWORK_DRIVE_URL = ''
 
-# SRX Gateway address or dns name
-SRX_GATEWAY = ''
+# PODNET CPE address or dns name
+PODNET_CPE = ''

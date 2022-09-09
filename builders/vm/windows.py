@@ -106,10 +106,8 @@ class Windows(WindowsMixin, VMImageMixin):
         # Check that all of the necessary keys are present
         if not all(template_data[key] is not None for key in Windows.template_keys):
             missing_keys = [f'"{key}"' for key in Windows.template_keys if template_data[key] is None]
-            error_msg = (
-                f'Template Data Error, the following keys were missing from the VM build data: '
-                f'{", ".join(missing_keys)}',
-            )
+            error_msg = f'Template Data Error, the following keys were missing from the VM build data: ' \
+                        f'{", ".join(missing_keys)}'
             Windows.logger.error(error_msg)
             vm_data['errors'].append(error_msg)
             span.set_tag('failed_reason', 'template_data_keys_missing')
@@ -211,7 +209,7 @@ class Windows(WindowsMixin, VMImageMixin):
 
         # Check for the primary storage
         if not any(storage['primary'] for storage in vm_data['storages']):
-            error = f'No primary storage drive found. Expected one primary storage drive'
+            error = 'No primary storage drive found. Expected one primary storage drive'
             Windows.logger.error(error)
             vm_data['errors'].append(error)
             return None
@@ -320,7 +318,7 @@ class Windows(WindowsMixin, VMImageMixin):
             return False
 
         # Render and attempt to write the answer file
-        template_name = f'vm/hyperv/answer_files/windows.j2'
+        template_name = 'vm/hyperv/answer_files/windows.j2'
         answer_file_data = utils.JINJA_ENV.get_template(template_name).render(**template_data)
         template_data.pop('admin_password')
         answer_file_log = utils.JINJA_ENV.get_template(template_name).render(**template_data)
@@ -338,7 +336,7 @@ class Windows(WindowsMixin, VMImageMixin):
             return False
 
         # Render and attempt to write the network file
-        template_name = f'vm/hyperv/commands/network.j2'
+        template_name = 'vm/hyperv/commands/network.j2'
         network = utils.JINJA_ENV.get_template(template_name).render(**template_data)
         Windows.logger.debug(f'Generated network file for VM #{vm_id}\n{network}')
         network_file = f'{path}/network.xml'
@@ -354,7 +352,7 @@ class Windows(WindowsMixin, VMImageMixin):
             return False
 
         # Render and attempt to write the build script file
-        template_name = f'vm/hyperv/commands/script.j2'
+        template_name = 'vm/hyperv/commands/script.j2'
         builder = utils.JINJA_ENV.get_template(template_name).render(**template_data)
         Windows.logger.debug(f'Generated build script file for VM #{vm_id}\n{builder}')
         script_file = f'{path}/builder.psm1'

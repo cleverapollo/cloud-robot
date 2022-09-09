@@ -8,14 +8,17 @@ scrubber class for virtual_routers
 
 # stdlib
 import logging
-from typing import Any, Dict, Optional
+from collections import deque
+from typing import Any, Deque, Dict, Optional
 # lib
 import opentracing
 from cloudcix.api.iaas import IAAS
 from jaeger_client import Span
+from paramiko import AutoAddPolicy, RSAKey, SSHClient, SSHException
 # local
+import settings
 import utils
-from mixins import VirtualRouterMixin
+from mixins import LinuxMixin
 
 
 __all__ = [
@@ -23,7 +26,7 @@ __all__ = [
 ]
 
 
-class VirtualRouter(VirtualRouterMixin):
+class VirtualRouter(LinuxMixin):
     """
     Class that handles the scrubbing of the specified virtual_router
     """
@@ -35,6 +38,10 @@ class VirtualRouter(VirtualRouterMixin):
         'management_ip',
         # The id of the Project that owns the virtual_router being scrubbed
         'project_id',
+        # A list of vLans to be built in the virtual_router
+        'vlans',
+        # A list of VPNs to be built in the virtual_router
+        'vpns',
     }
 
     @staticmethod
@@ -46,6 +53,7 @@ class VirtualRouter(VirtualRouterMixin):
         :return: A flag stating whether or not the scrub was successful
         """
         virtual_router_id = virtual_router_data['id']
+        project_id = virtual_router_data['project']['id']
 
         # Start by generating the proper dict of data needed by the template
         child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
@@ -63,29 +71,80 @@ class VirtualRouter(VirtualRouterMixin):
         # Check that all of the necessary keys are present
         if not all(template_data[key] is not None for key in VirtualRouter.template_keys):
             missing_keys = [f'"{key}"' for key in VirtualRouter.template_keys if template_data[key] is None]
-            error_msg = (
-                f'Template Data Error, the following keys were missing from the virtual_router scrub  data: '
-                f'{", ".join(missing_keys)}',
-            )
+            error_msg = f'Template Data Error, the following keys were missing from the virtual_router scrub  data: ' \
+                        f'{", ".join(missing_keys)}'
             VirtualRouter.logger.error(error_msg)
             virtual_router_data['errors'].append(error_msg)
             span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
         # If everything is okay, commence scrubbing the virtual_router
-        child_span = opentracing.tracer.start_span('generate_setconf', child_of=span)
-        conf = utils.JINJA_ENV.get_template('virtual_router/scrub.j2').render(**template_data)
+        child_span = opentracing.tracer.start_span('generate_ip_commands', child_of=span)
+        scrub_bash_script = utils.JINJA_ENV.get_template('virtual_router/commands/scrub.j2').render(**template_data)
+        VirtualRouter.logger.debug(
+            f'Generated scrub bash script for virtual_router #{virtual_router_id}\n{scrub_bash_script}',
+        )
         child_span.finish()
 
-        VirtualRouter.logger.debug(f'Generated setconf for virtual_router #{virtual_router_id}\n{conf}')
-
-        # Deploy the generated setconf to the router
+        # Log onto PodNet box and run bash script
         management_ip = template_data.pop('management_ip')
-        child_span = opentracing.tracer.start_span('deploy_setconf', child_of=span)
-        success, errors = VirtualRouter.deploy(conf, management_ip, True)
-        virtual_router_data['errors'].extend(errors)
-        child_span.finish()
-        return success
+        scrubbed = False
+        vpn_cmds = ''
+
+        client = SSHClient()
+        client.set_missing_host_key_policy(AutoAddPolicy())
+        key = RSAKey.from_private_key_file('/root/.ssh/id_rsa')
+        try:
+            # Try connecting to the host and running the necessary commands
+            # No need for password as it should have keys
+            client.connect(hostname=management_ip, username='robot', pkey=key, timeout=300)
+            sftp = client.open_sftp()
+            span.set_tag('host', management_ip)
+
+            # If there are VPNs, remove connections
+            if len(virtual_router_data['vpns']) > 0:
+                child_span = opentracing.tracer.start_span('scrub_project_vpns', child_of=span)
+                # First check for vpn file, if exists then its not quiesced previously
+                # then remove the file from /etc/swanctl/conf.d/ and terminate
+                vpn_filename = f'/etc/swanctl/conf.d/P{project_id}_vpns.conf'
+                try:
+                    sftp.open(vpn_filename, mode='r')
+                    vpn_cmds = f'sudo rm {vpn_filename}\n'
+                    child_span.finish()
+                except IOError:
+                    VirtualRouter.logger.debug(
+                        'VPN config does not exists, It must be removed in Quiesce step.',
+                    )
+
+            # Attempt to execute ALL of the virtual router scrub commands
+            VirtualRouter.logger.debug(
+                f'Executing Virtual Router scrub commands for virtual_router #{virtual_router_id}',
+            )
+            child_span = opentracing.tracer.start_span('scrub_virtual_router', child_of=span)
+            stdout, stderr = VirtualRouter.deploy(f'{vpn_cmds}{scrub_bash_script}', client, child_span)
+            child_span.finish()
+            if stderr:
+                VirtualRouter.logger.error(
+                    f'Virtaul Router scrub commands for virtual_router #{virtual_router_id} generated stderr.'
+                    f'\n{stderr}',
+                )
+                virtual_router_data['errors'].append(stderr)
+            else:
+                VirtualRouter.logger.debug(
+                    f'Virtual Router scrub commands for virtual_router #{virtual_router_id} generated stdout.'
+                    f'\n{stdout}',
+                )
+                scrubbed = True
+
+        except (SSHException, TimeoutError):
+            error = f'Exception occurred while quiescing virtual_router #{virtual_router_id} in {management_ip}'
+            VirtualRouter.logger.error(error, exc_info=True)
+            virtual_router_data['errors'].append(error)
+            span.set_tag('failed_reason', 'ssh_error')
+        finally:
+            client.close()
+
+        return scrubbed
 
     @staticmethod
     def _get_template_data(virtual_router_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
@@ -103,11 +162,28 @@ class VirtualRouter(VirtualRouterMixin):
         data: Dict[str, Any] = {key: None for key in VirtualRouter.template_keys}
 
         data['project_id'] = virtual_router_data['project']['id']
+        # Router information
+        data['management_ip'] = settings.MGMT_IP
 
-        # Get the management ip address from the Router.
-        child_span = opentracing.tracer.start_span('reading_router', child_of=span)
-        router = utils.api_read(IAAS.router, virtual_router_data['router_id'], span=child_span)
+        vlans: Deque[Dict[str, str]] = deque()
+        subnets = virtual_router_data['subnets']
+        # Add the vlan information to the deque
+        for subnet in subnets:
+            vlans.append({
+                'vlan': subnet['vlan'],
+            })
+
+        data['vlans'] = vlans
+
+        # Finally, get the VPNs for the Project
+        vpns: Deque[Dict[str, Any]] = deque()
+        params = {'search[virtual_router_id]': virtual_router_id}
+        child_span = opentracing.tracer.start_span('listing_vpns', child_of=span)
+        virtual_router_vpns = utils.api_list(IAAS.vpn, params, span=child_span)
         child_span.finish()
-        data['management_ip'] = router['management_ip']
+        for vpn in virtual_router_vpns:
+            vpns.append(vpn)
+        data['vpns'] = vpns
+        virtual_router_data['vpns'] = data['vpns']
 
         return data

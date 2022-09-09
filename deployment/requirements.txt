@@ -6,7 +6,6 @@ git+https://github.com/diyan/pywinrm.git@3bf4ab094761a861563fc1df1d4b44134147c20
 influxdb
 jaeger-client
 jinja2
-junos-eznc
 netaddr
 paramiko
 # supervisor for running multiple processes once

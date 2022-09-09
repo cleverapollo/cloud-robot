@@ -1,14 +1,14 @@
 """
 mixin classes that have functions that might be used in multiple places
 """
+from .cloud_init import CloudInitMixin
 from .linux import LinuxMixin
-from .virtual_router import VirtualRouterMixin
 from .vm import VMImageMixin, VMUpdateMixin
 from .windows import WindowsMixin
 
 __all__ = [
+    'CloudInitMixin',
     'LinuxMixin',
-    'VirtualRouterMixin',
     'VMImageMixin',
     'VMUpdateMixin',
     'WindowsMixin',
