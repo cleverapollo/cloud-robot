@@ -122,6 +122,7 @@ def _build_virtual_router(virtual_router_id: int, span: Span):
         if len(send_email_vpns) > 0:
             for vpn in send_email_vpns:
                 vpn['virtual_router_ip'] = virtual_router['virtual_router_ip']
+                vpn['podnet_cpe'] = virtual_router['podnet_cpe']
                 child_span = opentracing.tracer.start_span('send_email', child_of=span)
                 try:
                     EmailNotifier.vpn_build_success(vpn)

@@ -28,8 +28,12 @@ __all__ = [
     'LOGSTASH_ENABLE',
     'LOGSTASH_PORT',
     'LOGSTASH_URL',
+    'MGMT_IP',
     'NETWORK_DRIVE_URL',
     'NETWORK_PASSWORD',
+    'PODNET_CPE',
+    'PRIVATE_INF',
+    'PUBLIC_INF',
     'REGION_NAME',
     'ROBOT_ENV',
     'SEND_TO_FAIL',
@@ -44,7 +48,6 @@ __all__ = [
     'SUBJECT_VPN_BUILD_SUCCESS',
     'SUBJECT_VPN_UPDATE_SUCCESS',
     'SUBJECT_VIRTUAL_ROUTER_FAIL',
-    'SRX_GATEWAY',
     'VIRTUAL_ROUTERS_ENABLED',
 ]
 
@@ -62,6 +65,11 @@ NETWORK_PASSWORD = 'C1xacc355'
 
 # Flag to state whether VIRTUAL_ROUTERs are enabled or not
 VIRTUAL_ROUTERS_ENABLED = True
+
+# Router settings
+MGMT_IP = '2a02:5b20:1::10:0:1'
+PRIVATE_INF = 'ge-0/0/5'
+PUBLIC_INF = 'ge-0/0/4'
 
 """
 CloudCIX API Settings
@@ -108,19 +116,19 @@ EMAIL_REPLY_TO = 'CloudCIX <no-reply@cloudcix.net>'
 SEND_TO_FAIL = 'developers@cloudcix.com,noc@cix.ie'
 
 # Subject for Backups build fails
-SUBJECT_BACKUP_BUILD_FAIL = f'[CloudCIX] Your Backup has failed to build.'
+SUBJECT_BACKUP_BUILD_FAIL = '[CloudCIX] Your Backup has failed to build.'
 
 # Subject for Backup fails
-SUBJECT_BACKUP_FAIL = f'[CloudCIX] Backup Failure Occurred!'
+SUBJECT_BACKUP_FAIL = '[CloudCIX] Backup Failure Occurred!'
 
 # Subject for Project build fail Emails
 SUBJECT_PROJECT_FAIL = '[CloudCIX] VM Failure Occurred!'
 
 # Subject for Snapshot build fail Emails
-SUBJECT_SNAPSHOT_BUILD_FAIL = f'[CloudCIX] Your Snapshot has failed to build.'
+SUBJECT_SNAPSHOT_BUILD_FAIL = '[CloudCIX] Your Snapshot has failed to build.'
 
 # Subject for Snapshot fail Emails
-SUBJECT_SNAPSHOT_FAIL = f'[CloudCIX] Snapshot Failure Occurred!'
+SUBJECT_SNAPSHOT_FAIL = '[CloudCIX] Snapshot Failure Occurred!'
 
 # Subject for VM build fail Emails
 SUBJECT_VM_FAIL = '[CloudCIX] Your VM  has failed to build.'
@@ -184,8 +192,8 @@ HYPERV_VMS_PATH = r'"D:\HyperV\"'
 # Nas drive mount url
 NETWORK_DRIVE_URL = f'\\\\{REGION_NAME}-robothost.cloudcix.com\\var\\lib\\libvirt\\robot-drive'
 
-# SRX Gateway address or dns name
-SRX_GATEWAY = '185.57.117.254'
+# PODNET CPE address or dns name
+PODNET_CPE = '185.57.117.254'
 
 """
 Backup Settings

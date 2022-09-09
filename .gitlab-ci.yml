@@ -1,29 +1,29 @@
 stages:
-  - lint
-  - test
-  - docker-base
-  - docker
-  - dockerhub
-  - deploy
-  - deploy_github
-  
+- lint
+- test
+- docker-base
+- docker
+- dockerhub
+- deploy
+- deploy_github
+    
 
 lint:
-  image: gitlab.cloudcix.com:5005/utils/ci/lint
-  stage: lint
-  script:
+    image: gitlab.cloudcix.com:5005/utils/ci/lint
+    stage: lint
+    script:
     - flake8
-  except:
+    except:
     - master
     - stable
 
 mypy:
-  image: python:3.7
-  stage: lint
-  script:
+    image: python:3.7
+    stage: lint
+    script:
     - pip3 install 'mypy<0.800'
     - mypy --ignore-missing-imports builders dispatchers metrics quiescers restarters scrubbers tasks updaters celery_app.py cloudcix_token.py email_notifier.py robot.py state.py utils.py
-  except:
+    except:
     - master
     - stable
 
@@ -31,121 +31,54 @@ mypy:
 #                         Base Containers                                     #
 ###############################################################################
 opensource_base:
-  stage: docker-base
-  tags:
+    stage: docker-base
+    tags:
     - docker-build
-  script:
+    script:
+    - docker login -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD $CI_REGISTRY
     - docker build -f deployment/docker/opensource/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/opensource-base --no-cache .
     - docker push gitlab.cloudcix.com:5005/cloudcix/robot/opensource-base
-  only:
+    only:
     - stable
 
 # Will be deployed to docker hub for our use in our Delta COP/Region POD
 delta_base:
     stage: docker-base
     tags:
-      - docker-build
+    - docker-build
     script:
-      - docker build -f deployment/docker/opensource/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/delta --no-cache .
-      - docker push gitlab.cloudcix.com:5005/cloudcix/robot/delta
+    - docker login -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD $CI_REGISTRY
+    - docker build -f deployment/docker/opensource/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/delta --no-cache .
+    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/delta
     when: manual
     except:
-      - stable
-
-# dev_test_base:
-#  stage: docker-base
-#  tags:
-#    - docker-build
-#  before_script:
-#    - echo "$GITLAB_KEY" > id_rsa
-#  script:
-#    - docker build -f deployment/docker/dev/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/dev-test-base --no-cache .
-#    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/dev-test-base
-#  when:
-#    manual
-#  except:
-#    - master
-#    - stable
-#
-# dev_base:
-#  stage: docker-base
-#  tags:
-#    - docker-build
-#  before_script:
-#    - echo "$GITLAB_KEY" > id_rsa
-#  script:
-#    - docker build -f deployment/docker/dev/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/dev-base --no-cache .
-#    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/dev-base
-#  only:
-#    - master
-
-stable_base:
-  stage: docker-base
-  tags:
-    - docker-build
-  before_script:
-    - echo "$GITLAB_KEY" > id_rsa
-  script:
-    - docker build -f deployment/docker/stable/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/stable-base --no-cache .
-    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/stable-base
-  only:
     - stable
 
-###############################################################################
-#                           Dev Test Build and Deploy                              #
-###############################################################################
-# alpha_test_image:
-#  stage: docker
-#  tags:
-#    - docker-build
-#  script:
-#    - docker build -f deployment/docker/dev/alpha-test.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/alpha-test --no-cache .
-#    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/alpha-test
-#  when:
-#    manual
-#  except:
-#    - master
-#    - stable
+# Will be deployed to docker hub for our use in our Delta COP/Region POD
+devtest_base:
+    stage: docker-base
+    tags:
+    - docker-build
+    script:
+    - docker login -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD $CI_REGISTRY
+    - docker build -f deployment/docker/opensource/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/devtest --no-cache .
+    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/devtest
+    when: manual
+    except:
+    - stable
 
-# deploy_alpha_test:
-#  image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
-#  before_script:
-#    - cp ~/.ssh/application_framework/stage_key ~/.ssh/id_rsa
-#    - cp ~/.ssh/application_framework/stage_key.pub ~/.ssh/id_rsa.pub
-#  stage: deploy
-#  script:
-#    - ansible-playbook -i deployment/hosts/alpha.yml deployment/playbook.yml --extra-vars="deployment_host=alpha"
-#    - ansible-playbook -i deployment/hosts/alpha.yml deployment/worker-playbook.yml --extra-vars="deployment_host=alpha-worker0"
-#  when:
-#    manual
-#  except:
-#    - master
-#    - stable
-
-###############################################################################
-#                           Dev Build and Deploy                              #
-###############################################################################
-# alpha_image:
-#  stage: docker
-#  tags:
-#    - docker-build
-#  script:
-#    - docker build -f deployment/docker/dev/alpha.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/alpha --no-cache .
-#    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/alpha
-#  only:
-#  - master
-
-# deploy_alpha:
-#  image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
-#  before_script:
-#    - cp ~/.ssh/application_framework/stage_key ~/.ssh/id_rsa
-#    - cp ~/.ssh/application_framework/stage_key.pub ~/.ssh/id_rsa.pub
-#  stage: deploy
-#  script:
-#    - ansible-playbook -i deployment/hosts/alpha.yml deployment/playbook.yml --extra-vars="deployment_host=alpha"
-#    - ansible-playbook -i deployment/hosts/alpha.yml deployment/worker-playbook.yml --extra-vars="deployment_host=alpha-worker0"
-#  only:
-#    - master
+stable_base:
+    stage: docker-base
+    tags:
+    - docker-build
+    before_script:
+    - echo "$GITLAB_KEY" > id_rsa
+    script:
+    - docker login -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD $CI_REGISTRY
+    - docker build -f deployment/docker/stable/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/stable-base --no-cache .
+    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/stable-base
+    only:
+    - stable
 
 
 ###############################################################################
@@ -156,141 +89,135 @@ stable_base:
 #                        Cork01 Build and Deploy.                            #
 ###############################################################################
 cork01_image:
-  stage: docker
-  tags:
-  - docker-build
-  script:
-  - docker build -f deployment/docker/stable/cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/cork01 --no-cache .
-  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/cork01
-  only:
-  - stable
+    stage: docker
+    tags:
+    - docker-build
+    script:
+    - docker login -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD $CI_REGISTRY
+    - docker build -f deployment/docker/stable/cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/cork01 --no-cache .
+    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/cork01
+    only:
+    - stable
 
 deploy_cork01:
-  image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
-  before_script:
+    image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
+    before_script:
     - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
     - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
-  stage: deploy
-  script:
+    stage: deploy
+    script:
     # Deploy Heartbeat
     - ansible-playbook -i deployment/hosts/cork01.yml deployment/playbook.yml --extra-vars="deployment_host=cork01"
     # Deploy workers
     - ansible-playbook -i deployment/hosts/cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=cork01-worker0"
-  only:
+    only:
     - stable
 
 ###############################################################################
 #                        NTI Build and Deploy.                                #
 ###############################################################################
 nti-cork01_image:
-  stage: docker
-  tags:
-  - docker-build
-  script:
-  - docker build -f deployment/docker/stable/nti-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/nti-cork01 --no-cache .
-  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/nti-cork01
-  only:
-  - stable
+    stage: docker
+    tags:
+    - docker-build
+    script:
+    - docker login -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD $CI_REGISTRY
+    - docker build -f deployment/docker/stable/nti-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/nti-cork01 --no-cache .
+    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/nti-cork01
+    only:
+    - stable
 
 deploy_nti-cork01:
-  image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
-  before_script:
+    image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
+    before_script:
     - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
     - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
-  stage: deploy
-  script:
+    stage: deploy
+    script:
     # Deploy Heartbeat
     - ansible-playbook -i deployment/hosts/nti-cork01.yml deployment/playbook.yml --extra-vars="deployment_host=nti-cork01"
     # Deploy workers
     - ansible-playbook -i deployment/hosts/nti-cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=nti-cork01-worker0"
-  only:
+    only:
     - stable
-
-###############################################################################
-#                        NetSOC Build and Deploy.                            #
-###############################################################################
-# netsoc-cork01_image:
-#   stage: docker
-#   tags:
-#   - docker-build
-#   script:
-#   - docker build -f deployment/docker/stable/netsoc-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/netsoc-cork01 --no-cache .
-#   - docker push gitlab.cloudcix.com:5005/cloudcix/robot/netsoc-cork01
-#   only:
-#   - stable
-
-# deploy_netsoc-cork01:
-#   image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
-#   before_script:
-#     - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
-#     - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
-#   stage: deploy
-#   script:
-#     # Deploy Heartbeat
-#     - ansible-playbook -i deployment/hosts/netsoc-cork01.yml deployment/playbook.yml --extra-vars="deployment_host=netsoc-cork01"
-#     # Deploy workers
-#     - ansible-playbook -i deployment/hosts/netsoc-cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=netsoc-cork01-worker0"
-#   only:
-#     - stable
 
 ###############################################################################
 #                        VMotion Build and Deploy.                            #
 ###############################################################################
 vmotion-cork01_image:
-  stage: docker
-  tags:
-  - docker-build
-  script:
-  - docker build -f deployment/docker/stable/vmotion-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/vmotion-cork01 --no-cache .
-  - docker push gitlab.cloudcix.com:5005/cloudcix/robot/vmotion-cork01
-  only:
-  - stable
+    stage: docker
+    tags:
+    - docker-build
+    script:
+    - docker login -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD $CI_REGISTRY
+    - docker build -f deployment/docker/stable/vmotion-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/vmotion-cork01 --no-cache .
+    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/vmotion-cork01
+    only:
+    - stable
 
 deploy_vmotion-cork01:
-  image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
-  before_script:
+    image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
+    before_script:
     - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
     - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
-  stage: deploy
-  script:
+    stage: deploy
+    script:
     # Deploy Heartbeat
     - ansible-playbook -i deployment/hosts/vmotion-cork01.yml deployment/playbook.yml --extra-vars="deployment_host=vmotion-cork01"
     # Deploy workers
     - ansible-playbook -i deployment/hosts/vmotion-cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=vmotion-cork01-worker0"
-  only:
+    only:
     - stable
 
 ###############################################################################
 #                         Github and Dockerhub Deploy                         #
 ###############################################################################
 deploy_github:
-  image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
-  before_script:
+    image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
+    before_script:
     - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
     - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
-  stage: deploy_github
-  script:
+    stage: deploy_github
+    script:
     - /bin/bash deployment/github_deploy.sh
-  when: manual
-  only:
+    when: manual
+    only:
     - stable
 
 opersource_dockerhub:
-  stage: dockerhub
-  tags:
+    stage: dockerhub
+    tags:
     - docker-build
-  script:
+    script:
     - ./deployment/docker/publish/opensource.sh
-  when: manual
-  only:
+    when: manual
+    only:
     - stable
 
 delta_dockerhub:
-  stage: dockerhub
-  tags:
+    stage: dockerhub
+    tags:
     - docker-build
-  script:
+    script:
     - ./deployment/docker/publish/delta.sh
-  when: manual
-  except:
+    when: manual
+    except:
     - stable
+
+devtest_dockerhub:
+    stage: dockerhub
+    tags:
+    - docker-build
+    script:
+    - ./deployment/docker/publish/devtest.sh
+    when: manual
+    except:
+    - stable
+
+sast:
+    stage: test
+    
+include:
+- template: Security/SAST.gitlab-ci.yml
+- template: Security/SAST-IaC.latest.gitlab-ci.yml
+- template: Security/Secret-Detection.gitlab-ci.yml
