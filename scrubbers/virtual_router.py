@@ -38,6 +38,8 @@ class VirtualRouter(LinuxMixin):
         'management_ip',
         # The id of the Project that owns the virtual_router being scrubbed
         'project_id',
+        # The interface connecting Podnet to hosts
+        'private_interface',
         # A list of vLans to be built in the virtual_router
         'vlans',
         # A list of VPNs to be built in the virtual_router
@@ -164,6 +166,7 @@ class VirtualRouter(LinuxMixin):
         data['project_id'] = virtual_router_data['project']['id']
         # Router information
         data['management_ip'] = settings.MGMT_IP
+        data['private_interface'] = settings.PRIVATE_INF
 
         vlans: Deque[Dict[str, str]] = deque()
         subnets = virtual_router_data['subnets']
