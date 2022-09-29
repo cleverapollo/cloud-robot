@@ -6,6 +6,7 @@ updater class for linux snapshots
 """
 # stdlib
 import logging
+import socket
 from typing import Any, Dict, Optional
 # lib
 import opentracing
@@ -84,9 +85,15 @@ class Linux(LinuxMixin):
         updated = False
         client = SSHClient()
         client.set_missing_host_key_policy(AutoAddPolicy())
+        sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         try:
             # Try connecting to the host and running the necessary commands
-            client.connect(hostname=host_ip, username='administrator')  # No need for password as it should have keys
+            sock.connect((host_ip, 22))
+            client.connect(
+                hostname=host_ip,
+                username='administrator',
+                sock=sock,
+            )  # No need for password as it should have keys
             span.set_tag('host', host_ip)
 
             # Attempt to execute the update command
@@ -101,7 +108,7 @@ class Linux(LinuxMixin):
                 updated = True
             if stderr:
                 Linux.logger.error(f'Snapshot update command for Snapshot #{snapshot_id} generated stderr. \n{stderr}')
-        except SSHException as err:
+        except (OSError, SSHException) as err:
             error = f'Exception occurred while updating Snapshot #{snapshot_id} in {host_ip}.'
             Linux.logger.error(error, exc_info=True)
             snapshot_data['errors'].append(f'{error} Error: {err}')

@@ -10,6 +10,7 @@ import logging
 import os
 import random
 import shutil
+import socket
 import string
 from crypt import crypt, mksalt, METHOD_SHA512
 from typing import Any, Dict, Optional, Tuple
@@ -153,9 +154,15 @@ class Linux(LinuxMixin, VMImageMixin):
         built = False
         client = SSHClient()
         client.set_missing_host_key_policy(AutoAddPolicy())
+        sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         try:
             # Try connecting to the host and running the necessary commands
-            client.connect(hostname=host_ip, username='administrator')  # No need for password as it should have keys
+            sock.connect((host_ip, 22))
+            client.connect(
+                hostname=host_ip,
+                username='administrator',
+                sock=sock,
+            )  # No need for password as it should have keys
             span.set_tag('host', host_ip)
 
             # Attempt to execute the bridge build commands
@@ -185,7 +192,7 @@ class Linux(LinuxMixin, VMImageMixin):
                 vm_data['errors'].append(stderr)
             built = 'Domain creation completed' in stdout
 
-        except SSHException:
+        except (OSError, SSHException, TimeoutError):
             error = f'Exception occurred while building VM #{vm_id} in {host_ip}'
             Linux.logger.error(error, exc_info=True)
             vm_data['errors'].append(error)

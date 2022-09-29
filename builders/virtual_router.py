@@ -10,6 +10,7 @@ builder class for virtual_routers
 import logging
 import re
 from collections import deque
+import socket
 from typing import Any, Deque, Dict, Optional
 # lib
 import opentracing
@@ -138,10 +139,12 @@ class VirtualRouter(LinuxMixin):
         client = SSHClient()
         client.set_missing_host_key_policy(AutoAddPolicy())
         key = RSAKey.from_private_key_file('/root/.ssh/id_rsa')
+        sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         try:
             # Try connecting to the host and running the necessary commands
-            # No need for password as it should have keys, timeout is in seconds
-            client.connect(hostname=management_ip, username='robot', pkey=key, timeout=300)
+            # No need for password as it should have keys
+            sock.connect((management_ip, 22))
+            client.connect(hostname=management_ip, username='robot', pkey=key, timeout=300, sock=sock)
             sftp = client.open_sftp()
             span.set_tag('host', management_ip)
 
@@ -250,7 +253,7 @@ class VirtualRouter(LinuxMixin):
                 )
                 built = True
 
-        except (SSHException, TimeoutError):
+        except (OSError, SSHException, TimeoutError):
             error = f'Exception occurred while building virtual_router #{virtual_router_id} in {management_ip}'
             VirtualRouter.logger.error(error, exc_info=True)
             virtual_router_data['errors'].append(error)
