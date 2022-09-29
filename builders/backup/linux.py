@@ -6,6 +6,7 @@ builder class for kvm backup
 """
 # stdlib
 import logging
+import socket
 from datetime import datetime
 from typing import Any, Dict, Optional
 # lib
@@ -85,9 +86,15 @@ class Linux(LinuxMixin):
         built = False
         client = SSHClient()
         client.set_missing_host_key_policy(AutoAddPolicy)
+        sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         try:
             # Try connecting to the host and running the necessary commands
-            client.connect(hostname=host_ip, username='administrator')  # No need for password, has keys
+            sock.connect((host_ip, 22))
+            client.connect(
+                hostname=host_ip,
+                username='administrator',
+                sock=sock,
+            )  # No need for password as it should have keys
             span.set_tag('host', host_ip)
 
             # Attempt to execute the backup build commands
@@ -106,7 +113,7 @@ class Linux(LinuxMixin):
                 Linux.logger.error(f'Backup build command for Backup {backup_id} generated stderr. \n{stderr}')
                 backup_data['errors'].append(stderr)
             built = f'Backup done {template_data["vm_identifier"]}' in stdout
-        except SSHException:
+        except (OSError, SSHException, TimeoutError):
             error = f'Exception occured while building Backup #{backup_id} in {host_ip}'
             Linux.logger.error(error, exc_info=True)
             backup_data['errors'].append(error)
