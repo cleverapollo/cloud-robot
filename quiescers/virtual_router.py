@@ -96,7 +96,7 @@ class VirtualRouter(VirtualRouterScrubber):
             # Try connecting to the host and running the necessary commands
             # No need for password as it should have keys
             sock.connect((management_ip, 22))
-            client.connect(hostname=management_ip, username='robot', pkey=key, timeout=300, sock=sock)
+            client.connect(hostname=management_ip, username='robot', pkey=key, timeout=30, sock=sock)
             span.set_tag('host', management_ip)
 
             # If there are VPNs, remove connections
