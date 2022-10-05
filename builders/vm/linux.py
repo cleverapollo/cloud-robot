@@ -18,7 +18,7 @@ from typing import Any, Dict, Optional, Tuple
 import opentracing
 from jaeger_client import Span
 from netaddr import IPAddress, IPNetwork
-from paramiko import AutoAddPolicy, SSHClient, SSHException
+from paramiko import AutoAddPolicy, RSAKey, SSHClient, SSHException
 # local
 import settings
 import utils
@@ -154,6 +154,7 @@ class Linux(LinuxMixin, VMImageMixin):
         built = False
         client = SSHClient()
         client.set_missing_host_key_policy(AutoAddPolicy())
+        key = RSAKey.from_private_key_file('/root/.ssh/id_rsa')
         sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         try:
             # Try connecting to the host and running the necessary commands
@@ -161,6 +162,8 @@ class Linux(LinuxMixin, VMImageMixin):
             client.connect(
                 hostname=host_ip,
                 username='administrator',
+                pkey=key,
+                timeout=30,
                 sock=sock,
             )  # No need for password as it should have keys
             span.set_tag('host', host_ip)
