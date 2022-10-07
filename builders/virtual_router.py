@@ -379,8 +379,8 @@ class VirtualRouter(LinuxMixin):
                 vpn['local_ts'] = ','.join(local_ts_set)
                 vpn['remote_ts'] = ','.join(remote_ts_set)
             else:
-                vpn['local_ts'] = 'dynamic'
-                vpn['remote_ts'] = 'dynamic'
+                vpn['local_ts'] = '0.0.0.0/0'
+                vpn['remote_ts'] = '0.0.0.0/0'
             # version conversion
             vpn['version'] = '1' if vpn['ike_version'] == 'v1-only' else '2'
             # mode
