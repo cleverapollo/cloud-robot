@@ -8,6 +8,7 @@ quiescer class for virtual_routers
 
 # stdlib
 import logging
+import socket
 from typing import Any, Dict
 # lib
 import opentracing
@@ -90,10 +91,12 @@ class VirtualRouter(VirtualRouterScrubber):
         client = SSHClient()
         client.set_missing_host_key_policy(AutoAddPolicy())
         key = RSAKey.from_private_key_file('/root/.ssh/id_rsa')
+        sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         try:
             # Try connecting to the host and running the necessary commands
             # No need for password as it should have keys
-            client.connect(hostname=management_ip, username='robot', pkey=key, timeout=300)
+            sock.connect((management_ip, 22))
+            client.connect(hostname=management_ip, username='robot', pkey=key, timeout=30, sock=sock)
             span.set_tag('host', management_ip)
 
             # If there are VPNs, remove connections
@@ -122,7 +125,7 @@ class VirtualRouter(VirtualRouterScrubber):
                 )
                 quiesced = True
 
-        except (SSHException, TimeoutError):
+        except (OSError, SSHException, TimeoutError):
             error = f'Exception occurred while quiescing virtual_router #{virtual_router_id} in {management_ip}'
             VirtualRouter.logger.error(error, exc_info=True)
             virtual_router_data['errors'].append(error)
