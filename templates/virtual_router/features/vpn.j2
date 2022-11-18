@@ -22,7 +22,7 @@ connections {
 {# Section for a local authentication round. #}
         local {
             auth = psk
-            id = {{ podnet_cpe }}
+            id = {{ vpn['id'] }}
         }
 {# Section for a remote authentication round. #}
         remote {
