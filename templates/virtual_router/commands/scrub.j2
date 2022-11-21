@@ -10,3 +10,6 @@ sudo ip link del {{ private_interface }}.{{ vlan['vlan'] }}
 {% for vpn in vpns %}
 sudo swanctl -t -c {{ project_id }}-{{ vpn['stif_number'] }}
 {% endfor %}
+{# Remove vpn config file and Unload the VPN connection and credentials #}
+sudo rm -f {{ vpn_filename }}
+sudo swanctl -q

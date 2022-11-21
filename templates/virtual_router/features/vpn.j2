@@ -2,7 +2,7 @@ connections {
 {% for vpn in vpns %}
 
 {# Section for an IKE connection named <conn> #}
-    {{ project_id }}-{{ vpn['stif_number'] }} {
+    {{ project_id }}-{{ vpn['id'] }} {
 
 {# IKE major version to use for connection. #}
         version = {{ vpn['version'] }}
@@ -24,26 +24,30 @@ connections {
             auth = psk
             id = {{ vpn['id'] }}
         }
-{# Section for a remote authentication round. #}
+{# Section for a remote authentication round, %any considers an integer or an IP address #}
         remote {
             auth = psk
-            id = {{ vpn['ike_gateway_value'] }}
+            id = %any
         }
 
-{# CHILD_SA configuration sub-section. #}
+{# CHILD_SAs configuration sub-section. #}
         children {
-            {{ project_id }}-{{ vpn['stif_number'] }} {
+{% for child_sa in vpn['child_sas'] %}
+            {{ project_id }}-{{ vpn['id'] }}-{{ loop.index }} {
                 life_time = {{ vpn['ipsec_lifetime'] }}s
 {# Local traffic selectors to include in CHILD_SA. #}
-                local_ts = {{ vpn['local_ts'] }}
+                local_ts = {{ child_sa['lts'] }}
                 esp_proposals = {{ vpn['ipsec_encryption_map'] }}-{{ vpn['ipsec_authentication_map'] }}-{{ vpn['ipsec_pfs_groups_map'] }}
 {# Remote selectors to include in CHILD_SA. #}
-                remote_ts = {{ vpn['remote_ts'] }}
+                remote_ts = {{ child_sa['rts'] }}
 {# Inbound XFRM interface ID. #}
                 if_id_in = {{ vpn['stif_number'] }}
 {# Outbound XFRM interface ID. #}
                 if_id_out = {{ vpn['stif_number'] }}
+{# IPSec Establish time. #}
+                start_action = {{ vpn['start_action'] }}
             }
+{% endfor %}
         }
     }
 {% endfor %}
@@ -51,11 +55,11 @@ connections {
 
 secrets {
 {% for vpn in vpns %}
-    ike{{ vpn['stif_number'] }} {
+    ike{{ vpn['id'] }} {
 {# Value of the IKE preshared secret. #}
         secret = {{ vpn['ike_pre_shared_key'] }}
 {# IKE identity the IKE preshared secret belongs to. #}
-        id = {{ vpn['ike_gateway_value'] }}
+        id = {{ vpn['id'] }}
     }
 {% endfor %}
 }
