@@ -373,24 +373,34 @@ class VirtualRouter(LinuxMixin):
                 remote_ts.append(str(remote))
 
             vpn['routes'] = routes
-            if vpn['traffic_selector']:
-                local_ts_set = set(local_ts)
-                remote_ts_set = set(remote_ts)
-                vpn['local_ts'] = ','.join(local_ts_set)
-                vpn['remote_ts'] = ','.join(remote_ts_set)
-            else:
-                vpn['local_ts'] = '0.0.0.0/0'
-                vpn['remote_ts'] = '0.0.0.0/0'
+
             # version conversion
             vpn['version'] = '1' if vpn['ike_version'] == 'v1-only' else '2'
+
             # mode
             vpn['aggressive'] = 'yes' if vpn['ike_mode'] == 'aggressive' else 'no'
+
+            # child SAs, one for each traffic selectors pair
+            vpn['child_sas'] = []
+            if vpn['traffic_selector']:
+                if vpn['version'] == '2':
+                    local_ts_set = set(local_ts)
+                    remote_ts_set = set(remote_ts)
+                    vpn['child_sas'].append({'lts': ','.join(local_ts_set), 'rts': ','.join(remote_ts_set)})
+                elif vpn['version'] == '1':
+                    for route in routes:
+                        vpn['child_sas'].append({'lts': route['local'], 'rts': route['remote']})
+            else:
+                vpn['child_sas'].append({'lts': '0.0.0.0/0', 'rts': '0.0.0.0/0'})
+
+            # tunnel action
+            vpn['start_action'] = 'trap' if vpn['ipsec_establish_time'] == 'on-traffic' else 'start'
+
             # if send_email is true then read VPN for email addresses
             if vpn['send_email']:
                 child_span = opentracing.tracer.start_span('reading_vpn', child_of=span)
                 vpn['emails'] = utils.api_read(IAAS.vpn, pk=vpn['id'])['emails']
                 child_span.finish()
-                vpn['srx_vpn_name'] = f'https://{settings.PODNET_CPE}/vrf-{project_id}-{vpn["stif_number"]}-vpn'
 
             # MAP SRX values to Strongswan values
             vpn['ike_authentication_map'] = vpn_mappings.IKE_AUTHENTICATION_MAP[vpn['ike_authentication']]

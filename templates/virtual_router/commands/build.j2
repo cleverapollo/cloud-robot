@@ -62,11 +62,8 @@ sudo ip netns exec P{{ project_id }} ip route add {{ route['remote'] }} dev xfrm
 {% endfor %}
 
 {# Apply VPNs #}
+{# Add vpn config file and Load the VPN connection and credentials #}
 sudo mv {{ temp_vpn_filename }} {{ vpn_filename }}
 sudo swanctl -q
-{# Initiate the VPN connection #}
-{% for vpn in vpns %}
-sudo swanctl -i -c {{ project_id }}-{{ vpn['stif_number'] }}
-{% endfor %}
 {% endif %}
 {# ------------------------------------------------------------------------------------------------------------- #}
