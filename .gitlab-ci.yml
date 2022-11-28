@@ -8,7 +8,7 @@ stages:
     
 
 lint:
-    image: gitlab.cloudcix.com:5005/utils/ci/lint
+    image: cloudcix/lint:latest
     stage: lint
     script:
     - flake8
@@ -31,6 +31,9 @@ mypy:
 ###############################################################################
 opensource_base:
     stage: docker-base
+    image: gitlab/dind
+    services:
+    - docker:dind
     tags:
     - docker-build
     script:
@@ -43,6 +46,9 @@ opensource_base:
 # Will be deployed to docker hub for our use in our Delta COP/Region POD
 delta_base:
     stage: docker-base
+    image: gitlab/dind
+    services:
+    - docker:dind
     tags:
     - docker-build
     script:
@@ -56,6 +62,9 @@ delta_base:
 # Will be deployed to docker hub for our use in our Delta COP/Region POD
 devtest_base:
     stage: docker-base
+    image: gitlab/dind
+    services:
+    - docker:dind
     tags:
     - docker-build
     script:
@@ -68,6 +77,9 @@ devtest_base:
 
 stable_base:
     stage: docker-base
+    image: gitlab/dind
+    services:
+    - docker:dind
     tags:
     - docker-build
     before_script:
@@ -89,6 +101,9 @@ stable_base:
 ###############################################################################
 cork01_image:
     stage: docker
+    image: gitlab/dind
+    services:
+    - docker:dind
     tags:
     - docker-build
     script:
@@ -119,6 +134,9 @@ deploy_cork01:
 ###############################################################################
 nti-cork01_image:
     stage: docker
+    image: gitlab/dind
+    services:
+    - docker:dind
     tags:
     - docker-build
     script:
@@ -149,6 +167,9 @@ deploy_nti-cork01:
 ###############################################################################
 vmotion-cork01_image:
     stage: docker
+    image: gitlab/dind
+    services:
+    - docker:dind
     tags:
     - docker-build
     script:
@@ -191,6 +212,9 @@ deploy_github:
 
 opersource_dockerhub:
     stage: publish
+    image: gitlab/dind
+    services:
+    - docker:dind
     tags:
     - docker-build
     script:
@@ -201,6 +225,9 @@ opersource_dockerhub:
 
 delta_dockerhub:
     stage: publish
+    image: gitlab/dind
+    services:
+    - docker:dind
     tags:
     - docker-build
     script:
@@ -211,6 +238,9 @@ delta_dockerhub:
 
 devtest_dockerhub:
     stage: publish
+    image: gitlab/dind
+    services:
+    - docker:dind
     tags:
     - docker-build
     script:
