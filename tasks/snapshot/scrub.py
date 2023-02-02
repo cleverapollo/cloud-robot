@@ -143,7 +143,7 @@ def _scrub_snapshot(snapshot_id: int, span: Span):
         if server_type == 'HyperV':
             success = WindowsSnapshot.scrub(snapshot, child_span)
             child_span.set_tag('server_type', 'windows')
-        elif server_type == 'KVM':
+        elif server_type in ['KVM', 'GPU A100']:
             success = LinuxSnapshot.scrub(snapshot, child_span)
             child_span.set_tag('server_type', 'linux')
         else:

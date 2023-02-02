@@ -8,7 +8,12 @@ connections {
         version = {{ vpn['version'] }}
         aggressive = {{ vpn['aggressive'] }}
         proposals = {{ vpn['ike_encryption_map'] }}-{{ vpn['ike_authentication_map'] }}-{{ vpn['ike_dh_groups_map'] }}
+{# IKE life time(over_time) for ikev2 and its reauth_time for ikev1 #}
+{% if vpn['version'] == '1' %}
+        reauth_time = {{ vpn['ike_lifetime'] }}s
+{% else %}
         over_time = {{ vpn['ike_lifetime'] }}s
+{% endif %}
 
 {# Local address(es) to use for IKE communication, comma separated. #}
         local_addrs = {{ podnet_cpe }}
@@ -20,21 +25,27 @@ connections {
         if_id_out = {{ vpn['stif_number'] }}
 
 {# Section for a local authentication round. #}
-        local {
+        local-{{ vpn['id'] }} {
             auth = psk
-            id = {{ vpn['id'] }}
+            id = {{ vpn['ike_local_identifier'] }}
         }
 {# Section for a remote authentication round, %any considers an integer or an IP address #}
-        remote {
+        remote-{{ vpn['id'] }} {
             auth = psk
-            id = %any
+            id = {{ vpn['ike_remote_identifier'] }}
         }
 
 {# CHILD_SAs configuration sub-section. #}
         children {
+{# Every route combination is a child sa #}
 {% for child_sa in vpn['child_sas'] %}
             {{ project_id }}-{{ vpn['id'] }}-{{ loop.index }} {
+{# IPsec life time for ikev2 and its rekey time for ikev1 #}
+{% if vpn['version'] == '1' %}
+                rekey_time = {{ vpn['ipsec_lifetime'] }}s
+{% else %}
                 life_time = {{ vpn['ipsec_lifetime'] }}s
+{% endif %}
 {# Local traffic selectors to include in CHILD_SA. #}
                 local_ts = {{ child_sa['lts'] }}
                 esp_proposals = {{ vpn['ipsec_encryption_map'] }}-{{ vpn['ipsec_authentication_map'] }}-{{ vpn['ipsec_pfs_groups_map'] }}
@@ -55,11 +66,12 @@ connections {
 
 secrets {
 {% for vpn in vpns %}
-    ike{{ vpn['id'] }} {
+    ike-{{ vpn['id'] }} {
 {# Value of the IKE preshared secret. #}
         secret = {{ vpn['ike_pre_shared_key'] }}
 {# IKE identity the IKE preshared secret belongs to. #}
-        id = {{ vpn['id'] }}
+        id-local-{{ vpn['id'] }} = {{ vpn['ike_local_identifier'] }}
+        id-remote-{{ vpn['id'] }} = {{ vpn['ike_remote_identifier'] }}
     }
 {% endfor %}
 }

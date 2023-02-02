@@ -22,7 +22,7 @@
   {# Addresses #}
   <tr><th colspan="2" class="align-center" style="font-size:1.5em;">IPAddress Details</th></tr>
   <tr><th>Customer Router Gateway</th><td>{{ ike_gateway_value }}</td></tr>
-  <tr><th>Project Router Address</th><td>{{ podnet_cpe }}</td></tr>
+  <tr><th>Project's Region Router Address</th><td>{{ podnet_cpe }}</td></tr>
   {# Traffic selectors or Proxy ids #}
 {% if traffic_selector %}
   <tr><th colspan="2" class="align-center" style="padding-top:1em;font-size:1.5em;">Traffic-Selector/Proxy-ID settings</th></tr>
@@ -37,9 +37,10 @@
   <tr><th>Diffie-Hellman (DH) Group</th><td>{{ ike_dh_groups }}</td></tr>
   <tr><th>Encryption</th><td>{{ ike_encryption }}</td></tr>
   <tr><th>IKE Version</th><td>{{ ike_version }}</td></tr>
-  <tr><th>IKE Remote ID</th><td>{{ id }}</td></tr>
-  <tr><th>Lifetime (in seconds)</th><td>{{ ike_lifetime }}</td></tr>
-  <tr><th>Mode</th><td>{{ ike_mode }}</td></tr>
+  <tr><th>Project's IKE Local Identifier/Customer's IKE Remote Identifier</th><td>{{ ike_local_identifier }}</td></tr>
+  <tr><th>Project's IKE Remote Identifier/Customer's IKE Local Identifier </th><td>{{ ike_remote_identifier }}</td></tr>
+  <tr><th>IKE Lifetime (in seconds)</th><td>{{ ike_lifetime }}</td></tr>
+  <tr><th>Aggressive Mode</th><td>{{ aggressive }}</td></tr>
   <tr><th>Pre Shared Key</th><td>{{ ike_pre_shared_key }}</td></tr>
   {# IPSec Settings #}
   <tr><th colspan="2" class="align-center" style="padding-top:1em;font-size:1.5em;">IPSec (Phase 2) Settings</th></tr>
@@ -47,9 +48,13 @@
   <tr><th>Encapsulation Mode</th><td>Tunnel</td></tr>
   <tr><th>Establish Tunnel</th><td>{{ ipsec_establish_time }}</td></tr>
   <tr><th>Encryption</th><td>{{ ipsec_encryption }}</td></tr>
-  <tr><th>Lifetime (in seconds)</th><td>{{ ipsec_lifetime }}</td></tr>
+  <tr><th>IPSec Lifetime (in seconds)</th><td>{{ ipsec_lifetime }}</td></tr>
   <tr><th>PFS Group</th><td>{{ ipsec_pfs_groups }}</td></tr>
   <tr><th>Protocol</th><td>esp</td></tr>
 </table>
 {% endif %}
 {% endblock %}
+
+<h3>Notes:</h3>
+<p>CloudCIX's VPNs are built using StrongSwan. Certain limitations are adopted, for more information visit https://docs.community.cloudcix.com/architecture_podnet.html .</p>
+<hr />
