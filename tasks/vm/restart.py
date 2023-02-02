@@ -131,7 +131,7 @@ def _restart_vm(vm_id: int, span: Span):
         if server_type == 'HyperV':
             success = WindowsVM.restart(vm, child_span)
             child_span.set_tag('server_type', 'windows')
-        elif server_type == 'KVM':
+        elif server_type in ['KVM', 'GPU A100']:
             success = LinuxVM.restart(vm, child_span)
             child_span.set_tag('server_type', 'linux')
         elif server_type == 'Phantom':

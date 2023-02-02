@@ -43,23 +43,8 @@ opensource_base:
     only:
     - stable
 
-# Will be deployed to docker hub for our use in our Delta COP/Region POD
-delta_base:
-    stage: docker-base
-    image: gitlab/dind
-    services:
-    - docker:dind
-    tags:
-    - docker-build
-    script:
-    - docker login -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD $CI_REGISTRY
-    - docker build -f deployment/docker/opensource/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/delta --no-cache .
-    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/delta
-    when: manual
-    except:
-    - stable
 
-# Will be deployed to docker hub for our use in our Delta COP/Region POD
+# Will be deployed to docker hub for our use in our Devtest Region POD
 devtest_base:
     stage: docker-base
     image: gitlab/dind
@@ -91,115 +76,13 @@ stable_base:
     only:
     - stable
 
-
-###############################################################################
-#                         Production Build and Deploy                         #
-###############################################################################
-
-###############################################################################
-#                        Cork01 Build and Deploy.                            #
-###############################################################################
-cork01_image:
-    stage: docker
-    image: gitlab/dind
-    services:
-    - docker:dind
-    tags:
-    - docker-build
-    script:
-    - docker login -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD $CI_REGISTRY
-    - docker build -f deployment/docker/stable/cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/cork01 --no-cache .
-    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/cork01
-    when: manual
-    only:
-    - stable
-
-deploy_cork01:
-    image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
-    before_script:
-    - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
-    - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
-    stage: deploy
-    script:
-    # Deploy Heartbeat
-    - ansible-playbook -i deployment/hosts/cork01.yml deployment/playbook.yml --extra-vars="deployment_host=cork01"
-    # Deploy workers
-    - ansible-playbook -i deployment/hosts/cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=cork01-worker0"
-    when: manual
-    only:
-    - stable
-
-###############################################################################
-#                        NTI Build and Deploy.                                #
-###############################################################################
-nti-cork01_image:
-    stage: docker
-    image: gitlab/dind
-    services:
-    - docker:dind
-    tags:
-    - docker-build
-    script:
-    - docker login -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD $CI_REGISTRY
-    - docker build -f deployment/docker/stable/nti-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/nti-cork01 --no-cache .
-    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/nti-cork01
-    when: manual
-    only:
-    - stable
-
-deploy_nti-cork01:
-    image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
-    before_script:
-    - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
-    - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
-    stage: deploy
-    script:
-    # Deploy Heartbeat
-    - ansible-playbook -i deployment/hosts/nti-cork01.yml deployment/playbook.yml --extra-vars="deployment_host=nti-cork01"
-    # Deploy workers
-    - ansible-playbook -i deployment/hosts/nti-cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=nti-cork01-worker0"
-    when: manual
-    only:
-    - stable
-
-###############################################################################
-#                        VMotion Build and Deploy.                            #
-###############################################################################
-vmotion-cork01_image:
-    stage: docker
-    image: gitlab/dind
-    services:
-    - docker:dind
-    tags:
-    - docker-build
-    script:
-    - docker login -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD $CI_REGISTRY
-    - docker build -f deployment/docker/stable/vmotion-cork01.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/vmotion-cork01 --no-cache .
-    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/vmotion-cork01
-    when: manual
-    only:
-    - stable
-
-deploy_vmotion-cork01:
-    image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
-    before_script:
-    - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
-    - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
-    stage: deploy
-    script:
-    # Deploy Heartbeat
-    - ansible-playbook -i deployment/hosts/vmotion-cork01.yml deployment/playbook.yml --extra-vars="deployment_host=vmotion-cork01"
-    # Deploy workers
-    - ansible-playbook -i deployment/hosts/vmotion-cork01.yml deployment/worker-playbook.yml --extra-vars="deployment_host=vmotion-cork01-worker0"
-    when: manual
-    only:
-    - stable
-
 ###############################################################################
 #                         Github and Dockerhub Deploy                         #
 ###############################################################################
 deploy_github:
-    image: gitlab.cloudcix.com:5005/cloudcix/deployment/image
+    image: gitlab/dind
+    services:
+    - docker:dind
     before_script:
     - cp ~/.ssh/application_framework/live_key ~/.ssh/id_rsa
     - cp ~/.ssh/application_framework/live_key.pub ~/.ssh/id_rsa.pub
@@ -218,22 +101,10 @@ opersource_dockerhub:
     tags:
     - docker-build
     script:
+    - docker login -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD $CI_REGISTRY
     - ./deployment/docker/publish/opensource.sh
     when: manual
     only:
-    - stable
-
-delta_dockerhub:
-    stage: publish
-    image: gitlab/dind
-    services:
-    - docker:dind
-    tags:
-    - docker-build
-    script:
-    - ./deployment/docker/publish/delta.sh
-    when: manual
-    except:
     - stable
 
 devtest_dockerhub:
@@ -244,6 +115,7 @@ devtest_dockerhub:
     tags:
     - docker-build
     script:
+    - docker login -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD $CI_REGISTRY
     - ./deployment/docker/publish/devtest.sh
     when: manual
     except:

@@ -378,7 +378,7 @@ class VirtualRouter(LinuxMixin):
             vpn['version'] = '1' if vpn['ike_version'] == 'v1-only' else '2'
 
             # mode
-            vpn['aggressive'] = 'yes' if vpn['ike_mode'] == 'aggressive' else 'no'
+            vpn['aggressive'] = 'yes' if vpn['version'] == '1' else 'no'
 
             # child SAs, one for each traffic selectors pair
             vpn['child_sas'] = []

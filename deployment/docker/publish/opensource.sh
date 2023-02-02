@@ -21,9 +21,6 @@ fi
 git tag $V $CI_COMMIT_REF_NAME
 printf "Successfully tagged commit as version $V"
 
-printf "Pulling latest docker images from Gitlab"
-docker login --username cloudcixdevelopers --password $DOCKERHUB_PW > /dev/null
-
 # Pull the latest opensource docker image from gitlab
 IMAGE='gitlab.cloudcix.com:5005/cloudcix/robot/opensource-base:latest'
 docker pull $IMAGE
@@ -37,6 +34,7 @@ printf "Tagging and pushing images to dockerhub"
 NAME='cloudcix/robot'
 TAGS=($V_MAJOR $V_MAJOR.$V_MINOR "latest")
 
+docker login --username cloudcixdevelopers --password $DOCKERHUB_PW > /dev/null
 for TAG in "${TAGS[@]}"; do
     docker tag $IMAGE $NAME:$TAG
     docker push $NAME:$TAG
