@@ -7,9 +7,18 @@ table inet filter {
     chain global {
         ct state established,related accept
     }
+
     chain icmp_allow {
         icmp type { echo-reply, destination-unreachable, echo-request, time-exceeded } accept
         icmpv6 type { echo-request, mld-listener-query, nd-router-solicit, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert } accept
+    }
+
+    # IKE and IPSec
+    chain vpn {
+        # IKE 500, 4500 ports and udp protocol
+        meta l4proto udp th dport { 500, 4500 } accept
+        # Allow IPSec esp protocol
+        ip protocol esp accept
     }
 
     # inbound NAT 1:1
@@ -40,7 +49,9 @@ table inet filter {
         jump global
         jump icmp_allow
         # DNS needs to be allowed
-        meta l4proto { tcp, udp } th dport {53, 500} accept
+        meta l4proto { tcp, udp } th dport 53 accept
+        # allow VPN
+        jump vpn
     }
 
     # supporting chains for forward chain and itself
@@ -53,7 +64,7 @@ table inet filter {
 {% elif rule['protocol'] == 'icmp' %}
         ip saddr {{ rule['source'] }} ip daddr {{ rule['destination'] }} jump icmp_allow
 {% else %}
-        ip saddr {{ rule['source'] }} ip daddr {{ rule['destination'] }} {{ rule['protocol'] }} dport {{ rule['port'] }} accept
+        ip saddr {{ rule['source'] }} ip daddr {{ rule['destination'] }} {{ rule['protocol'] }} dport { {{ rule['port'] }} } accept
 {% endif %}
 
 {% endif %}
@@ -69,7 +80,7 @@ table inet filter {
 {% elif rule['protocol'] == 'icmp' %}
         ip saddr {{ rule['source'] }} ip daddr {{ rule['destination'] }} drop
 {% else %}
-        ip saddr {{ rule['source'] }} ip daddr {{ rule['destination'] }} {{ rule['protocol'] }} dport {{ rule['port'] }} drop
+        ip saddr {{ rule['source'] }} ip daddr {{ rule['destination'] }} {{ rule['protocol'] }} dport { {{ rule['port'] }} } drop
 {% endif %}
 
 {% endif %}
@@ -83,6 +94,9 @@ table inet filter {
 
         # DNS needs to be allowed
         meta l4proto { tcp, udp } th dport 53 accept
+
+        # allow VPN
+        jump vpn
 
 {% for vpn in vpns %}
         # For VPN {{ vpn['id'] }}

@@ -161,7 +161,7 @@ def _build_vm(vm_id: int, span: Span):
         if server_type == 'HyperV':
             success = WindowsVM.build(vm, child_span)
             child_span.set_tag('server_type', 'vm')
-        elif server_type == 'KVM':
+        elif server_type in ['KVM', 'GPU A100']:
             success = LinuxVM.build(vm, child_span)
             child_span.set_tag('server_type', 'vm')
         elif server_type == 'Phantom':

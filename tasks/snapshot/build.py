@@ -137,7 +137,7 @@ def _build_snapshot(snapshot_id: int, span: Span):
         if server_type == 'HyperV':
             success = WindowsSnapshot.build(snapshot, child_span)
             child_span.set_tag('server_type', 'snapshot')
-        elif server_type == 'KVM':
+        elif server_type in ['KVM', 'GPU A100']:
             success = LinuxSnapshot.build(snapshot, child_span)
             child_span.set_tag('server_type', 'snapshot')
         else:

@@ -102,7 +102,7 @@ def _scrub_vm(vm_id: int, span: Span):
         if server_type == 'HyperV':
             success = WindowsVM.scrub(vm, child_span)
             child_span.set_tag('server_type', 'windows')
-        elif server_type == 'KVM':
+        elif server_type in ['KVM', 'GPU A100']:
             success = LinuxVM.scrub(vm, child_span)
             child_span.set_tag('server_type', 'linux')
         elif server_type == 'Phantom':

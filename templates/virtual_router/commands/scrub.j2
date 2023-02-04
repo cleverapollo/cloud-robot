@@ -6,7 +6,10 @@ sudo ip netns del P{{ project_id }}
 sudo ip link del br-B{{ vlan['vlan'] }}
 sudo ip link del {{ private_interface }}.{{ vlan['vlan'] }}
 {% endfor %}
+{# Remove vpn config file and reload/unload the VPN connection and credentials #}
+sudo rm --force {{ vpn_filename }}
+sudo swanctl --load-all
 {# If VPNs exists then terminate each vpn, Warnings are expected if vpn doesn't exists, it is ignored #}
 {% for vpn in vpns %}
-sudo swanctl -t -c {{ project_id }}-{{ vpn['stif_number'] }}
+sudo swanctl --terminate --ike {{ project_id }}-{{ vpn['id'] }}
 {% endfor %}

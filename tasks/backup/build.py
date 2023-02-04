@@ -137,7 +137,7 @@ def _build_backup(backup_id: int, span: Span):
         if server_type == 'HyperV':
             success = WindowsBackup.build(backup, child_span)
             child_span.set_tag('server_type', 'backup')
-        elif server_type == 'KVM':
+        elif server_type in ['KVM', 'GPU A100']:
             success = LinuxBackup.build(backup, child_span)
             child_span.set_tag('server_type', 'backup')
         else:
