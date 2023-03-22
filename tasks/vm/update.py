@@ -130,10 +130,17 @@ def _update_vm(vm_id: int, span: Span):
     for item in updates.keys():
         if item in ['cpu_quantity', 'ram_quantity'] and updates[item] is not None:
             changes = True
-            break
         if item in ['storage_histories'] and len(updates[item]) != 0:
             changes = True
-            break
+        if item in ['gpu_quantity'] and updates[item] is not None:
+            changes = True
+            # get the list of GPUs that are connected to this VM
+            child_span = opentracing.tracer.start_span('list_gpu_devices', child_of=span)
+            params = {'search[vm_id]': vm_id}
+            devices = utils.api_list(IAAS.device, params, span=child_span)
+            child_span.finish()
+            if len(devices) > 0:
+                vm['gpu_devices'] = devices
 
     if changes:
         # Read the VM server to get the server type
@@ -195,6 +202,26 @@ def _update_vm(vm_id: int, span: Span):
             metrics.vm_update_failure()
             return
         metrics.vm_update_success()
+
+        if 'reset_gpus' in vm.keys():
+            # reset vm_id to None for gpu devices
+            for device in vm['reset_gpus']:
+                device_id = device['id']
+                child_span = opentracing.tracer.start_span('update_to_reset_device', child_of=span)
+                response = IAAS.device.partial_update(
+                    token=Token.get_instance().token,
+                    pk=device_id,
+                    data={'vm_id': None},
+                    span=child_span,
+                )
+                child_span.finish()
+
+                if response.status_code != 200:
+                    logger.error(
+                        f'Could not update Device #{device_id} to vm_id=None.\nResponse: {response.content.decode()}.',
+                    )
+                    return
+
     else:
         logger.error(f'Failed to update VM #{vm_id}')
         vm.pop('server_data')

@@ -7,6 +7,8 @@ updater class for linux vms
 """
 # stdlib
 import logging
+import os
+import shutil
 import socket
 from typing import Any, Dict, Optional
 # lib
@@ -42,6 +44,8 @@ class Linux(LinuxMixin, VMUpdateMixin):
         'host_sudo_passwd',
         # The IP Address of the Management interface of the physical Router
         'management_ip',
+        # the path on the host where the network drive is found
+        'network_drive_path',
         # a flag stating whether or not the VM should be turned back on after updating it
         'restart',
         # storage type (HDD/SSD)
@@ -86,15 +90,20 @@ class Linux(LinuxMixin, VMUpdateMixin):
             span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
+        # Write necessary files into the network drive if required
+        network_drive_path = settings.KVM_ROBOT_NETWORK_DRIVE_PATH
+        path = f'{network_drive_path}/VMs/{vm_data["project"]["id"]}_{vm_id}'
+        if len(template_data['changes']['gpu']) > 0:
+            child_span = opentracing.tracer.start_span('write_gpu_file_to_network_drive', child_of=span)
+            file_write_success = Linux._generate_network_drive_files(vm_data, template_data, path)
+            child_span.finish()
+            if not file_write_success:
+                # The method will log which part failed, so we can just exit
+                span.set_tag('failed_reason', 'network_drive_gpu_file_failed_to_write')
+                return False
+
         # If everything is okay, commence updating the VM
         host_ip = template_data.pop('host_ip')
-
-        # Generate the update command using the template data
-        child_span = opentracing.tracer.start_span('generate_command', child_of=span)
-        cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/update.j2').render(**template_data)
-        child_span.finish()
-
-        Linux.logger.debug(f'Generated VM update command for VM #{vm_id}\n{cmd}')
 
         # Open a client and run the two necessary commands on the host
         updated = False
@@ -117,16 +126,97 @@ class Linux(LinuxMixin, VMUpdateMixin):
             # Attempt to execute the update command
             Linux.logger.debug(f'Executing update command for VM #{vm_id}')
 
-            child_span = opentracing.tracer.start_span('update_vm', child_of=span)
+            # First make sure the VM must be in shutdown state. So sending shutdown commands.
+            quiesce = True
+            child_span = opentracing.tracer.start_span('generate_quiesce_command', child_of=span)
+            cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/quiesce.j2').render(**template_data)
+            child_span.finish()
+            Linux.logger.debug(f'Generated VM Quiesce command for VM #{vm_id}\n{cmd}')
+
+            child_span = opentracing.tracer.start_span('quiesce_vm', child_of=span)
             stdout, stderr = Linux.deploy(cmd, client, child_span)
             child_span.finish()
 
             if stdout:
-                Linux.logger.debug(f'VM update command for VM #{vm_id} generated stdout.\n{stdout}')
-                updated = True
+                Linux.logger.debug(f'VM quiesce command for VM #{vm_id} generated stdout.\n{stdout}')
             if stderr:
-                Linux.logger.error(f'VM update command for VM #{vm_id} generated stderr.\n{stderr}')
+                Linux.logger.error(f'VM quiesce command for VM #{vm_id} generated stderr.\n{stderr}')
+                quiesce = False
 
+            # CPU changes if any.
+            cpu = True
+            if template_data['changes']['cpu'] and quiesce:
+                child_span = opentracing.tracer.start_span('generate_cpu_command', child_of=span)
+                cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/update/cpu.j2').render(**template_data)
+                child_span.finish()
+                Linux.logger.debug(f'Generated VM CPU update command for VM #{vm_id}\n{cmd}')
+
+                child_span = opentracing.tracer.start_span('update_vm_cpu', child_of=span)
+                stdout, stderr = Linux.deploy(cmd, client, child_span)
+                child_span.finish()
+
+                if stdout:
+                    Linux.logger.debug(f'VM update CPU command for VM #{vm_id} generated stdout.\n{stdout}')
+                if stderr:
+                    Linux.logger.error(f'VM update CPU command for VM #{vm_id} generated stderr.\n{stderr}')
+                    cpu = False
+
+            # Drive changes if any.
+            drive = True
+            if template_data['changes']['storages'] and quiesce:
+                child_span = opentracing.tracer.start_span('generate_drive_command', child_of=span)
+                cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/update/drive.j2').render(**template_data)
+                child_span.finish()
+                Linux.logger.debug(f'Generated VM Drive update command for VM #{vm_id}\n{cmd}')
+
+                child_span = opentracing.tracer.start_span('update_vm_drive', child_of=span)
+                stdout, stderr = Linux.deploy(cmd, client, child_span)
+                child_span.finish()
+
+                if stdout:
+                    Linux.logger.debug(f'VM update Drive command for VM #{vm_id} generated stdout.\n{stdout}')
+                if stderr:
+                    Linux.logger.error(f'VM update Drive command for VM #{vm_id} generated stderr.\n{stderr}')
+                    drive = False
+
+            # GPU changes if any.
+            gpu = True
+            if template_data['changes']['gpu'] and quiesce:
+                child_span = opentracing.tracer.start_span('generate_gpu_command', child_of=span)
+                cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/update/gpu.j2').render(**template_data)
+                child_span.finish()
+                Linux.logger.debug(f'Generated VM GPU update command for VM #{vm_id}\n{cmd}')
+
+                child_span = opentracing.tracer.start_span('update_vm_gpu', child_of=span)
+                stdout, stderr = Linux.deploy(cmd, client, child_span)
+                child_span.finish()
+
+                if stdout:
+                    Linux.logger.debug(f'VM update GPU command for VM #{vm_id} generated stdout.\n{stdout}')
+                if stderr:
+                    Linux.logger.error(f'VM update GPU command for VM #{vm_id} generated stderr.\n{stderr}')
+                    gpu = False
+
+            # RAM changes if any.
+            ram = True
+            if template_data['changes']['ram'] and quiesce:
+                child_span = opentracing.tracer.start_span('generate_ram_command', child_of=span)
+                cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/update/ram.j2').render(**template_data)
+                child_span.finish()
+                Linux.logger.debug(f'Generated VM RAM update command for VM #{vm_id}\n{cmd}')
+
+                child_span = opentracing.tracer.start_span('update_vm_ram', child_of=span)
+                stdout, stderr = Linux.deploy(cmd, client, child_span)
+                child_span.finish()
+
+                if stdout:
+                    Linux.logger.debug(f'VM update RAM command for VM #{vm_id} generated stdout.\n{stdout}')
+                if stderr:
+                    Linux.logger.error(f'VM update RAM command for VM #{vm_id} generated stderr.\n{stderr}')
+                    ram = False
+
+            # Restart the VM if it was in Running state before.
+            restart = True
             if template_data['restart']:
                 # Also render and deploy the restart_cmd template
                 restart_cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/restart.j2').render(**template_data)
@@ -141,6 +231,9 @@ class Linux(LinuxMixin, VMUpdateMixin):
                     Linux.logger.debug(f'VM restart command for VM #{vm_id} generated stdout.\n{stdout}')
                 if stderr:
                     Linux.logger.error(f'VM restart command for VM #{vm_id} generated stderr.\n{stderr}')
+                    restart = False
+
+            updated = all([quiesce, drive, cpu, gpu, ram, restart])
         except (OSError, SSHException, TimeoutError) as err:
             error = f'Exception occurred while updating VM #{vm_id} in {host_ip}.'
             Linux.logger.error(error, exc_info=True)
@@ -148,6 +241,13 @@ class Linux(LinuxMixin, VMUpdateMixin):
             span.set_tag('failed_reason', 'ssh_error')
         finally:
             client.close()
+
+        # remove all the files created in network drive
+        if len(template_data['changes']['gpu']) > 0:
+            try:
+                shutil.rmtree(path)
+            except OSError:
+                Linux.logger.warning(f'Failed to remove network drive gpu file for VM #{vm_id}')
 
         return updated
 
@@ -172,6 +272,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
         changes: Dict[str, Any] = {
             'ram': False,
             'cpu': False,
+            'gpu': False,
             'storages': False,
         }
         updates = vm_data['history'][0]
@@ -187,6 +288,33 @@ class Linux(LinuxMixin, VMUpdateMixin):
         except KeyError:
             pass
 
+        # Fetch the device information for the update
+        try:
+            if updates['gpu_quantity'] is not None:
+                # There can only be cases:
+                # 1. len(vm_data['gpu_devices']) = gpu_quantity(vm['gpu']) but not
+                # len(vm_data['gpu_devices']) < gpu_quantity, if exits then its API mistake. OR
+                # 2. len(vm_data['gpu_devices']) > gpu_quantity (vm['gpu'])
+                # (a case where Robot has to detach gpus to make length vm_data['gpu_devices'] = gpu_quantity)
+                if len(vm_data['gpu_devices']) == vm_data['gpu']:
+                    # detach all the gpu devices(changes['gpu']) and attach (changes['gpu_attach']) all present devices
+                    changes['gpu'] = changes['gpu_attach'] = vm_data['gpu_devices']
+                elif len(vm_data['gpu_devices']) > vm_data['gpu']:
+                    # detach all the gpu devices and attach vm['gpu'] number of devices
+                    # slice the present_devices into two lists, one with devices to attach
+                    # and other with devices to reset on database
+                    changes['gpu_attach'] = list(vm_data['gpu_devices'])[:updates['gpu_quantity']]
+                    changes['gpu'] = vm_data['gpu_devices']
+                    vm_data['reset_gpus'] = list(vm_data['gpu_devices'])[updates['gpu_quantity']:]
+                else:
+                    error = f'Invalid case of GPU quantity is more than the devices assigned # {vm_id}.'
+                    Linux.logger.error(error)
+                    vm_data['errors'].append(error)
+                    return None
+
+        except KeyError:
+            pass
+
         # Fetch the drive information for the update
         try:
             if len(updates['storage_histories']) != 0:
@@ -199,6 +327,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
 
         # Add changes to data
         data['changes'] = changes
+        data['network_drive_path'] = settings.KVM_HOST_NETWORK_DRIVE_PATH
         data['storage_type'] = vm_data['storage_type']
         data['total_drives'] = len(vm_data['storages'])
         data['vms_path'] = settings.KVM_VMS_PATH
@@ -224,3 +353,48 @@ class Linux(LinuxMixin, VMUpdateMixin):
         data['restart'] = vm_data['restart']
 
         return data
+
+    @staticmethod
+    def _generate_network_drive_files(vm_data: Dict[str, Any], template_data: Dict[str, Any], path: str) -> bool:
+        """
+        Generate and write files into the network drive so they are on the host for the update scripts to utilise.
+        Writes the following files to the drive;
+            - pci_gpu.xml
+        :param vm_data: The data of the VM read from the API
+        :param template_data: The retrieved template data for the kvm vm
+        :param path: Network drive location to create above files for VM build
+        :returns: A flag stating whether or not the job was successful
+        """
+        vm_id = vm_data['id']
+        # Create a folder by vm_identifier name at network_drive_path/VMs/
+        try:
+            os.mkdir(path)
+        except FileExistsError:
+            pass
+        except OSError as err:
+            error = f'Failed to create directory for VM #{vm_id} at {path}.'
+            Linux.logger.error(error, exc_info=True)
+            vm_data['errors'].append(f'{error} Error: {err}')
+            return False
+
+        # Render and attempt to write the pci_gpu files
+        template_name = f'vm/kvm/device/pci_gpu.j2'
+        for device in vm_data['gpu_devices']:
+            pci_gpu_data = utils.JINJA_ENV.get_template(template_name).render(device=device['id_on_host'])
+            Linux.logger.debug(f'Generated pci_gpu_{device["id"]}.xml file for VM #{vm_id}\n{pci_gpu_data}')
+            pci_gpu_file_path = f'{path}/pci_gpu_{device["id"]}.xml'
+            try:
+                # Attempt to write
+                with open(pci_gpu_file_path, 'w') as f:
+                    f.write(pci_gpu_data)
+                Linux.logger.debug(
+                    f'Successfully wrote pci_gpu_{device["id"]}.xml file for VM #{vm_id} to {pci_gpu_file_path}',
+                )
+            except IOError as err:
+                error = f'Failed to write pci_gpu_{device["id"]}.xml file for VM #{vm_id} to {pci_gpu_file_path}'
+                Linux.logger.error(error, exc_info=True)
+                vm_data['errors'].append(f'{error} Error: {err}')
+                return False
+
+        # Return True as all was successful
+        return True
