@@ -1,0 +1,7 @@
+{
+{# Update the RAM #}
+{# a. Maximum #}
+echo '{{ host_sudo_passwd }} '| sudo -S virsh setmaxmem {{ vm_identifier }} {{ changes['ram'] }}M --config
+{# b. Current #}
+echo '{{ host_sudo_passwd }}' | sudo -S virsh setmem {{ vm_identifier }} {{ changes['ram'] }}M --config
+}

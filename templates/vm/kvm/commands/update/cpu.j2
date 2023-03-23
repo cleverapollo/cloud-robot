@@ -1,0 +1,7 @@
+{
+{# Update the vCPU values #}
+{# a. Maximum #}
+echo '{{ host_sudo_passwd }}' | sudo -S virsh setvcpus {{ vm_identifier }} --maximum {{ changes['cpu'] }} --config
+{# b. Current #}
+echo '{{ host_sudo_passwd }}' | sudo -S virsh setvcpus {{ vm_identifier }} --count {{ changes['cpu'] }} --config
+}
