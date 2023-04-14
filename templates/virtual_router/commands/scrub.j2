@@ -3,7 +3,10 @@ sudo ip netns del P{{ project_id }}
 {# vlan bridges are built on master namespace so should be deleted directly #}
 {# If vlan bridge exists then it will be deleted, Warnings are expected if vlan bridge doesn't exist, it is ignored #}
 {% for vlan in vlans %}
+{# Old naming of Bridges #}
 sudo ip link del br-B{{ vlan['vlan'] }}
+{# New naming of Bridges #}
+sudo ip link del br-prj{{ vlan['vlan'] }}
 sudo ip link del {{ private_interface }}.{{ vlan['vlan'] }}
 {% endfor %}
 {# Remove vpn config file and reload/unload the VPN connection and credentials #}
