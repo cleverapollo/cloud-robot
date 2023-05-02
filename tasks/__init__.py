@@ -14,6 +14,7 @@ import utils
 from celery_app import app
 from settings import IN_PRODUCTION
 from .virtual_router import debug_logs
+from .healthcheck import find_stuck_infra
 
 
 @app.task
@@ -58,3 +59,11 @@ def debug(virtual_router_id: int):
             f'Passing virtual_router #{virtual_router_id} to the debug_logs task queue',
         )
         debug_logs.delay(virtual_router_id)
+
+
+@app.task
+def healthcheck(interval_mins: int):
+    """
+    Check IaaS for virtual infrastructure that's been in an unstable state for too long.
+    """
+    find_stuck_infra(interval_mins)
