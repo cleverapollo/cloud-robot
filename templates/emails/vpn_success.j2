@@ -6,15 +6,11 @@
 <p>You are receiving this email because you requested for a VPN to be built.</p>
 <p>You must now configure the VPN on your hardware following the instructions below, in order to connect.</p>
 <hr />
-<h3>Step 1</h3>
-<p>Before connecting to a VPN Tunnel, ensure that your Project is reachable.</p>
-<p>You can check this by pinging the Virtual Router of the Project at <b>{{ virtual_router_ip }}</b>.</p>
-<hr />
 {% if vpn_type == 'site_to_site' %}
-<h3>Step 2</h3>
-<p>After ensuring the Project is accessible, configure the VPN settings on your local router with the settings in the table below.</p>
+<h3>Step 1</h3>
+<p>Configure the VPN settings on your local router with the settings in the table below.</p>
 <hr />
-<h3>Step 3</h3>
+<h3>Step 2</h3>
 <p>After configuring the VPN on your local hardware, test that it works by pinging the gateway of a Project Subnet;</p>
 <hr />
 <h2>{{ description }} VPN Configuration</h2>
