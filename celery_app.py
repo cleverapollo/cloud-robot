@@ -5,6 +5,7 @@ Celery main runner
 import atexit
 import logging
 import time
+from datetime import timedelta
 # lib
 import opentracing
 from celery import Celery
@@ -19,6 +20,9 @@ import utils
 __all__ = [
     'app',
 ]
+
+
+HEALTHCHECK_INTERVAL_MINUTES = 10
 
 # Jaeger opentracing.tracer config
 tracer_config = Config(
@@ -44,6 +48,7 @@ app.conf.timezone = 'Europe/Dublin'
 # Route heartbeat tasks to a different queue than the other tasks
 app.conf.task_routes = {
     'tasks.scrub': {'queue': 'heartbeat'},
+    'tasks.healthcheck': {'queue': 'heartbeat'},
     # Also send virtual router tasks to a separate queue
     'tasks.virtual_router.*': {'queue': 'virtual_router'},
     # All other tasks will be sent to the default queue named 'celery'
@@ -54,6 +59,12 @@ app.conf.beat_schedule = {
     'scrub-at-midnight': {
         'task': 'tasks.scrub',
         'schedule': crontab(minute=0, hour=0),  # daily at midnight
+    },
+    'healthcheck': {
+        'task': 'tasks.healthcheck',
+        'schedule': timedelta(minutes=HEALTHCHECK_INTERVAL_MINUTES),
+        'args': (HEALTHCHECK_INTERVAL_MINUTES,),
+        'relative': True,
     },
 }
 

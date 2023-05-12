@@ -40,12 +40,7 @@ connections {
 {# Every route combination is a child sa #}
 {% for child_sa in vpn['child_sas'] %}
             {{ project_id }}-{{ vpn['id'] }}-{{ loop.index }} {
-{# IPsec life time for ikev2 and its rekey time for ikev1 #}
-{% if vpn['version'] == '1' %}
-                rekey_time = {{ vpn['ipsec_lifetime'] }}s
-{% else %}
-                life_time = {{ vpn['ipsec_lifetime'] }}s
-{% endif %}
+                rekey_time = {{ vpn['ipsec_rekey_time'] }}s
 {# Local traffic selectors to include in CHILD_SA. #}
                 local_ts = {{ child_sa['lts'] }}
                 esp_proposals = {{ vpn['ipsec_encryption_map'] }}-{{ vpn['ipsec_authentication_map'] }}-{{ vpn['ipsec_pfs_groups_map'] }}

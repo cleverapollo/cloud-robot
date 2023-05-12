@@ -22,20 +22,20 @@ sudo ip netns exec P{{ project_id }} ip addr add {{ nat['public_address'] }}/{{ 
 {# ------------------------------------------------------------------------------------------------------------- #}
 {# create Project Network bridges #}
 {% for vlan in vlans %}
-sudo ip link add name br-B{{ vlan['vlan'] }} type bridge
-sudo ip link set br-B{{ vlan['vlan'] }} up
+sudo ip link add name br-prj{{ vlan['vlan'] }} type bridge
+sudo ip link set br-prj{{ vlan['vlan'] }} up
 
 {# add network gateway interface on namespace and connect to network bridge #}
 sudo ip link add P{{ project_id }}.B{{ vlan['vlan'] }} type veth peer name B{{ vlan['vlan'] }}.P{{ project_id }}
 sudo ip link set P{{ project_id }}.B{{ vlan['vlan'] }} netns P{{ project_id }}
-sudo ip link set B{{ vlan['vlan'] }}.P{{ project_id }} master br-B{{ vlan['vlan'] }}
+sudo ip link set B{{ vlan['vlan'] }}.P{{ project_id }} master br-prj{{ vlan['vlan'] }}
 sudo ip link set dev B{{ vlan['vlan'] }}.P{{ project_id }} up
 sudo ip netns exec P{{ project_id }} ip addr add {{ vlan['address_range'] }} dev P{{ project_id }}.B{{ vlan['vlan'] }}
 sudo ip netns exec P{{ project_id }} ip link set dev P{{ project_id }}.B{{ vlan['vlan'] }} up
 
 {# create vlan for private interface and connect to project network bridge #}
 sudo ip link add link {{ private_interface }} name {{ private_interface }}.{{ vlan['vlan'] }} type vlan id {{ vlan['vlan'] }}
-sudo ip link set dev {{ private_interface }}.{{ vlan['vlan'] }} master br-B{{ vlan['vlan'] }}
+sudo ip link set dev {{ private_interface }}.{{ vlan['vlan'] }} master br-prj{{ vlan['vlan'] }}
 sudo ip link set dev {{ private_interface }}.{{ vlan['vlan'] }} up
 {% endfor %}
 {# ------------------------------------------------------------------------------------------------------------- #}

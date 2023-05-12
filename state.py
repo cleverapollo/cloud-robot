@@ -29,3 +29,26 @@ QUIESCE_FILTERS = [QUIESCE, SCRUB]
 RESTART_FILTERS = [RESTART]
 SCRUB_FILTERS = [SCRUB]
 UPDATE_FILTERS = [RUNNING_UPDATE, QUIESCED_UPDATE]
+STABLE_STATES = [RUNNING, QUIESCED, SCRUB_QUEUE, CLOSED]
+
+STATE_NAMES = {
+    0: 'ignore',
+    1: 'requested',
+    2: 'building',
+    3: 'unresourced',
+    4: 'running',
+    5: 'quiesce',
+    6: 'quiesced',
+    7: 'restart',
+    8: 'scrub',
+    9: 'scrub_queue',
+    10: 'running_update',
+    11: 'running_updating',
+    12: 'quiescing',
+    13: 'restarting',
+    14: 'scrub_prep',
+    15: 'quiesced_update',
+    16: 'quiesced_updating',
+    17: 'scrubbing',
+    99: 'closed',
+}
