@@ -381,7 +381,7 @@ class VirtualRouter(LinuxMixin):
             vpn['aggressive'] = 'yes' if vpn['version'] == '1' else 'no'
 
             # ipsec_rekey_time = 0.9*ipsec_lifetime (Strongswan working perfectly with rekey_time instead of life_time)
-            vpn['ipsec_rekey_time'] = int(0.9*vpn['ipsec_lifetime'])
+            vpn['ipsec_rekey_time'] = int(0.9 * vpn['ipsec_lifetime'])
 
             # child SAs, one for each traffic selectors pair
             vpn['child_sas'] = []
