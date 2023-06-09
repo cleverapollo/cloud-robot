@@ -5,6 +5,7 @@ File containing methods for monitoring if Robot is running as intended
 # stdlib
 import logging
 from datetime import datetime, timedelta
+from dateutil.parser import isoparse
 from typing import Any, Dict
 
 # lib
@@ -43,7 +44,7 @@ def find_stuck_infra(interval_mins: int):
             label = f'VM #{item["id"]}'
         else:
             label = f'Virtual Router #{item["id"]}'
-        updated = datetime.strptime(item['updated'], '%Y-%m-%dT%H:%M:%S')
+        updated = isoparse(item['updated'])
 
         warrantor_reference = _create_warrantor_reference(label, item['state'])
         client = item['project']['reseller_id']
@@ -143,6 +144,6 @@ def _create_warrantor_ticket(item: Dict[str, Any]):
         data=data,
     )
     if response.status_code == 201:
-        LOGGER.info(f'Successfully created ticket for {item["label"]}')
+        LOGGER.warning(f'Successfully created ticket for {item["label"]}')
     else:
         LOGGER.warning(f'Failed to create ticket for {item["label"]}')

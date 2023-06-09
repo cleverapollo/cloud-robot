@@ -58,14 +58,17 @@ class LinuxMixin:
         _, stdout, stderr = client.exec_command(command)
         # Block until command finishes
         stdout.channel.recv_exit_status()
+        cls.logger.debug(f'Deployed command to Linux Host {hostname}')
         child_span.finish()
 
         # Read the full response from both channels
         child_span = opentracing.tracer.start_span('read_stdout', child_of=span)
         output = cls.get_full_response(stdout.channel)
+        cls.logger.debug(f'Completed read of output from Linux Host {hostname}')
         child_span.finish()
 
         child_span = opentracing.tracer.start_span('read_stderr', child_of=span)
         error = cls.get_full_response(stderr.channel)
         child_span.finish()
+        cls.logger.debug(f'Completed read of error from Linux Host {hostname}')
         return output, error
