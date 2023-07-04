@@ -24,7 +24,7 @@ class LinuxMixin:
     logger: logging.Logger
 
     @staticmethod
-    def get_full_response(channel: Channel, wait_time: int = 15, read_size: int = 64) -> str:
+    def get_full_response(channel: Channel, wait_time: int = 5, read_size: int = 1476) -> str:
         """
         Get the full response from the specified paramiko channel, waiting a given number of seconds before trying to
         read from it each time.

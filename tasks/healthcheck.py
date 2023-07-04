@@ -44,7 +44,6 @@ def find_stuck_infra(interval_mins: int):
             label = f'VM #{item["id"]}'
         else:
             label = f'Virtual Router #{item["id"]}'
-        updated = isoparse(item['updated'])
 
         warrantor_reference = _create_warrantor_reference(label, item['state'])
         client = item['project']['reseller_id']
@@ -60,7 +59,7 @@ def find_stuck_infra(interval_mins: int):
             'label': label,
             'warrantor_reference': warrantor_reference,
             'state_name': state.STATE_NAMES[item['state']],
-            'updated': updated.strftime('%H:%M %B-%d'),
+            'updated': item['updated'],
             'warrantor': warrantor,
         })
 
@@ -128,14 +127,14 @@ def _find_warrantor_ticket(reference: str, warrantor: int, client: int):
 
 
 def _create_warrantor_ticket(item: Dict[str, Any]):
-
+    updated = isoparse(item['updated']).strftime('%H:%M UTC %B %d')
     data = {
         'warrantor_address_id': item['warrantor'],
         'warrantor_reference': item['warrantor_reference'],
         'client_address_id': item['client'],
         'date_of_issue': datetime.utcnow().isoformat(),
         'processing_instruction': (
-            f'{item["label"]} entered state {item["state_name"]} at {item["updated"]} and has not completed.'
+            f'{item["label"]} entered state {item["state_name"]} at {updated} and has not completed.'
         ),
     }
     response = Support.ticket.create(
