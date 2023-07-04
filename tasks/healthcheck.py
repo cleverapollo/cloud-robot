@@ -127,7 +127,7 @@ def _find_warrantor_ticket(reference: str, warrantor: int, client: int):
 
 
 def _create_warrantor_ticket(item: Dict[str, Any]):
-    updated = isoparse(item['updated']).strftime('%H:%M UTC %B %d'),
+    updated = isoparse(item['updated']).strftime('%H:%M UTC %B %d')
     data = {
         'warrantor_address_id': item['warrantor'],
         'warrantor_reference': item['warrantor_reference'],
