@@ -12,11 +12,12 @@ import socket
 from typing import Any, Dict
 # lib
 import opentracing
+from cloudcix.lock import ResourceLock
 from jaeger_client import Span
 from paramiko import AutoAddPolicy, RSAKey, SSHClient, SSHException
 # local
-import utils
 from builders import VirtualRouter as VirtualRouterBuilder
+from utils import JINJA_ENV, Targets
 
 __all__ = [
     'VirtualRouter',
@@ -77,16 +78,16 @@ class VirtualRouter(VirtualRouterBuilder):
 
         # If everything is okay, commence updating the virtual_router
         child_span = opentracing.tracer.start_span('generate_ip_commands', child_of=span)
-        update_bash_script = utils.JINJA_ENV.get_template('virtual_router/commands/update.j2').render(**template_data)
+        update_bash_script = JINJA_ENV.get_template('virtual_router/commands/update.j2').render(**template_data)
         VirtualRouter.logger.debug(
             f'Generated update bash script for virtual_router #{virtual_router_id}\n{update_bash_script}',
         )
 
-        firewall_nft = utils.JINJA_ENV.get_template('virtual_router/features/firewall.j2').render(**template_data)
+        firewall_nft = JINJA_ENV.get_template('virtual_router/features/firewall.j2').render(**template_data)
         VirtualRouter.logger.debug(f'Generated firewall nft for virtual_router #{virtual_router_id}\n{firewall_nft}')
 
         if len(virtual_router_data['vpns']) > 0:
-            vpn_conf = utils.JINJA_ENV.get_template('virtual_router/features/vpn.j2').render(**template_data)
+            vpn_conf = JINJA_ENV.get_template('virtual_router/features/vpn.j2').render(**template_data)
             VirtualRouter.logger.debug(f'Generated vpn conf for virtual_router #{virtual_router_id}\n{vpn_conf}')
 
         child_span.finish()
@@ -147,7 +148,18 @@ class VirtualRouter(VirtualRouterBuilder):
             )
 
             child_span = opentracing.tracer.start_span('update_virtual_router', child_of=span)
-            stdout, stderr = VirtualRouter.deploy(update_bash_script, client, child_span)
+            if len(virtual_router_data['vpns']) > 0:
+                # for vpns swanctl load command applied which is a critical section.
+                # Critical section
+                requestor = f'Apply Swanctl for Update Virtual Router #{virtual_router_id}'
+                target = Targets.PODNET.generate_id(
+                    region_id=virtual_router_data['project']['region_id'],
+                    router_id=virtual_router_data['router_id'],
+                )
+                with ResourceLock(target, requestor, child_span):
+                    stdout, stderr = VirtualRouter.deploy(update_bash_script, client, child_span)
+            else:
+                stdout, stderr = VirtualRouter.deploy(update_bash_script, client, child_span)
             child_span.finish()
             if stderr:
                 VirtualRouter.logger.error(

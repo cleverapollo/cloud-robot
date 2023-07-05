@@ -3,6 +3,7 @@ File containing some utility functions that wrap around various repeatedly used 
 """
 # stdlib
 import atexit
+import enum
 import logging
 import os
 import subprocess
@@ -32,6 +33,7 @@ __all__ = [
     'get_current_git_sha',
     'JINJA_ENV',
     'setup_root_logger',
+    'Targets',
     'write_to_drive',
 ]
 
@@ -261,3 +263,24 @@ def write_to_drive(
         return False, f'{err}'
 
     return True, None
+
+
+class TargetIdError(Exception):
+    """
+    Raised when not all data is supplied to generate a target id
+    """
+    pass
+
+
+class Targets(enum.Enum):
+    API = 'Region #{region_id} API #{endpoint}'
+    HOST = 'Region #{region_id} {server_type_name} #{server_id}'
+    PODNET = 'Region #{region_id} PodNet #{router_id}'
+
+    def generate_id(self, **data):
+        try:
+            target = self.value.format(**data)
+        except KeyError as e:
+            # Find out what key was missing
+            raise TargetIdError(f'Could not generate id for {self.name}. Missing keyword argument "{e.args[0]}"')
+        return target
