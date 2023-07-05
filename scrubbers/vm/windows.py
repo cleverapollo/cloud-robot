@@ -15,8 +15,8 @@ from netaddr import IPAddress
 from winrm.exceptions import WinRMError
 # local
 import settings
-import utils
 from mixins import WindowsMixin
+from utils import JINJA_ENV
 
 
 __all__ = [
@@ -79,7 +79,7 @@ class Windows(WindowsMixin):
 
         # Render the scrub command
         child_span = opentracing.tracer.start_span('generate_command', child_of=span)
-        cmd = utils.JINJA_ENV.get_template('vm/hyperv/commands/scrub.j2').render(**template_data)
+        cmd = JINJA_ENV.get_template('vm/hyperv/commands/scrub.j2').render(**template_data)
         child_span.finish()
 
         # Open a client and run the two necessary commands on the host

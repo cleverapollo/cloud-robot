@@ -10,5 +10,6 @@ jaeger-client
 jinja2
 netaddr
 paramiko
+psycopg2
 # supervisor for running multiple processes once
 supervisor

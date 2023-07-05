@@ -7,17 +7,20 @@ scrubber class for linux vms
 # stdlib
 import logging
 import socket
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
 # lib
 import opentracing
 from cloudcix.api.iaas import IAAS
+from cloudcix.lock import ResourceLock
 from jaeger_client import Span
 from netaddr import IPAddress
 from paramiko import AutoAddPolicy, RSAKey, SSHClient, SSHException
 # local
 import settings
-import utils
+import state
 from mixins import LinuxMixin
+from utils import api_list, JINJA_ENV, Targets
 
 
 __all__ = [
@@ -34,8 +37,6 @@ class Linux(LinuxMixin):
     logger = logging.getLogger('robot.scrubbers.vm.linux')
     # Keep track of the keys necessary for the template, so we can ensure that all keys are present before scrubbing
     template_keys = {
-        # a flag stating whether or not we need to delete the bridge as well (only if there are no more VMs)
-        'delete_bridge',
         # the ip address of the host that the VM to scrub is running on
         'host_ip',
         # the sudo password of the host, used to run some commands
@@ -46,6 +47,8 @@ class Linux(LinuxMixin):
         'storages',
         # the vlans that the vm is a part of
         'vlans',
+        # a list of vlans to delete as well
+        'vlans_to_be_removed',
         # an identifier that uniquely identifies the vm
         'vm_identifier',
         # path for vm's .img files located in host
@@ -84,14 +87,14 @@ class Linux(LinuxMixin):
             span.set_tag('failed_reason', 'template_data_keys_missing')
             return False
 
-        # If everything is okay, commence scrubbing the VM
-        host_ip = template_data.pop('host_ip')
-        delete_bridge = template_data.pop('delete_bridge')
-
         # Generate the two commands that will be run on the host machine directly
         child_span = opentracing.tracer.start_span('generate_commands', child_of=span)
         bridge_scrub_cmd, vm_scrub_cmd = Linux._generate_host_commands(vm_id, template_data)
         child_span.finish()
+
+        # If everything is okay, commence scrubbing the VM
+        host_ip = template_data.pop('host_ip')
+        vlans_to_be_removed = template_data.pop('vlans_to_be_removed')
 
         # Open a client and run the two necessary commands on the host
         scrubbed = False
@@ -125,11 +128,21 @@ class Linux(LinuxMixin):
                 Linux.logger.error(f'VM scrub command for VM #{vm_id} generated stderr.\n{stderr}')
 
             # Check if we also need to run the command to delete the bridge
-            if delete_bridge:
-                Linux.logger.debug(f'Deleting bridge for VM #{vm_id}')
+            if len(vlans_to_be_removed) > 0:
+                Linux.logger.debug(f'Deleting bridges # {", ".join(vlans_to_be_removed)} for VM #{vm_id}')
 
                 child_span = opentracing.tracer.start_span('scrub_bridge', child_of=span)
-                stdout, stderr = Linux.deploy(bridge_scrub_cmd, client, child_span)
+                # Critical section
+                requestor = f'Scrub Bridge for Scrub Linux VM #{vm_id}'
+                region_id = vm_data['project']['region_id']
+                server = vm_data['server_data']['type']['name']
+                target = Targets.HOST.generate_id(
+                    region_id=region_id,
+                    server_type_name=server,
+                    server_id=vm_data['server_id'],
+                )
+                with ResourceLock(target, requestor, child_span):
+                    stdout, stderr = Linux.deploy(bridge_scrub_cmd, client, child_span)
                 child_span.finish()
 
                 if stdout:
@@ -185,7 +198,7 @@ class Linux(LinuxMixin):
         data['host_ip'] = host_ip
 
         child_span = opentracing.tracer.start_span('determine_bridge_deletion', child_of=span)
-        data['delete_bridge'] = Linux._determine_bridge_deletion(vm_data, child_span)
+        data['vlans_to_be_removed'] = Linux._determine_bridge_deletion(vm_data, child_span)
         child_span.finish()
         return data
 
@@ -200,54 +213,71 @@ class Linux(LinuxMixin):
         :param template_data: The retrieved template data for the vm
         :returns: (bridge_scrub_command, vm_scrub_command)
         """
-        # Render the bridge scrub command
-        bridge_cmd = utils.JINJA_ENV.get_template('vm/kvm/bridge/scrub.j2').render(**template_data)
-        Linux.logger.debug(f'Generated bridge scrub command for VM #{vm_id}\n{bridge_cmd}')
+        # Render the bridge scrub command if bridges to delete are present
+        bridge_cmd = ''
+        if len(template_data['vlans_to_be_removed']) > 0:
+            bridge_cmd = JINJA_ENV.get_template('vm/kvm/bridge/scrub.j2').render(**template_data)
+            Linux.logger.debug(f'Generated bridge scrub command for VM #{vm_id}\n{bridge_cmd}')
 
         # Render the VM scrub command
-        vm_cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/scrub.j2').render(**template_data)
+        vm_cmd = JINJA_ENV.get_template('vm/kvm/commands/scrub.j2').render(**template_data)
         Linux.logger.debug(f'Generated vm scrub command for VM #{vm_id}\n{vm_cmd}')
 
         return bridge_cmd, vm_cmd
 
     @staticmethod
-    def _determine_bridge_deletion(vm_data: Dict[str, Any], span: Span) -> bool:
+    def _determine_bridge_deletion(vm_data: Dict[str, Any], span: Span) -> List[str]:
         """
-        Given a VM, determine if we need to delete it's bridge.
-        We need to delete the bridge if the VM is the last Linux VM left in the Subnet
+        Given a VM, determine vlan bridges to delete.
+        We need to delete the bridges if the VM is the last Linux VM left in the Subnet
 
         Steps:
-            - sort out all the subnets of the VM being deleted
-            - List the other private IP Addresses in the same Subnets (excluding this VM's id)
-            - List all the VMs pointed to by the vm id fields of the returned (if any)
-            - For each VM, get the server_id of the host it is built on
-            - List servers by server_id of VMs and type_name KVM
-            - If the list is empty return True, else False
+            1. Get all other VMs on this VM's server in the same project.
+            2. Find all the subnets(vlans) of the VM being deleted
+            3. Find all the subnets(vlans) of all other VMs from the first step
+            4. Compare vlans from step 2 and step 3 and find out the vlans on this VM to be deleted
+               that are not in the list of other VMs vlans
         """
         vm_id = vm_data['id']
-        # Get the subnet_ids for the private ips configured on VM
-        subnet_ids = [ip['subnet']['id'] for ip in vm_data['ip_addresses']]
-        subnet_ids = list(set(subnet_ids))  # Removing duplicates
+        server_id = vm_data['server_id']
+        project_id = vm_data['project']['id']
 
-        # Find the other private ip addresses in the subnets
+        # Get all other VMs that are on the same Server of the same project.
         params = {
-            'search[exclude__vm_id]': vm_id,
-            'search[subnet_id__in]': subnet_ids,
+            'exclude[id]': vm_id,
+            'exclude[state]': state.CLOSED,
+            'search[server_id]': server_id,
+            'search[project_id]': project_id,
         }
-        subnet_ips = utils.api_list(IAAS.ip_address, params, span=span)
+        # Critical section
+        requestor = f'Scrub Bridge for Scrub Linux VM #{vm_id}'
+        region_id = vm_data['project']['region_id']
+        endpoint = f'VMs List for Project#{project_id} Server#{server_id}'
+        target = Targets.API.generate_id(
+            region_id=region_id,
+            endpoint=endpoint,
+        )
+        child_span = opentracing.tracer.start_span('api_list_other_vms', child_of=span)
+        with ResourceLock(target, requestor, child_span):
+            other_vms_on_server = api_list(IAAS.vm, params, span=span)
+        child_span.finish()
 
-        # List the other VMs in the subnet
-        subnet_vm_ids = list(map(lambda ip: ip['vm_id'], subnet_ips))
-        subnet_vms = utils.api_list(IAAS.vm, {'search[id__in]': subnet_vm_ids}, span=span)
+        # Get all subnet vlans of the VM
+        subnet_vlans = []
+        for ip in vm_data['ip_addresses']:
+            subnet_vlans.append(ip['subnet']['vlan'])
 
-        # Get the server_id from the VMs and check for KVM hosts
-        server_ids = list(set(map(lambda vm: vm['server_id'], subnet_vms)))
+        # For each vm in other_vms_on_server, get a list of their subnet vlans
+        other_vms_subnet_vlans = []
+        for vm in other_vms_on_server:
+            for ip in vm['ip_addresses']:
+                other_vms_subnet_vlans.append(ip['subnet']['vlan'])
 
-        params = {
-            'search[id__in]': server_ids,
-            'search[type__name]': 'KVM',
-        }
-        servers = utils.api_list(IAAS.server, params, span=span)
+        # if a vlan is not in other_vms_subnet_vlans,
+        # add to remove list as it is not in use by another vm on VM's server
+        vlans_to_be_removed = set()
+        for vlan in subnet_vlans:
+            if vlan not in other_vms_subnet_vlans:
+                vlans_to_be_removed.add(str(vlan))
 
-        # If the list of servers is empty we can delete the bridge
-        return not bool(servers)
+        return list(vlans_to_be_removed)

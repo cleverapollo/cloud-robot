@@ -15,14 +15,14 @@ import string
 from typing import Any, Dict, Optional
 # lib
 import opentracing
+from cloudcix.lock import ResourceLock
 from jaeger_client import Span
 from netaddr import IPAddress
 from winrm.exceptions import WinRMError
 # local
 import settings
-import utils
 from mixins import VMImageMixin, WindowsMixin
-
+from utils import JINJA_ENV, Targets
 
 __all__ = [
     'Windows',
@@ -130,14 +130,24 @@ class Windows(WindowsMixin, VMImageMixin):
 
         # Render the build command
         child_span = opentracing.tracer.start_span('generate_command', child_of=span)
-        cmd = utils.JINJA_ENV.get_template('vm/hyperv/commands/build.j2').render(**template_data)
+        cmd = JINJA_ENV.get_template('vm/hyperv/commands/build.j2').render(**template_data)
         child_span.finish()
 
         # Open a client and run the two necessary commands on the host
         built = False
         try:
             child_span = opentracing.tracer.start_span('build_vm', child_of=span)
-            response = Windows.deploy(cmd, host_name, child_span)
+            # Critical section
+            requestor = f'Build Windows VM #{vm_id}'
+            region_id = vm_data['project']['region_id']
+            server = vm_data['server_data']['type']['name']
+            target = Targets.HOST.generate_id(
+                region_id=region_id,
+                server_type_name=server,
+                server_id=vm_data['server_id'],
+            )
+            with ResourceLock(target, requestor, child_span):
+                response = Windows.deploy(cmd, host_name, child_span)
             child_span.finish()
             span.set_tag('host', host_name)
         except WinRMError as err:
@@ -319,9 +329,9 @@ class Windows(WindowsMixin, VMImageMixin):
 
         # Render and attempt to write the answer file
         template_name = 'vm/hyperv/answer_files/windows.j2'
-        answer_file_data = utils.JINJA_ENV.get_template(template_name).render(**template_data)
+        answer_file_data = JINJA_ENV.get_template(template_name).render(**template_data)
         template_data.pop('admin_password')
-        answer_file_log = utils.JINJA_ENV.get_template(template_name).render(**template_data)
+        answer_file_log = JINJA_ENV.get_template(template_name).render(**template_data)
         Windows.logger.debug(f'Generated answer file for VM #{vm_id}\n{answer_file_log}')
         answer_file_path = f'{path}/unattend.xml'
         try:
@@ -337,7 +347,7 @@ class Windows(WindowsMixin, VMImageMixin):
 
         # Render and attempt to write the network file
         template_name = 'vm/hyperv/commands/network.j2'
-        network = utils.JINJA_ENV.get_template(template_name).render(**template_data)
+        network = JINJA_ENV.get_template(template_name).render(**template_data)
         Windows.logger.debug(f'Generated network file for VM #{vm_id}\n{network}')
         network_file = f'{path}/network.xml'
         try:
@@ -353,7 +363,7 @@ class Windows(WindowsMixin, VMImageMixin):
 
         # Render and attempt to write the build script file
         template_name = 'vm/hyperv/commands/script.j2'
-        builder = utils.JINJA_ENV.get_template(template_name).render(**template_data)
+        builder = JINJA_ENV.get_template(template_name).render(**template_data)
         Windows.logger.debug(f'Generated build script file for VM #{vm_id}\n{builder}')
         script_file = f'{path}/builder.psm1'
         try:
