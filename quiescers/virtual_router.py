@@ -12,12 +12,12 @@ import socket
 from typing import Any, Dict
 # lib
 import opentracing
+from cloudcix.lock import ResourceLock
 from jaeger_client import Span
 from paramiko import AutoAddPolicy, RSAKey, SSHClient, SSHException
 # local
-import utils
 from scrubbers import VirtualRouter as VirtualRouterScrubber
-
+from utils import JINJA_ENV, Targets
 
 __all__ = [
     'VirtualRouter',
@@ -50,7 +50,6 @@ class VirtualRouter(VirtualRouterScrubber):
         :return: A flag stating whether or not the quiesce was successful
         """
         virtual_router_id = virtual_router_data['id']
-        project_id = virtual_router_data['project']['id']
 
         # Start by generating the proper dict of data needed by the template
         child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
@@ -77,7 +76,7 @@ class VirtualRouter(VirtualRouterScrubber):
 
         # If everything is okay, commence quiescing the virtual_router
         child_span = opentracing.tracer.start_span('generate_setconf', child_of=span)
-        quiesce_bash_script = utils.JINJA_ENV.get_template('virtual_router/commands/quiesce.j2').render(**template_data)
+        quiesce_bash_script = JINJA_ENV.get_template('virtual_router/commands/quiesce.j2').render(**template_data)
         VirtualRouter.logger.debug(
             f'Generated quiesce bash script for virtual_router #{virtual_router_id}\n{quiesce_bash_script}',
         )
@@ -86,7 +85,6 @@ class VirtualRouter(VirtualRouterScrubber):
         # Log onto PodNet box and run bash script
         management_ip = template_data.pop('management_ip')
         quiesced = False
-        vpn_cmds = ''
 
         client = SSHClient()
         client.set_missing_host_key_policy(AutoAddPolicy())
@@ -99,18 +97,23 @@ class VirtualRouter(VirtualRouterScrubber):
             client.connect(hostname=management_ip, username='robot', pkey=key, timeout=30, sock=sock)
             span.set_tag('host', management_ip)
 
-            # If there are VPNs, remove connections
-            if len(virtual_router_data['vpns']) > 0:
-                # First remove the file from /etc/swanctl/conf.d/ then terminate
-                vpn_filename = f'/etc/swanctl/conf.d/P{project_id}_vpns.conf'
-                vpn_cmds = f'sudo rm {vpn_filename}\n'
-
             # Attempt to execute ALL of the virtual router build commands
             VirtualRouter.logger.debug(
                 f'Executing Virtual Router quiesce commands for virtual_router #{virtual_router_id}',
             )
             child_span = opentracing.tracer.start_span('quiesce_virtual_router', child_of=span)
-            stdout, stderr = VirtualRouter.deploy(f'{vpn_cmds}{quiesce_bash_script}', client, child_span)
+            if len(virtual_router_data['vpns']) > 0:
+                # for vpns swanctl load command applied which is a critical section.
+                # Critical section
+                requestor = f'Apply Swanctl for Quiesce Virtual Router #{virtual_router_id}'
+                target = Targets.PODNET.generate_id(
+                    region_id=virtual_router_data['project']['region_id'],
+                    router_id=virtual_router_data['router_id'],
+                )
+                with ResourceLock(target, requestor, child_span):
+                    stdout, stderr = VirtualRouter.deploy(quiesce_bash_script, client, child_span)
+            else:
+                stdout, stderr = VirtualRouter.deploy(quiesce_bash_script, client, child_span)
             child_span.finish()
             if stderr:
                 VirtualRouter.logger.error(

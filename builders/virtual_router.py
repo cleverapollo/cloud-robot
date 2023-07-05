@@ -9,20 +9,26 @@ builder class for virtual_routers
 # stdlib
 import logging
 import re
-from collections import deque
 import socket
+from collections import deque
 from typing import Any, Deque, Dict, Optional
 # lib
 import opentracing
 from cloudcix.api.iaas import IAAS
+from cloudcix.lock import ResourceLock
 from jaeger_client import Span
 from netaddr import IPNetwork
 from paramiko import AutoAddPolicy, RSAKey, SSHClient, SSHException
 # local
 import settings
-import utils
-from mixins import LinuxMixin
 import vpn_mappings
+from mixins import LinuxMixin
+from utils import (
+    api_list,
+    api_read,
+    JINJA_ENV,
+    Targets,
+)
 
 
 __all__ = [
@@ -117,16 +123,16 @@ class VirtualRouter(LinuxMixin):
 
         # If everything is okay, commence building the virtual_router
         child_span = opentracing.tracer.start_span('generate_ip_commands', child_of=span)
-        build_bash_script = utils.JINJA_ENV.get_template('virtual_router/commands/build.j2').render(**template_data)
+        build_bash_script = JINJA_ENV.get_template('virtual_router/commands/build.j2').render(**template_data)
         VirtualRouter.logger.debug(
             f'Generated build bash script for virtual_router #{virtual_router_id}\n{build_bash_script}',
         )
 
-        firewall_nft = utils.JINJA_ENV.get_template('virtual_router/features/firewall.j2').render(**template_data)
+        firewall_nft = JINJA_ENV.get_template('virtual_router/features/firewall.j2').render(**template_data)
         VirtualRouter.logger.debug(f'Generated firewall nft for virtual_router #{virtual_router_id}\n{firewall_nft}')
 
         if len(virtual_router_data['vpns']) > 0:
-            vpn_conf = utils.JINJA_ENV.get_template('virtual_router/features/vpn.j2').render(**template_data)
+            vpn_conf = JINJA_ENV.get_template('virtual_router/features/vpn.j2').render(**template_data)
             VirtualRouter.logger.debug(f'Generated vpn conf for virtual_router #{virtual_router_id}\n{vpn_conf}')
 
         child_span.finish()
@@ -154,49 +160,30 @@ class VirtualRouter(LinuxMixin):
             VirtualRouter.logger.debug(
                 f'Checking the Floating subnet bridge for Subnet id #{ipv4_subnet_id}',
             )
-            floating_bridge_file = f'/etc/netplan/{ipv4_subnet_id}-config.yaml'
-            try:
-                sftp.open(floating_bridge_file, mode='r')
-            except IOError:
-                VirtualRouter.logger.debug(
-                    f'Floating subnet Bridge not found for id #{ipv4_subnet_id}, so creating the bridge.',
-                )
-                floating_bridge = utils.JINJA_ENV.get_template(
-                    'virtual_router/features/floating_bridge.j2',
-                ).render(**template_data, ipv4_floating_subnet_id=ipv4_subnet_id)
-                VirtualRouter.logger.debug(
-                    f'Generated build floating subnet bridge for Subnet '
-                    f'#{ipv4_subnet_id}\n{floating_bridge}',
-                )
-                temp_floating_bridge_file = f'{remote_path}{ipv4_subnet_id}-config.yaml'
-                try:
-                    with sftp.open(temp_floating_bridge_file, mode='w', bufsize=1) as yaml:
-                        yaml.write(floating_bridge)
-                    VirtualRouter.logger.debug(
-                        f'Successfully wrote file {temp_floating_bridge_file} to PodNet box#{management_ip}',
-                    )
-                    # move temp file to netplan dir and apply netplan changes
-                    child_span = opentracing.tracer.start_span('apply_netplan_changes', child_of=span)
-                    netplan_cmd = f'sudo mv {temp_floating_bridge_file} {floating_bridge_file} && sudo netplan apply'
-                    stdout, stderr = VirtualRouter.deploy(netplan_cmd, client, child_span)
-                    child_span.finish()
-                    if stderr:
-                        VirtualRouter.logger.error(
-                            f'Applying netplan changes for PodNet #{management_ip} generated stderr: \n{stderr}',
-                        )
-                        virtual_router_data['errors'].append(stderr)
-                    else:
-                        VirtualRouter.logger.debug(
-                            f'Applying netplan changes for PodNet #{management_ip} generated stdout: \n{stdout}',
-                        )
+            floating_bridge_file = f'{ipv4_subnet_id}-config.yaml'
+            floating_bridge = JINJA_ENV.get_template(
+                'virtual_router/features/floating_bridge.j2',
+            ).render(**template_data, ipv4_floating_subnet_id=ipv4_subnet_id)
 
-                except IOError as err:
-                    VirtualRouter.logger.error(
-                        f'Failed to write file {temp_floating_bridge_file} to PodNet box#{management_ip}',
-                        exc_info=True,
-                    )
-                    virtual_router_data['errors'].append(err)
-                    return False
+            # Critical section
+            requestor = f'Build Bridge for Build Virtual Router #{virtual_router_id}'
+            target = Targets.PODNET.generate_id(
+                region_id=virtual_router_data['project']['region_id'],
+                router_id=virtual_router_data['router_id'],
+            )
+            child_span = opentracing.tracer.start_span('build_bridge_critical_section_enter', child_of=span)
+            with ResourceLock(target, requestor, child_span):
+                bridge_exits = VirtualRouter.netplan_bridge_setup(
+                    floating_bridge,
+                    client,
+                    floating_bridge_file,
+                    f'Virtual Router #{virtual_router_id}',
+                    child_span,
+                )
+            child_span.finish()
+
+            if not bridge_exits:
+                return False
 
             # Secondly, Write Firewall rules file .nft and vpn.conf file(if any) to PodNet box
             child_span = opentracing.tracer.start_span('write_files_to_podnet_box', child_of=span)
@@ -238,7 +225,14 @@ class VirtualRouter(LinuxMixin):
                 f'Executing Virtual Router build commands for virtual_router #{virtual_router_id}',
             )
             child_span = opentracing.tracer.start_span('build_virtual_router', child_of=span)
-            stdout, stderr = VirtualRouter.deploy(build_bash_script, client, child_span)
+            if len(virtual_router_data['vpns']) > 0:
+                # for vpns swanctl load command applied which is a critical section.
+                # Critical section
+                requestor = f'Apply Swanctl for Build Virtual Router #{virtual_router_id}'
+                with ResourceLock(target, requestor, child_span):
+                    stdout, stderr = VirtualRouter.deploy(build_bash_script, client, child_span)
+            else:
+                stdout, stderr = VirtualRouter.deploy(build_bash_script, client, child_span)
             child_span.finish()
             if stderr:
                 VirtualRouter.logger.error(
@@ -315,7 +309,7 @@ class VirtualRouter(LinuxMixin):
             'search[public_ip_id__isnull]': False,
         }
         child_span = opentracing.tracer.start_span('listing_ip_addresses', child_of=span)
-        nat_ips = utils.api_list(IAAS.ip_address, params, span=child_span)
+        nat_ips = api_list(IAAS.ip_address, params, span=child_span)
         child_span.finish()
         for ip in nat_ips:
             nats.append({
@@ -355,7 +349,7 @@ class VirtualRouter(LinuxMixin):
         vpns: Deque[Dict[str, Any]] = deque()
         params = {'search[virtual_router_id]': virtual_router_id}
         child_span = opentracing.tracer.start_span('listing_vpns', child_of=span)
-        virtual_router_vpns = utils.api_list(IAAS.vpn, params, span=child_span)
+        virtual_router_vpns = api_list(IAAS.vpn, params, span=child_span)
         child_span.finish()
         for vpn in virtual_router_vpns:
             routes: Deque[Dict[str, str]] = deque()
@@ -402,7 +396,7 @@ class VirtualRouter(LinuxMixin):
             # if send_email is true then read VPN for email addresses
             if vpn['send_email']:
                 child_span = opentracing.tracer.start_span('reading_vpn', child_of=span)
-                vpn['emails'] = utils.api_read(IAAS.vpn, pk=vpn['id'])['emails']
+                vpn['emails'] = api_read(IAAS.vpn, pk=vpn['id'])['emails']
                 child_span.finish()
 
             # MAP SRX values to Strongswan values

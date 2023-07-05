@@ -18,8 +18,8 @@ from netaddr import IPAddress
 from paramiko import AutoAddPolicy, RSAKey, SSHClient, SSHException
 # local
 import settings
-import utils
 from mixins import LinuxMixin, VMUpdateMixin
+from utils import JINJA_ENV
 
 
 __all__ = [
@@ -129,7 +129,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
             # First make sure the VM must be in shutdown state. So sending shutdown commands.
             quiesce = True
             child_span = opentracing.tracer.start_span('generate_quiesce_command', child_of=span)
-            cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/quiesce.j2').render(**template_data)
+            cmd = JINJA_ENV.get_template('vm/kvm/commands/quiesce.j2').render(**template_data)
             child_span.finish()
             Linux.logger.debug(f'Generated VM Quiesce command for VM #{vm_id}\n{cmd}')
 
@@ -147,7 +147,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
             cpu = True
             if template_data['changes']['cpu'] and quiesce:
                 child_span = opentracing.tracer.start_span('generate_cpu_command', child_of=span)
-                cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/update/cpu.j2').render(**template_data)
+                cmd = JINJA_ENV.get_template('vm/kvm/commands/update/cpu.j2').render(**template_data)
                 child_span.finish()
                 Linux.logger.debug(f'Generated VM CPU update command for VM #{vm_id}\n{cmd}')
 
@@ -165,7 +165,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
             drive = True
             if template_data['changes']['storages'] and quiesce:
                 child_span = opentracing.tracer.start_span('generate_drive_command', child_of=span)
-                cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/update/drive.j2').render(**template_data)
+                cmd = JINJA_ENV.get_template('vm/kvm/commands/update/drive.j2').render(**template_data)
                 child_span.finish()
                 Linux.logger.debug(f'Generated VM Drive update command for VM #{vm_id}\n{cmd}')
 
@@ -183,7 +183,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
             gpu = True
             if template_data['changes']['gpu'] and quiesce:
                 child_span = opentracing.tracer.start_span('generate_gpu_command', child_of=span)
-                cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/update/gpu.j2').render(**template_data)
+                cmd = JINJA_ENV.get_template('vm/kvm/commands/update/gpu.j2').render(**template_data)
                 child_span.finish()
                 Linux.logger.debug(f'Generated VM GPU update command for VM #{vm_id}\n{cmd}')
 
@@ -201,7 +201,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
             ram = True
             if template_data['changes']['ram'] and quiesce:
                 child_span = opentracing.tracer.start_span('generate_ram_command', child_of=span)
-                cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/update/ram.j2').render(**template_data)
+                cmd = JINJA_ENV.get_template('vm/kvm/commands/update/ram.j2').render(**template_data)
                 child_span.finish()
                 Linux.logger.debug(f'Generated VM RAM update command for VM #{vm_id}\n{cmd}')
 
@@ -219,7 +219,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
             restart = True
             if template_data['restart']:
                 # Also render and deploy the restart_cmd template
-                restart_cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/restart.j2').render(**template_data)
+                restart_cmd = JINJA_ENV.get_template('vm/kvm/commands/restart.j2').render(**template_data)
 
                 # Attempt to execute the restart command
                 Linux.logger.debug(f'Executing restart command for VM #{vm_id}')
@@ -380,7 +380,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
         # Render and attempt to write the pci_gpu files
         template_name = f'vm/kvm/device/pci_gpu.j2'
         for device in vm_data['gpu_devices']:
-            pci_gpu_data = utils.JINJA_ENV.get_template(template_name).render(device=device['id_on_host'])
+            pci_gpu_data = JINJA_ENV.get_template(template_name).render(device=device['id_on_host'])
             Linux.logger.debug(f'Generated pci_gpu_{device["id"]}.xml file for VM #{vm_id}\n{pci_gpu_data}')
             pci_gpu_file_path = f'{path}/pci_gpu_{device["id"]}.xml'
             try:

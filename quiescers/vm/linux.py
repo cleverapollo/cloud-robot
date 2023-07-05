@@ -16,8 +16,8 @@ from netaddr import IPAddress
 from paramiko import AutoAddPolicy, RSAKey, SSHClient, SSHException
 # local
 import settings
-import utils
 from mixins import LinuxMixin
+from utils import JINJA_ENV
 
 
 __all__ = [
@@ -80,7 +80,7 @@ class Linux(LinuxMixin):
 
         # Generate the quiesce command using the template data
         child_span = opentracing.tracer.start_span('generate_command', child_of=span)
-        cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/quiesce.j2').render(**template_data)
+        cmd = JINJA_ENV.get_template('vm/kvm/commands/quiesce.j2').render(**template_data)
         child_span.finish()
         Linux.logger.debug(f'Generated VM quiesce command for VM #{vm_id}\n{cmd}')
 

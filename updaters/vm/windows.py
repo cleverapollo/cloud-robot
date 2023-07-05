@@ -10,13 +10,14 @@ import logging
 from typing import Any, Dict, Optional
 # lib
 import opentracing
+from cloudcix.lock import ResourceLock
 from jaeger_client import Span
 from netaddr import IPAddress
 from winrm.exceptions import WinRMError
 # local
 import settings
-import utils
 from mixins import VMUpdateMixin, WindowsMixin
+from utils import JINJA_ENV, Targets
 
 
 __all__ = [
@@ -87,14 +88,24 @@ class Windows(WindowsMixin, VMUpdateMixin):
 
         # Render the update command
         child_span = opentracing.tracer.start_span('generate_command', child_of=span)
-        cmd = utils.JINJA_ENV.get_template('vm/hyperv/commands/update.j2').render(**template_data)
+        cmd = JINJA_ENV.get_template('vm/hyperv/commands/update.j2').render(**template_data)
         child_span.finish()
 
         # Open a client and run the two necessary commands on the host
         updated = False
         try:
             child_span = opentracing.tracer.start_span('update_vm', child_of=span)
-            response = Windows.deploy(cmd, host_name, child_span)
+            # Critical section
+            requestor = f'Update for Windows VM #{vm_id}'
+            region_id = vm_data['project']['region_id']
+            server = vm_data['server_data']['type']['name']
+            target = Targets.HOST.generate_id(
+                region_id=region_id,
+                server_type_name=server,
+                server_id=vm_data['server']['id'],
+            )
+            with ResourceLock(target, requestor, child_span):
+                response = Windows.deploy(cmd, host_name, child_span)
             span.set_tag('host', host_name)
             child_span.finish()
         except WinRMError as err:
@@ -116,7 +127,7 @@ class Windows(WindowsMixin, VMUpdateMixin):
             # Check if we need to restart the VM as well
             if template_data['restart']:
                 # Also render and deploy the restart_cmd template
-                restart_cmd = utils.JINJA_ENV.get_template('vm/hyperv/commands/restart.j2').render(**template_data)
+                restart_cmd = JINJA_ENV.get_template('vm/hyperv/commands/restart.j2').render(**template_data)
 
                 # Attempt to execute the restart command
                 Windows.logger.debug(f'Executing restart command for VM #{vm_id}')

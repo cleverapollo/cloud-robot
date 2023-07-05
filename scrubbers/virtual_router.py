@@ -14,12 +14,13 @@ from typing import Any, Deque, Dict, Optional
 # lib
 import opentracing
 from cloudcix.api.iaas import IAAS
+from cloudcix.lock import ResourceLock
 from jaeger_client import Span
 from paramiko import AutoAddPolicy, RSAKey, SSHClient, SSHException
 # local
 import settings
-import utils
 from mixins import LinuxMixin
+from utils import api_list, JINJA_ENV, Targets
 
 
 __all__ = [
@@ -45,6 +46,8 @@ class VirtualRouter(LinuxMixin):
         'vlans',
         # A list of VPNs to be built in the virtual_router
         'vpns',
+        # VPN filename that goes into Podnet /etc/swanctl/conf.d/
+        'vpn_filename',
     }
 
     @staticmethod
@@ -56,7 +59,6 @@ class VirtualRouter(LinuxMixin):
         :return: A flag stating whether or not the scrub was successful
         """
         virtual_router_id = virtual_router_data['id']
-        project_id = virtual_router_data['project']['id']
 
         # Start by generating the proper dict of data needed by the template
         child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
@@ -83,7 +85,7 @@ class VirtualRouter(LinuxMixin):
 
         # If everything is okay, commence scrubbing the virtual_router
         child_span = opentracing.tracer.start_span('generate_ip_commands', child_of=span)
-        scrub_bash_script = utils.JINJA_ENV.get_template('virtual_router/commands/scrub.j2').render(**template_data)
+        scrub_bash_script = JINJA_ENV.get_template('virtual_router/commands/scrub.j2').render(**template_data)
         VirtualRouter.logger.debug(
             f'Generated scrub bash script for virtual_router #{virtual_router_id}\n{scrub_bash_script}',
         )
@@ -92,7 +94,6 @@ class VirtualRouter(LinuxMixin):
         # Log onto PodNet box and run bash script
         management_ip = template_data.pop('management_ip')
         scrubbed = False
-        vpn_cmds = ''
 
         client = SSHClient()
         client.set_missing_host_key_policy(AutoAddPolicy())
@@ -103,30 +104,25 @@ class VirtualRouter(LinuxMixin):
             # No need for password as it should have keys
             sock.connect((management_ip, 22))
             client.connect(hostname=management_ip, username='robot', pkey=key, timeout=30, sock=sock)
-            sftp = client.open_sftp()
             span.set_tag('host', management_ip)
-
-            # If there are VPNs, remove connections
-            if len(virtual_router_data['vpns']) > 0:
-                child_span = opentracing.tracer.start_span('scrub_project_vpns', child_of=span)
-                # First check for vpn file, if exists then its not quiesced previously
-                # then remove the file from /etc/swanctl/conf.d/ and terminate
-                vpn_filename = f'/etc/swanctl/conf.d/P{project_id}_vpns.conf'
-                try:
-                    sftp.open(vpn_filename, mode='r')
-                    vpn_cmds = f'sudo rm {vpn_filename}\n'
-                    child_span.finish()
-                except IOError:
-                    VirtualRouter.logger.debug(
-                        'VPN config does not exists, It must be removed in Quiesce step.',
-                    )
 
             # Attempt to execute ALL of the virtual router scrub commands
             VirtualRouter.logger.debug(
                 f'Executing Virtual Router scrub commands for virtual_router #{virtual_router_id}',
             )
             child_span = opentracing.tracer.start_span('scrub_virtual_router', child_of=span)
-            stdout, stderr = VirtualRouter.deploy(f'{vpn_cmds}{scrub_bash_script}', client, child_span)
+            if len(virtual_router_data['vpns']) > 0:
+                # for vpns swanctl load command applied which is a critical section.
+                # Critical section
+                requestor = f'Apply Swanctl for Scrub Virtual Router #{virtual_router_id}'
+                target = Targets.PODNET.generate_id(
+                    region_id=virtual_router_data['project']['region_id'],
+                    router_id=virtual_router_data['router_id'],
+                )
+                with ResourceLock(target, requestor, child_span):
+                    stdout, stderr = VirtualRouter.deploy(scrub_bash_script, client, child_span)
+            else:
+                stdout, stderr = VirtualRouter.deploy(scrub_bash_script, client, child_span)
             child_span.finish()
             if stderr:
                 VirtualRouter.logger.error(
@@ -166,7 +162,7 @@ class VirtualRouter(LinuxMixin):
         VirtualRouter.logger.debug(f'Compiling template data for virtual_router #{virtual_router_id}')
         data: Dict[str, Any] = {key: None for key in VirtualRouter.template_keys}
 
-        data['project_id'] = virtual_router_data['project']['id']
+        data['project_id'] = project_id = virtual_router_data['project']['id']
         # Router information
         data['management_ip'] = settings.MGMT_IP
         data['private_interface'] = settings.PRIVATE_INF
@@ -185,11 +181,12 @@ class VirtualRouter(LinuxMixin):
         vpns: Deque[Dict[str, Any]] = deque()
         params = {'search[virtual_router_id]': virtual_router_id}
         child_span = opentracing.tracer.start_span('listing_vpns', child_of=span)
-        virtual_router_vpns = utils.api_list(IAAS.vpn, params, span=child_span)
+        virtual_router_vpns = api_list(IAAS.vpn, params, span=child_span)
         child_span.finish()
         for vpn in virtual_router_vpns:
             vpns.append(vpn)
         data['vpns'] = vpns
         virtual_router_data['vpns'] = data['vpns']
+        data['vpn_filename'] = f'/etc/swanctl/conf.d/P{project_id}_vpns.conf'
 
         return data

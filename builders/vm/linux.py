@@ -16,13 +16,14 @@ from crypt import crypt, mksalt, METHOD_SHA512
 from typing import Any, Dict, Optional, Tuple
 # lib
 import opentracing
+from cloudcix.lock import ResourceLock
 from jaeger_client import Span
 from netaddr import IPAddress, IPNetwork
 from paramiko import AutoAddPolicy, RSAKey, SSHClient, SSHException
 # local
 import settings
-import utils
 from mixins import LinuxMixin, VMImageMixin
+from utils import JINJA_ENV, Targets
 
 
 __all__ = [
@@ -170,9 +171,18 @@ class Linux(LinuxMixin, VMImageMixin):
 
             # Attempt to execute the bridge build commands
             Linux.logger.debug(f'Executing bridge build commands for VM #{vm_id}')
-
             child_span = opentracing.tracer.start_span('build_bridge', child_of=span)
-            stdout, stderr = Linux.deploy(bridge_build_cmd, client, child_span)
+            # Critical section
+            requestor = f'Build Bridge for Build VM #{vm_id}'
+            region_id = vm_data['project']['region_id']
+            server = vm_data['server_data']['type']['name']
+            target = Targets.HOST.generate_id(
+                region_id=region_id,
+                server_type_name=server,
+                server_id=vm_data['server_id'],
+            )
+            with ResourceLock(target, requestor, child_span):
+                stdout, stderr = Linux.deploy(bridge_build_cmd, client, child_span)
             child_span.finish()
 
             if stdout:
@@ -183,7 +193,6 @@ class Linux(LinuxMixin, VMImageMixin):
 
             # Now attempt to execute the vm build command
             Linux.logger.debug(f'Executing vm build command for VM #{vm_id}')
-
             child_span = opentracing.tracer.start_span('build_vm', child_of=span)
             stdout, stderr = Linux.deploy(vm_build_cmd, client, child_span)
             child_span.finish()
@@ -435,7 +444,7 @@ class Linux(LinuxMixin, VMImageMixin):
         # Render and attempt to write the bridge definition file
         for vlan in template_data['vlans']:
             template_name = 'vm/kvm/bridge/definition.j2'
-            bridge_def = utils.JINJA_ENV.get_template(template_name).render(vlan=vlan)
+            bridge_def = JINJA_ENV.get_template(template_name).render(vlan=vlan)
             Linux.logger.debug(f'Generated bridge definition file for VM #{vm_id}\n{bridge_def}')
             bridge_def_filename = f'{path}/br{vlan}.yaml'
             try:
@@ -453,7 +462,7 @@ class Linux(LinuxMixin, VMImageMixin):
 
         # Render and attempt to write the answer file
         template_name = f'vm/kvm/answer_files/{answer_file_name}.j2'
-        answer_file_data = utils.JINJA_ENV.get_template(template_name).render(**template_data)
+        answer_file_data = JINJA_ENV.get_template(template_name).render(**template_data)
         Linux.logger.debug(f'Generated answer file for VM #{vm_id}\n{answer_file_data}')
         answer_file_path = f'{path}/{template_data["vm_identifier"]}.cfg'
         try:
@@ -482,11 +491,11 @@ class Linux(LinuxMixin, VMImageMixin):
         :returns: A flag stating whether or not the job was successful
         """
         # Render the bridge build commands
-        bridge_cmd = utils.JINJA_ENV.get_template('vm/kvm/bridge/build.j2').render(**template_data)
+        bridge_cmd = JINJA_ENV.get_template('vm/kvm/bridge/build.j2').render(**template_data)
         Linux.logger.debug(f'Generated bridge build command for VM #{vm_id}\n{bridge_cmd}')
 
         # Render the VM build command
-        vm_cmd = utils.JINJA_ENV.get_template('vm/kvm/commands/build.j2').render(**template_data)
+        vm_cmd = JINJA_ENV.get_template('vm/kvm/commands/build.j2').render(**template_data)
         Linux.logger.debug(f'Generated vm build command for VM #{vm_id}\n{vm_cmd}')
 
         return bridge_cmd, vm_cmd
