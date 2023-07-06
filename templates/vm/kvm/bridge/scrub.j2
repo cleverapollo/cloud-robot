@@ -1,5 +1,7 @@
 {
 {% for vlan in vlans_to_be_removed %}
+{% set filename = '/etc/netplan/{{ vlan }}.yaml' %}
+if [ -f {{ filename }} ]; then
   {# 1. Delete the bridge interface first #}
   echo '{{ host_sudo_passwd }}' | sudo -S ip link del cloud0.{{ vlan }}
 
@@ -7,7 +9,8 @@
   echo '{{ host_sudo_passwd }}' | sudo -S ip link del br{{ vlan }}
 
   {# 3. Delete the bridge interface yaml file from /etc/netplan/ next #}
-  echo '{{ host_sudo_passwd }}' | sudo -S rm /etc/netplan/{{ vlan }}.yaml
+  echo '{{ host_sudo_passwd }}' | sudo -S rm {{ filename }}
+fi
 {% endfor %}
 
   {# 4. Neplan apply to make all changes effect at once #}
