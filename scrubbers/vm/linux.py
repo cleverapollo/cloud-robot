@@ -7,7 +7,7 @@ scrubber class for linux vms
 # stdlib
 import logging
 import socket
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 # lib
 import opentracing
@@ -65,7 +65,7 @@ class Linux(LinuxMixin):
 
         # Generate the necessary template data
         child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
-        template_data = Linux._get_template_data(vm_data, child_span)
+        template_data = Linux._get_template_data(vm_data)
         child_span.finish()
 
         # Check that the data was successfully generated
@@ -259,68 +259,70 @@ class Linux(LinuxMixin):
         vlans_to_be_removed = Linux._determine_bridge_deletion(vm_data, child_span)
         child_span.finish()
 
-        if len(vlans_to_be_removed) > 0:
-            vm_id = vm_data['id']
-            # Get the ip address of the host
-            host_ip = Linux.get_host_ip(vm_data)
-            if host_ip is None:
-                error = f'Host ip address not found for the server # {vm_data["server_id"]}.'
-                Linux.logger.error(error)
-                vm_data['errors'].append(error)
-                return False
+        if not len(vlans_to_be_removed) > 0:
+            return True
 
-            # Render the bridge scrub command if bridges to delete are present
-            bridge_scrub_cmd = JINJA_ENV.get_template('vm/kvm/bridge/scrub.j2').render(
-                host_sudo_passwd=settings.NETWORK_PASSWORD,
-                vlans_to_be_removed=vlans_to_be_removed,
+        vm_id = vm_data['id']
+        # Get the ip address of the host
+        host_ip = Linux.get_host_ip(vm_data)
+        if host_ip is None:
+            error = f'Host ip address not found for the server # {vm_data["server_id"]}.'
+            Linux.logger.error(error)
+            vm_data['errors'].append(error)
+            return False
+
+        # Render the bridge scrub command if bridges to delete are present
+        bridge_scrub_cmd = JINJA_ENV.get_template('vm/kvm/bridge/scrub.j2').render(
+            host_sudo_passwd=settings.NETWORK_PASSWORD,
+            vlans_to_be_removed=vlans_to_be_removed,
+        )
+        Linux.logger.debug(f'Generated bridge scrub command for VM #{vm_id}\n{bridge_scrub_cmd}')
+
+        removed = False
+        # Open a client and run the necessary commands on the host
+        client = SSHClient()
+        client.set_missing_host_key_policy(AutoAddPolicy())
+        key = RSAKey.from_private_key_file('/root/.ssh/id_rsa')
+        sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        try:
+            # Try connecting to the host and running the necessary commands
+            sock.connect((host_ip, 22))
+            client.connect(
+                hostname=host_ip,
+                username='administrator',
+                pkey=key,
+                timeout=30,
+                sock=sock,
+            )  # No need for password as it should have keys
+            span.set_tag('host', host_ip)
+
+            Linux.logger.debug(f'Deleting bridges # {", ".join(vlans_to_be_removed)} for VM #{vm_id}')
+
+            child_span = opentracing.tracer.start_span('scrub_bridge', child_of=span)
+            # Critical section
+            requestor = f'Scrub Bridge for Scrub Linux VM #{vm_id}'
+            region_id = vm_data['project']['region_id']
+            server = vm_data['server_data']['type']['name']
+            target = Targets.HOST.generate_id(
+                region_id=region_id,
+                server_type_name=server,
+                server_id=vm_data['server_id'],
             )
-            Linux.logger.debug(f'Generated bridge scrub command for VM #{vm_id}\n{bridge_scrub_cmd}')
+            with ResourceLock(target, requestor, child_span):
+                stdout, stderr = Linux.deploy(bridge_scrub_cmd, client, child_span)
+            child_span.finish()
 
-            removed = False
-            # Open a client and run the necessary commands on the host
-            client = SSHClient()
-            client.set_missing_host_key_policy(AutoAddPolicy())
-            key = RSAKey.from_private_key_file('/root/.ssh/id_rsa')
-            sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-            try:
-                # Try connecting to the host and running the necessary commands
-                sock.connect((host_ip, 22))
-                client.connect(
-                    hostname=host_ip,
-                    username='administrator',
-                    pkey=key,
-                    timeout=30,
-                    sock=sock,
-                )  # No need for password as it should have keys
-                span.set_tag('host', host_ip)
+            if stdout:
+                Linux.logger.debug(f'Bridge scrub command for VM #{vm_id} generated stdout\n{stdout}')
+                removed = True
+            if stderr:
+                Linux.logger.error(f'Bridge scrub command for VM #{vm_id} generated stderr\n{stderr}')
 
-                Linux.logger.debug(f'Deleting bridges # {", ".join(vlans_to_be_removed)} for VM #{vm_id}')
-
-                child_span = opentracing.tracer.start_span('scrub_bridge', child_of=span)
-                # Critical section
-                requestor = f'Scrub Bridge for Scrub Linux VM #{vm_id}'
-                region_id = vm_data['project']['region_id']
-                server = vm_data['server_data']['type']['name']
-                target = Targets.HOST.generate_id(
-                    region_id=region_id,
-                    server_type_name=server,
-                    server_id=vm_data['server_id'],
-                )
-                with ResourceLock(target, requestor, child_span):
-                    stdout, stderr = Linux.deploy(bridge_scrub_cmd, client, child_span)
-                child_span.finish()
-
-                if stdout:
-                    Linux.logger.debug(f'Bridge scrub command for VM #{vm_id} generated stdout\n{stdout}')
-                    removed = True
-                if stderr:
-                    Linux.logger.error(f'Bridge scrub command for VM #{vm_id} generated stderr\n{stderr}')
-
-            except (OSError, SSHException, TimeoutError) as err:
-                error = f'Exception occurred while removing bridges for VM #{vm_id} in {host_ip}.'
-                Linux.logger.error(error, exc_info=True)
-                vm_data['errors'].append(f'{error} Error: {err}')
-                span.set_tag('failed_reason', 'ssh_error')
-            finally:
-                client.close()
-            return removed
+        except (OSError, SSHException, TimeoutError) as err:
+            error = f'Exception occurred while removing bridges for VM #{vm_id} in {host_ip}.'
+            Linux.logger.error(error, exc_info=True)
+            vm_data['errors'].append(f'{error} Error: {err}')
+            span.set_tag('failed_reason', 'ssh_error')
+        finally:
+            client.close()
+        return removed
