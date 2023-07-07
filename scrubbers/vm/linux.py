@@ -136,7 +136,7 @@ class Linux(LinuxMixin):
     def get_host_ip(vm_data):
         host_ip = None
         for interface in vm_data['server_data']['interfaces']:
-            if interface['enabled'] is True and interface['ip_address'] is not None:
+            if interface['enabled'] and interface['ip_address'] is not None:
                 if IPAddress(str(interface['ip_address'])).version == 6:
                     host_ip = interface['ip_address']
                     break
