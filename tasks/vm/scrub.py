@@ -143,6 +143,13 @@ def _scrub_vm(vm_id: int, span: Span):
             return
         logger.info(f'Successfully closed VM #{vm_id}')
 
+        # Removing Linux VM's bridges if any
+        if server_type in ['KVM', 'GPU A100']:
+            if LinuxVM.remove_bridges(vm, child_span):
+                logger.info(f'Successfully Deleted bridges of VM #{vm_id} from hardware.')
+            else:
+                logger.error(f'Failed to delete bridges of VM #{vm_id} from hardware.')
+
     else:
         logger.error(f'Failed to scrub VM #{vm_id}')
         vm.pop('server_data')
