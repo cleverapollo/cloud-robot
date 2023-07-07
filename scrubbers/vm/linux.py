@@ -311,12 +311,14 @@ class Linux(LinuxMixin):
             with ResourceLock(target, requestor, child_span):
                 stdout, stderr = Linux.deploy(bridge_scrub_cmd, client, child_span)
             child_span.finish()
-
+            # In this case it is observed that for a successful deletion of bridge, stdout and stderr are None
+            # so considering this as success
+            removed = True
             if stdout:
                 Linux.logger.debug(f'Bridge scrub command for VM #{vm_id} generated stdout\n{stdout}')
-                removed = True
             if stderr:
                 Linux.logger.error(f'Bridge scrub command for VM #{vm_id} generated stderr\n{stderr}')
+                removed = False
 
         except (OSError, SSHException, TimeoutError) as err:
             error = f'Exception occurred while removing bridges for VM #{vm_id} in {host_ip}.'
