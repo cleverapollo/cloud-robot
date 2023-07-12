@@ -210,7 +210,6 @@ class Linux(LinuxMixin):
 
         # Get all other VMs that are on the same Server of the same project.
         params = {
-            'exclude[id]': vm_id,
             'exclude[state]': state.CLOSED,
             'search[server_id]': server_id,
             'search[project_id]': project_id,
