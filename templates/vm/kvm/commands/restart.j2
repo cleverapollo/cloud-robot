@@ -1,2 +1,8 @@
+{
 {# Power on a shut down VM #}
 echo '{{ host_sudo_passwd }}' | sudo -S virsh start {{ vm_identifier }}
+{# Wait for running the VM #}
+while [ $(virsh domstate {{ vm_identifier }}) != 'running') ]; do
+    sleep 0.1
+done
+}

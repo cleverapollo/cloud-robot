@@ -2,7 +2,7 @@
 {# Update the vGPU values #}
 {# a. Detach ALL #}
 {% for gpu in changes['gpu'] %}
-echo '{{ host_sudo_passwd }}' | sudo -S virsh detach-device {{ vm_identifier }} --file {{ network_drive_path }}/VMs/{{ vm_identifier }}/pci_gpu_{{ gpu['id'] }}.xml  --persistent
+echo '{{ host_sudo_passwd }}' | sudo -S virsh detach-device --domain {{ vm_identifier }} --file {{ network_drive_path }}/VMs/{{ vm_identifier }}/pci_gpu_{{ gpu['id'] }}.xml --persistent
 {% endfor %}
 {# b. Attach Required #}
 {% if changes['gpu_attach']|length > 0 %}
