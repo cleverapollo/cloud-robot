@@ -1,8 +1,7 @@
 {
 {# shutting down the VM #}
 echo '{{ host_sudo_passwd }}' | sudo -S virsh shutdown {{ vm_identifier }}
-{# Wait for shut off the VM #}
-while [ $(virsh domstate {{ vm_identifier }}) != 'shut off' ]; do
-    sleep 0.1
+while virsh list --all | grep '{{ vm_identifier }}' | grep 'running'; do
+sleep 1
 done
 }
