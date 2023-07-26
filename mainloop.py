@@ -111,8 +111,8 @@ def mainloop():
             logger.debug(f'Acknowledged run_robot api that requested projects id # {project_ids} are dispatched.')
         else:
             logger.debug('No changes found for Robot so is going back to sleep for 15 seconds.')
-            # No changes in region, Robot going to sleep for 1 seconds
-            time.sleep(1)
+            # No changes in region, Robot going to sleep for 15 seconds
+            time.sleep(15)
 
 
 # mainloop starting point
