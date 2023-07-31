@@ -43,7 +43,7 @@ INFO "Pulling latest docker image from gitlab"
 IMAGE='gitlab.cloudcix.com:5005/cloudcix/robot/opensource-base:latest'
 docker pull $IMAGE
 
-BASE_LIST=(`echo $V | tr '.' ' '`)
+BASE_LIST=(`echo $VERSION | tr '.' ' '`)
 V_MAJOR=${BASE_LIST[0]}
 V_MINOR=${BASE_LIST[1]}
 
