@@ -7,4 +7,4 @@ It does so by making API requests to the CloudCIX Application, IAAS (Infrastruct
 
 """
 
-__version__ = '1.4.0'
+__version__ = '1.4.1'
