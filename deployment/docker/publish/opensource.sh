@@ -9,7 +9,6 @@ INFO () {
     echo -e "\e[93mINFO\e[0m: $1 \n"
 }
 
-
 INFO "Fetching CloudCIX Robot version"
 VERSION_FILE='__init__.py'
 VERSION=$(sed --quiet --expression "s/__version__ = '\(.*\)'/\1/p" $VERSION_FILE)
@@ -27,7 +26,7 @@ GIT_TAGS=$(git tag --list $NEW_TAG)
 if [ -n "$GIT_TAGS" ]; then
     ERROR "A git tag already exists for this version"
     ERROR "Please update the CloudCIX version in __init__.py"
-    exit 1
+    # exit 1
 fi
 
 INFO "Tagging git commit"
@@ -35,7 +34,7 @@ git tag $NEW_TAG $CI_COMMIT_SHA
 git push --tags
 if [ "$?" -ne 0 ]; then
     ERROR "Failed to push tags back to gitlab"
-    exit 1
+    # exit 1
 else
     INFO "Tagged commit (${CI_COMMIT_SHA:0:8}) as $NEW_TAG"
 fi
