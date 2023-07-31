@@ -120,9 +120,8 @@ def _build_vm(vm_id: int, span: Span):
         )
         # Return without changing the state
         span.set_tag('return_reason', 'vr_not_ready')
-        # since virtual_router is not ready yet so wait for 3 sec and try again.
-        # Average time to build a VR in PodNet is 3 seconds
-        build_vm.s(vm_id).apply_async(eta=datetime.now() + timedelta(seconds=3))
+        # since virtual_router is not ready yet so wait for 10 sec and try again.
+        build_vm.s(vm_id).apply_async(eta=datetime.now() + timedelta(seconds=10))
         return
 
     # If all is well and good here, update the VM state to BUILDING and pass the data to the builder
