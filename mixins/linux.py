@@ -11,7 +11,7 @@ from typing import Deque, Tuple
 # lib
 import opentracing
 from jaeger_client import Span
-from paramiko import Channel, SSHClient
+from paramiko import SSHClient
 # local
 
 __all__ = [
@@ -21,20 +21,6 @@ __all__ = [
 
 class LinuxMixin:
     logger: logging.Logger
-
-    @staticmethod
-    def get_full_response(channel: Channel, read_size: int = 1476) -> str:
-        """
-        Get the full response from the specified paramiko channel, waiting a given number of seconds before trying to
-        read from it each time.
-        :param channel: The channel to be read from
-        :param read_size: How many bytes to be read from the channel each time
-        :return: The full output from the channel, or as much as can be read given the parameters.
-        """
-        fragments: Deque[str] = deque()
-        while channel.recv_ready():
-            fragments.append(channel.recv(read_size).decode())
-        return ''.join(fragments)
 
     @classmethod
     def deploy(cls, command: str, client: SSHClient, span: Span) -> Tuple[str, str]:
@@ -47,27 +33,39 @@ class LinuxMixin:
         :return: The messages retrieved from stdout and stderr of the command
         """
         hostname = client.get_transport().sock.getpeername()[0]
-        cls.logger.debug(f'Deploying command {command} to Linux Host {hostname}')
+        cls.logger.debug(f'Executing command {command} to Linux Host {hostname}')
 
         # Run the command via the client
         child_span = opentracing.tracer.start_span('exec_command', child_of=span)
         _, stdout, stderr = client.exec_command(command)
-        # Block until command finishes
-        stdout.channel.recv_exit_status()
-        stderr.channel.recv_exit_status()
-        cls.logger.debug(f'Deployed command to Linux Host {hostname}')
+        cls.logger.debug(f'Executed command to Linux Host {hostname}')
         child_span.finish()
 
-        # Read the full response from both channels
-        child_span = opentracing.tracer.start_span('read_stdout', child_of=span)
-        output = cls.get_full_response(stdout.channel)
-        cls.logger.debug(f'Completed read of output from Linux Host {hostname}')
+        # Read from stdout and stderr, keep going until the connection is closed
+        channel = stdout.channel
+        output_fragments: Deque[str] = deque()
+        error_fragments: Deque[str] = deque()
+        child_span = opentracing.tracer.start_span('read_channel', child_of=span)
+        while True:
+            # Check the status of the connection, and read any remaining output
+            closed = channel.closed
+            while channel.recv_ready():
+                output_fragments.append(stdout.read().decode())  # Read the entirety of stdout
+
+            while channel.recv_stderr_ready():
+                # error_fragments.append(stderr.read().decode())  # Read the entirety of stderr
+                # temporarily adding stderr to output as stderr is not evaluated properly, need to be removed.
+                output_fragments.append(stderr.read().decode())
+
+            if closed:
+                break
+        cls.logger.debug(f'Completed read of stdout and stderr from Linux Host {hostname}')
         child_span.finish()
 
-        child_span = opentracing.tracer.start_span('read_stderr', child_of=span)
-        error = cls.get_full_response(stderr.channel)
-        child_span.finish()
-        cls.logger.debug(f'Completed read of error from Linux Host {hostname}')
+        # Sorting out the output and the error
+        output = ''.join(output_fragments)
+        error = ''.join(error_fragments)
+
         return output, error
 
     @classmethod
