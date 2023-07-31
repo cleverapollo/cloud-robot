@@ -32,7 +32,7 @@ fi
 
 INFO "Tagging git commit"
 git tag $NEW_TAG $CI_COMMIT_SHA
-git push --tags --push-option=ci.skip # Don't trigger new pipeline
+git push --tags
 if [ "$?" -ne 0 ]; then
     ERROR "Failed to push tags back to gitlab"
     exit 1

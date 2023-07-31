@@ -5,7 +5,7 @@ stages:
 - publish
 - docker
 - deploy
-    
+
 
 lint:
     image: cloudcix/lint:latest
@@ -42,6 +42,8 @@ opensource_base:
     - docker push gitlab.cloudcix.com:5005/cloudcix/robot/opensource-base
     only:
     - stable
+    except:
+    - tags
 
 
 # Will be deployed to docker hub for our use in our Devtest Region POD
@@ -75,6 +77,8 @@ stable_base:
     - docker push gitlab.cloudcix.com:5005/cloudcix/robot/stable-base
     only:
     - stable
+    except:
+    - tags
 
 ###############################################################################
 #                         Github and Dockerhub Deploy                         #
@@ -106,6 +110,8 @@ opersource_dockerhub:
     when: manual
     only:
     - stable
+    except:
+    - tags
 
 devtest_dockerhub:
     stage: publish
@@ -114,6 +120,13 @@ devtest_dockerhub:
     - docker:dind
     tags:
     - docker-build
+    before_script:
+    - mkdir -p ~/.ssh
+    - touch ~/.ssh/known_hosts
+    - cd ~/.ssh
+    - echo "${RUNNER_SSH_KEY}" > id_rsa
+    - chmod 0400 id_rsa
+    - ssh-keyscan -t rsa gitlab.cloudcix.com >> ~/.ssh/known_hosts
     script:
     - docker login -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD $CI_REGISTRY
     - ./deployment/docker/publish/devtest.sh
