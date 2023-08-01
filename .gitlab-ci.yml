@@ -120,13 +120,6 @@ devtest_dockerhub:
     - docker:dind
     tags:
     - docker-build
-    before_script:
-    - mkdir -p ~/.ssh
-    - touch ~/.ssh/known_hosts
-    - cd ~/.ssh
-    - echo "${RUNNER_SSH_KEY}" > id_rsa
-    - chmod 0400 id_rsa
-    - ssh-keyscan -t rsa gitlab.cloudcix.com >> ~/.ssh/known_hosts
     script:
     - docker login -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD $CI_REGISTRY
     - ./deployment/docker/publish/devtest.sh
