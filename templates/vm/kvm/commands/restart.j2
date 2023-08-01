@@ -1,2 +1,10 @@
+{
 {# Power on a shut down VM #}
-echo '{{ host_sudo_passwd }}' | sudo -S virsh start {{ vm_identifier }}
+echo '{{ host_sudo_passwd }}' | sudo --prompt='' -S virsh start {{ vm_identifier }}
+{# Wait for the VM to be in the running state #}
+until [[ $(echo '{{ host_sudo_passwd }}' | sudo --prompt='' -S virsh domstate {{ vm_identifier }}) = 'running' ]]; do
+    echo 'still starting'
+    sleep 0.5
+done
+echo 'VM {{ vm_identifier }} has been started'
+}
