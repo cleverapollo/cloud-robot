@@ -62,24 +62,6 @@ devtest_base:
     except:
     - stable
 
-stable_base:
-    stage: docker-base
-    image: gitlab/dind
-    services:
-    - docker:dind
-    tags:
-    - docker-build
-    before_script:
-    - echo "$GITLAB_KEY" > id_rsa
-    script:
-    - docker login -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD $CI_REGISTRY
-    - docker build -f deployment/docker/stable/base.Dockerfile -t gitlab.cloudcix.com:5005/cloudcix/robot/stable-base --no-cache .
-    - docker push gitlab.cloudcix.com:5005/cloudcix/robot/stable-base
-    only:
-    - stable
-    except:
-    - tags
-
 ###############################################################################
 #                         Github and Dockerhub Deploy                         #
 ###############################################################################
