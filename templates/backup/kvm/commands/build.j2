@@ -1,3 +1,5 @@
+{# Stop execution if something fails #}
+set -e
 {# Create Backup #}
 DOMAIN='{{ vm_identifier }}'
 export_path='{{ export_path }}'
@@ -7,7 +9,7 @@ BREAK=false
         echo "---- VM Backup start $DOMAIN ---- $(date +'%d-%m-%Y %H:%M:%S')"
 
         BACKUPFOLDER=$export_path/$DOMAIN
-        [ ! -d $BACKUPFOLDER ] && mkdir -p $BACKUPFOLDER
+        [ ! -d $BACKUPFOLDER ] && echo '{{ host_sudo_passwd }}' | sudo -S mkdir -p $BACKUPFOLDER
         TARGETS=$(echo '{{ host_sudo_passwd }}' | sudo -S virsh domblklist $DOMAIN --details | grep disk | awk '{print $3}')
         IMAGES=$(echo '{{ host_sudo_passwd }}' | sudo -S virsh domblklist $DOMAIN --details | grep disk | awk '{print $4}')
 
