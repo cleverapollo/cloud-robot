@@ -32,6 +32,8 @@ class Robot:
     virtual_router_dispatcher: Union[dispatchers.PhantomVirtualRouter, dispatchers.VirtualRouter]
     # backup
     backups: list
+    # ceph
+    cephs: list
     # snapshots
     snapshots: list
     # virtual routers
@@ -42,6 +44,7 @@ class Robot:
     def __init__(
             self,
             backups: list,
+            cephs: list,
             snapshots: list,
             virtual_routers: list,
             vms: list,
@@ -50,6 +53,7 @@ class Robot:
         self.logger = logging.getLogger('robot.mainloop')
         # Instantiate the dispatchers
         self.backup_dispatcher = dispatchers.Backup(settings.NETWORK_PASSWORD)
+        self.ceph_dispatcher = dispatchers.Ceph(settings.NETWORK_PASSWORD)
         self.snapshot_dispatcher = dispatchers.Snapshot(settings.NETWORK_PASSWORD)
         self.vm_dispatcher = dispatchers.VM(settings.NETWORK_PASSWORD)
         if settings.VIRTUAL_ROUTERS_ENABLED:
@@ -58,6 +62,8 @@ class Robot:
             self.virtual_router_dispatcher = dispatchers.PhantomVirtualRouter()
         # Instantiate backups
         self.backups = backups
+        # Instantiate cephs
+        self.cephs = cephs
         # Instantiate snapshots
         self.snapshots = snapshots
         # Instantiate virtual routers
@@ -77,6 +83,10 @@ class Robot:
         self.backups_to_update = self.backups['running_update']
         self.backups_to_update += self.backups['quiesced_update']
         self.backups_to_scrub = self.backups['scrub']
+
+        self.cephs_to_build = self.cephs['build']
+        self.cephs_to_update = self.cephs['running_update']
+        self.cephs_to_scrub = self.cephs['scrub']
 
         self.snapshots_to_build = self.snapshots['build']
         self.snapshots_to_update = self.snapshots['running_update']
@@ -100,6 +110,7 @@ class Robot:
         #                              BUILD                             #
         # ############################################################## #
         self._backup_build()
+        self._ceph_build()
         self._snapshot_build()
         self._virtual_router_build()
         self._vm_build()
@@ -145,6 +156,14 @@ class Robot:
         for backup_id in self.backups_to_build:
             self.logger.info('backup dispatcher called')
             self.backup_dispatcher.build(backup_id)
+
+    def _ceph_build(self):
+        """
+        Sends ceph to build dispatcher, and asynchronously builds them
+        """
+        for ceph_id in self.cephs_to_build:
+            self.logger.info('ceph dispatcher called')
+            self.ceph_dispatcher.build(ceph_id)
 
     def _snapshot_build(self):
         """

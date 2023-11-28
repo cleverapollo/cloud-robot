@@ -4,11 +4,14 @@ File containing some utility functions that wrap around various repeatedly used 
 # stdlib
 import atexit
 import enum
+import json
 import logging
 import os
 import subprocess
 from collections import deque
 from json import JSONEncoder
+from json.decoder import JSONDecodeError
+from pathlib import Path
 from typing import Any, Deque, Dict, Iterable, Optional, Tuple
 # lib
 import jinja2
@@ -35,12 +38,21 @@ __all__ = [
     'setup_root_logger',
     'Targets',
     'write_to_drive',
+    'get_ceph_monitors',
+    'get_ceph_pool',
 ]
 
 JINJA_ENV = jinja2.Environment(
     loader=jinja2.FileSystemLoader('templates'),
     trim_blocks=True,
 )
+
+CEPH_POOLS = {
+    'CEPH_001': 'CLOUDCIX-VOLUMES',
+    'CEPH_002': 'CLOUDCIX-IMAGES',
+}
+
+CEPH_MONITORS = None
 
 
 class DequeEncoder(JSONEncoder):
@@ -284,3 +296,30 @@ class Targets(enum.Enum):
             # Find out what key was missing
             raise TargetIdError(f'Could not generate id for {self.name}. Missing keyword argument "{e.args[0]}"')
         return target
+
+
+def get_ceph_monitors():
+    global CEPH_MONITORS
+    if CEPH_MONITORS is not None:
+        return CEPH_MONITORS
+
+    mon_string = os.environ.get('CEPH_MONITORS').strip('{}')
+    # Should be a list of IP Addresses
+    mons = mon_string.split(',')
+
+    # Validate each one is an IP
+    logger = logging.getLogger(__name__ + '.get_ceph_monitors')
+    ips = list()
+    for mon in mons:
+        try:
+            mon_ip = str(netaddr.ip.IPAddress(mon.strip()))
+        except netaddr.core.AddrFormatError:
+            continue
+        logger.debug(f'Found Ceph Monitor: {mon_ip}')
+        ips.append(mon_ip)
+    CEPH_MONITORS = ips
+    return CEPH_MONITORS
+
+
+def get_ceph_pool(sku: str) -> Optional[str]:
+    return CEPH_POOLS.get(sku.upper())
