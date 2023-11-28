@@ -10,6 +10,10 @@ from .backup import (
     update_failure as backup_update_failure,
     update_success as backup_update_success,
 )
+from .ceph import (
+    build_failure as ceph_build_failure,
+    build_success as ceph_build_success,
+)
 from .snapshot import (
     build_failure as snapshot_build_failure,
     build_success as snapshot_build_success,
@@ -55,6 +59,9 @@ __all__ = [
     'backup_scrub_success',
     'backup_update_failure',
     'backup_update_success',
+    # ceph
+    'ceph_build_failure',
+    'ceph_build_success',
     # snapshot
     'snapshot_build_failure',
     'snapshot_build_success',

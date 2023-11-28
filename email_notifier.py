@@ -76,6 +76,30 @@ class EmailNotifier:
         logger.debug(f'Sent failure email for Backup #{backup_data["id"]}.')
 
     @staticmethod
+    def ceph_failure(ceph_data: Dict[str, Any], task: str):
+        """
+        Report any kind of failure to the NOC and developers emails
+        """
+        logger = logging.getLogger('robot.email_notifier.failure')
+        logger.debug(f'Sending failure email for Ceph #{ceph_data["id"]}')
+        # catch errors
+        errors = ceph_data.pop('errors')
+        # Add the pretty printed data blob to the VM
+        ceph_data['data'] = dumps(ceph_data, indent=2, cls=utils.DequeEncoder)
+        # Render the email body
+        body = utils.JINJA_ENV.get_template('emails/ceph_failure.j2').render(
+            compute_url=settings.COMPUTE_UI_URL,
+            task=task,
+            errors=errors,
+            **ceph_data,
+        )
+        # Format the subject
+        subject = settings.SUBJECT_PROJECT_FAIL
+        for email in settings.SEND_TO_FAIL.split(','):
+            if EmailNotifier._compose_email(email, subject, body):
+                logger.debug(f'Sent failure email for Ceph #{ceph_data["id"]} to {settings.SEND_TO_FAIL}.')
+
+    @staticmethod
     def vm_failure(vm_data: Dict[str, Any], task: str):
         """
         Report any kind of failure to the NOC and developers emails
@@ -227,6 +251,33 @@ class EmailNotifier:
         # Also run the generic failure method to pass failures to us
         EmailNotifier.backup_failure(backup_data, 'build')
         logger.debug(f'Sent build failure email for Backup #{backup_data["id"]}.')
+
+    @staticmethod
+    def ceph_build_failure(ceph_data: Dict[str, Any]):
+        """
+        Given a ceph's details, render and send a build failure email
+        """
+        logger = logging.getLogger('robot.email_notifier.build_failure')
+        logger.debug(f'Sending build failure email for Ceph #{ceph_data["id"]}.')
+        # Check that the data contains an email
+        emails = ceph_data.get('emails', None)
+        if emails is None:
+            logger.error(
+                f'No email found for ceph #{ceph_data["id"]}. Sending to {settings.SEND_TO_FAIL} instead.',
+            )
+            emails = [settings.SEND_TO_FAIL]
+        # Render the email body
+        body = utils.JINJA_ENV.get_template('emails/ceph_build_failure.j2').render(
+            name=ceph_data['vm']['name'],
+        )
+        # Format the subject
+        subject = settings.SUBJECT_CEPH_BUILD_FAIL
+        for email in emails:
+            EmailNotifier._compose_email(email, subject, body)
+
+        # Also run the generic failure method to pass failures to us
+        EmailNotifier.ceph_failure(ceph_data, 'build')
+        logger.debug(f'Sent build failure email for Ceph #{ceph_data["id"]}.')
 
     @staticmethod
     def snapshot_build_failure(snapshot_data: Dict[str, Any]):

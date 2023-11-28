@@ -1,5 +1,6 @@
 from .backup import Linux as LinuxBackup
 from .backup import Windows as WindowsBackup
+from .ceph import Ceph
 from .snapshot import Linux as LinuxSnapshot
 from .snapshot import Windows as WindowsSnapshot
 from .virtual_router import VirtualRouter
@@ -11,6 +12,8 @@ __all__ = [
     # backup
     'LinuxBackup',
     'WindowsBackup',
+    # ceph
+    'Ceph',
     # snapshot
     'LinuxSnapshot',
     'WindowsSnapshot',
