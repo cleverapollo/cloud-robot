@@ -1,0 +1,41 @@
+{
+    {# Stop execution if something fails#}
+    set -e
+
+    {% for ceph in changes.ceph.attach %}
+        {# Check if the drive is already attached #}
+        virsh domblklist --domain {{ vm_identifier }} | grep {{ ceph.identifier }} \
+            && echo 'CephAttach: Ceph {{ ceph.identifier }} already attached to VM {{ vm_identifier }}' \
+            && continue
+
+        {# Generate a new target for the drive #}
+        EXISTING_TARGETS=$(virsh domblklist --domain {{ vm_identifier }})
+        TARGET_PREFIX=hd
+        NEW_LETTER=""
+        for LETTER in {a..z};
+        do
+            if ! [[ "${EXISTING_TARGETS[@]}" =~ "${TARGET_PREFIX}${LETTER}" ]];
+            then
+                NEW_LETTER="${LETTER}""
+                break
+            fi
+        done
+
+        if [ -z $NEW_LETTER ];
+        then
+            echo 'CephAttach: Could not generate drive name for {{ ceph.identifier }}' 1>&2
+            exit 1
+        fi
+
+        {# Get the Ceph secret id #}
+        SECRET_UUID=$(virsh secret-list | awk '/ceph CIX_VOL_MANAGER/ { print $1 }' )
+
+        {# Generate the XML snippet #}
+        cat << EOF
+          {% include 'vm/kvm/device/ceph.xml.j2' with pool_name=ceph.pool_name device_name=ceph.identifier monitor_ips=monitor_ips only %}
+        EOF >> ceph_{{ ceph.identifier }}.xml
+
+        virsh attach-device --domain {{ vm_identifier }} --file  ceph_{{ ceph.identifier }}.xml --config \
+            && echo "CephAttach: Ceph #{{ ceph.identifier }} attached to VM #{{ vm_identifier }}"
+    {% endfor %}
+}
