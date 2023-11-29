@@ -4,18 +4,16 @@ File containing some utility functions that wrap around various repeatedly used 
 # stdlib
 import atexit
 import enum
-import json
 import logging
 import os
 import subprocess
 from collections import deque
 from json import JSONEncoder
-from json.decoder import JSONDecodeError
-from pathlib import Path
-from typing import Any, Deque, Dict, Iterable, Optional, Tuple
+from typing import Any, Deque, Dict, Iterable, List, Optional, Tuple
 # lib
 import jinja2
 import netaddr
+from cloudcix.api.iaas import IAAS
 from logstash_async.formatter import LogstashFormatter
 from logstash_async.handler import AsynchronousLogstashHandler
 # local
@@ -323,3 +321,16 @@ def get_ceph_monitors():
 
 def get_ceph_pool(sku: str) -> Optional[str]:
     return CEPH_POOLS.get(sku.upper())
+
+
+def get_linked_resources(vm_id: int) -> Optional[List[Dict]]:
+    response = IAAS.ceph.list(
+        token=Token.get_instance().token,
+        params={'search[parent_id]': vm_id},
+    )
+    if response.status_code != 200:
+        logging.getLogger(__name__ + '.get_linked_resources').error(
+            f'Could not list resources attached to VM #{vm_id}',
+        )
+        return None
+    return response.json()['content']

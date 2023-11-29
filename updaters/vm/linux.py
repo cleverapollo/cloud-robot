@@ -18,8 +18,9 @@ from netaddr import IPAddress
 from paramiko import AutoAddPolicy, RSAKey, SSHClient, SSHException
 # local
 import settings
+import state
 from mixins import LinuxMixin, VMUpdateMixin
-from utils import JINJA_ENV
+from utils import JINJA_ENV, get_ceph_monitors, get_ceph_pool
 
 
 __all__ = [
@@ -46,7 +47,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
         'management_ip',
         # the path on the host where the network drive is found
         'network_drive_path',
-        # a flag stating whether or not the VM should be turned back on after updating it
+        # a flag stating if the VM should be turned back on after updating it
         'restart',
         # storage type (HDD/SSD)
         'storage_type',
@@ -64,7 +65,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
         Commence the update of a vm using the data read from the API
         :param vm_data: The result of a read request for the specified VM
         :param span: The tracing span in use for this update task
-        :return: A flag stating whether or not the update was successful
+        :return: A flag stating if the update was successful
         """
         vm_id = vm_data['id']
 
@@ -81,7 +82,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
             span.set_tag('failed_reason', 'template_data_failed')
             return False
 
-        # Check that all of the necessary keys are present
+        # Check that all necessary keys are present
         if not all(template_data[key] is not None for key in Linux.template_keys):
             missing_keys = [f'"{key}"' for key in Linux.template_keys if template_data[key] is None]
             error_msg = f'Template Data Error, the following keys were missing from the VM update data: ' \
@@ -215,6 +216,41 @@ class Linux(LinuxMixin, VMUpdateMixin):
                     Linux.logger.error(f'VM update RAM command for VM #{vm_id} generated stderr.\n{stderr}')
                     ram = False
 
+            # Ceph changes
+            ceph_detach = True
+            if template_data['changes']['ceph']['detach'] and quiesce:
+                child_span = opentracing.tracer.start_span('generate_detach_command', child_of=span)
+                cmd = JINJA_ENV.get_template('vm/kvm/commands/update/ceph_detach.j2').render(**template_data)
+                child_span.finish()
+                Linux.logger.debug(f'Generated VM Ceph detach command for VM #{vm_id}\n{cmd}')
+
+                child_span = opentracing.tracer.start_span('ceph_detach', child_of=span)
+                stdout, stderr = Linux.deploy(cmd, client, child_span)
+                child_span.finish()
+
+                if stdout:
+                    Linux.logger.debug(f'VM Ceph Detach command for VM #{vm_id} generated stdout.\n{stdout}')
+                if stderr:
+                    Linux.logger.error(f'VM Ceph Detach command for VM #{vm_id} generated stderr.\n{stderr}')
+                    ceph_detach = False
+
+            ceph_attach = True
+            if template_data['changes']['ceph']['attach'] and quiesce:
+                child_span = opentracing.tracer.start_span('generate_attach_command', child_of=span)
+                cmd = JINJA_ENV.get_template('vm/kvm/commands/update/ceph_attach.j2').render(**template_data)
+                child_span.finish()
+                Linux.logger.debug(f'Generated VM Ceph attach command for VM #{vm_id}\n{cmd}')
+
+                child_span = opentracing.tracer.start_span('ceph_attach', child_of=span)
+                stdout, stderr = Linux.deploy(cmd, client, child_span)
+                child_span.finish()
+
+                if stdout:
+                    Linux.logger.debug(f'VM Ceph attach command for VM #{vm_id} generated stdout.\n{stdout}')
+                if stderr:
+                    Linux.logger.error(f'VM Ceph attach command for VM #{vm_id} generated stderr.\n{stderr}')
+                    ceph_detach = False
+
             # Restart the VM if it was in Running state before.
             restart = True
             if template_data['restart']:
@@ -233,7 +269,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
                     Linux.logger.error(f'VM restart command for VM #{vm_id} generated stderr.\n{stderr}')
                     restart = False
 
-            updated = all([quiesce, drive, cpu, gpu, ram, restart])
+            updated = all([quiesce, drive, cpu, gpu, ceph_detach, ceph_attach, ram, restart])
         except (OSError, SSHException, TimeoutError) as err:
             error = f'Exception occurred while updating VM #{vm_id} in {host_ip}.'
             Linux.logger.error(error, exc_info=True)
@@ -254,7 +290,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
     @staticmethod
     def _get_template_data(vm_data: Dict[str, Any], span: Span) -> Optional[Dict[str, Any]]:
         """
-        Given the vm data from the API, create a dictionary that contains all of the necessary keys for the template
+        Given the vm data from the API, create a dictionary that contains all the necessary keys for the template
         The keys will be checked in the update method and not here, this method is only concerned with fetching the data
         that it can.
         :param vm_data: The data of the VM read from the API
@@ -274,11 +310,12 @@ class Linux(LinuxMixin, VMUpdateMixin):
             'cpu': False,
             'gpu': False,
             'storages': False,
+            'ceph': False,
         }
         updates = vm_data['history'][0]
         try:
             if updates['ram_quantity'] is not None:
-                # RAM is needed in MB for the updater but we take it in in GB (1024, not 1000)
+                # RAM is needed in MB for the updater but we take it in GB (1024, not 1000)
                 changes['ram'] = vm_data['ram'] * 1024
         except KeyError:
             pass
@@ -287,6 +324,29 @@ class Linux(LinuxMixin, VMUpdateMixin):
                 changes['cpu'] = vm_data['cpu']
         except KeyError:
             pass
+
+        linked_resources = updates.get('linked_resources', list())
+        attach = list()
+        detach = list()
+        for resource in linked_resources:
+            resource['identifier'] = f'{resource["project_id"]}_{resource["id"]}'
+            resource['pool_name'] = get_ceph_pool(resource['specs'][0]['sku'])
+
+            if resource['state'] is state.RUNNING:
+                attach.append(resource)
+            elif resource['state'] is state.QUIESCE:
+                detach.append(resource)
+            else:
+                Linux.logger.warning(
+                    f'Found linked resource #{resource["id"]} in state {resource["state"]}. ',
+                    f'Should be {state.RUNNING} or {state.QUIESCE})',
+                )
+
+        if len(attach) > 0 or len(detach) > 0:
+            changes['ceph'] = {
+                'attach': attach,
+                'detach': detach,
+            }
 
         # Fetch the device information for the update
         try:
@@ -360,10 +420,11 @@ class Linux(LinuxMixin, VMUpdateMixin):
         Generate and write files into the network drive so they are on the host for the update scripts to utilise.
         Writes the following files to the drive;
             - pci_gpu.xml
+            - ceph.xml
         :param vm_data: The data of the VM read from the API
         :param template_data: The retrieved template data for the kvm vm
         :param path: Network drive location to create above files for VM build
-        :returns: A flag stating whether or not the job was successful
+        :returns: A flag stating if the job was successful
         """
         vm_id = vm_data['id']
         # Create a folder by vm_identifier name at network_drive_path/VMs/
@@ -378,7 +439,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
             return False
 
         # Render and attempt to write the pci_gpu files
-        template_name = f'vm/kvm/device/pci_gpu.j2'
+        template_name = 'vm/kvm/device/pci_gpu.j2'
         for device in vm_data['gpu_devices']:
             pci_gpu_data = JINJA_ENV.get_template(template_name).render(device=device['id_on_host'])
             Linux.logger.debug(f'Generated pci_gpu_{device["id"]}.xml file for VM #{vm_id}\n{pci_gpu_data}')
@@ -392,6 +453,33 @@ class Linux(LinuxMixin, VMUpdateMixin):
                 )
             except IOError as err:
                 error = f'Failed to write pci_gpu_{device["id"]}.xml file for VM #{vm_id} to {pci_gpu_file_path}'
+                Linux.logger.error(error, exc_info=True)
+                vm_data['errors'].append(f'{error} Error: {err}')
+                return False
+
+        # Render and write the Ceph XML snippets for attaching
+        monitor_ips = get_ceph_monitors()
+        if monitor_ips is None or len(monitor_ips) == 0:
+            Linux.logger.error('Could not get Ceph Monitor IPs when building ')
+            return False
+
+        template_name = 'vm/kvm/device/ceph.xml.j2'
+        template = JINJA_ENV.get_template(template_name)
+        for ceph in template_data['changes']['ceph_attach']:
+            ceph_xml = template.render(
+                device_name=ceph['identifier'],
+                monitor_ips=monitor_ips,
+                pool_name=ceph['pool_name'],
+            )
+            ceph_file_path = f'{path}/ceph_{ceph["identifier"]}.xml'
+
+            try:
+                # Attempt to write
+                with open(ceph_file_path, 'w') as f:
+                    f.write(ceph_xml)
+                Linux.logger.debug(f'Successfully wrote {ceph_file_path} for ceph #{ceph["id"]}')
+            except IOError as err:
+                error = f'Failed to write {ceph_file_path} for ceph #{ceph["id"]}'
                 Linux.logger.error(error, exc_info=True)
                 vm_data['errors'].append(f'{error} Error: {err}')
                 return False

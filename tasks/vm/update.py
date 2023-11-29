@@ -142,6 +142,15 @@ def _update_vm(vm_id: int, span: Span):
             if len(devices) > 0:
                 vm['gpu_devices'] = devices
 
+    linked_resources = utils.get_linked_resources(vm_id)
+    if linked_resources is None:
+        logger.error(f'Could not update VM #{vm_id}. Could not list linked resources')
+        span.set_tag('return_reason', 'resources_not_listed')
+        return
+    if len(linked_resources) > 0:
+        updates['linked_resources'] = linked_resources
+        changes = True
+
     if changes:
         # Read the VM server to get the server type
         child_span = opentracing.tracer.start_span('read_vm_server', child_of=span)
