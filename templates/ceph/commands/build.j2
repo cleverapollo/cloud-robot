@@ -3,11 +3,11 @@
     set -e
 
     {# Check if the drive already exists #}
-    rbd --pool {{ pool_name }} list | grep --quiet --regexp={{ device_name }} \
-      && echo -n {{ success_msg }}
+    echo '{{ host_sudo_passwd }}' | sudo -S rbd --pool {{ pool_name }} list | grep --quiet --regexp={{ device_name }} \
+      && echo -en "Ceph {{ device_name }} already exists in pool\n{{ success_msg }}" \
       && exit 0
 
     {# Create the drive #}
-    rbd create --size {{ device_size }} {{ pool_name }}/{{ device_name }} \
+    echo '{{ host_sudo_passwd }}' | sudo -S rbd create --size {{ device_size }} {{ pool_name }}/{{ device_name }} \
       && echo -n {{ success_msg }}
 }

@@ -2,7 +2,7 @@
     {# Stop execution if something fails#}
     set -e
 
-    {% for ceph in changes.ceph.attach %}
+    {% for ceph in changes.ceph_attach %}
         {# Check if the drive is already attached #}
         virsh domblklist --domain {{ vm_identifier }} | grep {{ ceph.identifier }} \
             && echo 'CephAttach: Ceph {{ ceph.identifier }} already attached to VM {{ vm_identifier }}' \
@@ -32,7 +32,18 @@
 
         {# Generate the XML snippet #}
         cat << EOF
-          {% include 'vm/kvm/device/ceph.xml.j2' with pool_name=ceph.pool_name device_name=ceph.identifier monitor_ips=monitor_ips only %}
+	  <disk type="network" device="disk">
+	    <driver name="qemu" type="raw"/>
+	    <auth username="cix_vol_mgr">
+	      <secret type="ceph" uuid="${CEPH_SECRET_UUID}"/>
+	    </auth>
+	    <source protocol="rbd" name="{{ ceph.pool_name }}/{{ ceph.device_name }}">
+	      {% for ip in monitor_ips %}
+	      <host name="{{ ip }}" port="6789"/>
+	      {% endfor %}
+	    </source>
+	    <target dev="hd${NEW_LETTER}" bus="virtio"/>
+	  </disk>
         EOF >> ceph_{{ ceph.identifier }}.xml
 
         virsh attach-device --domain {{ vm_identifier }} --file  ceph_{{ ceph.identifier }}.xml --config \

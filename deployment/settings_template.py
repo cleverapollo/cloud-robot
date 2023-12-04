@@ -1,4 +1,5 @@
 import os
+import netaddr
 
 ORGANIZATION_URL = os.getenv('ORGANIZATION_URL', 'example.com')
 REGION_NAME = os.getenv('POD_NAME', 'pod')
@@ -190,6 +191,24 @@ HYPERV_SECONDARY_BACKUP_STORAGE_PATH = 'S:\\'
 KVM_PRIMARY_BACKUP_STORAGE_PATH = '/mnt/backup-p/'
 # KVM secondary backup location
 KVM_SECONDARY_BACKUP_STORAGE_PATH = '/mnt/backup-s/'
+
+"""
+Ceph Settings
+"""
+CEPH_POOLS = {
+    'CEPH_001': 'CLOUDCIX-VOLUMES',
+    'CEPH_002': 'CLOUDCIX-IMAGES',
+}
+
+CEPH_MONITORS = list()
+for monitor in os.environ.get('CEPH_MONITORS', '').split(','):
+    monitor = monitor.strip('{} ')
+    try:
+        ip = netaddr.ip.IPAddress(monitor)
+    except netaddr.core.AddrFormatError:
+        continue
+    CEPH_MONITORS.append(str(ip))
+CEPH_MONITORS = tuple(CEPH_MONITORS)
 
 """
 Robot Database
