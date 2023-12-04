@@ -150,5 +150,4 @@ def _build_ceph(ceph_id: int, span: Span):
         # If later this feature is added, code goes here
     else:
         logger.error(f'Failed to build Ceph #{ceph_id}')
-        ceph.pop('server_data')
         _unresource(ceph, span)

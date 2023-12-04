@@ -13,6 +13,7 @@ import socket
 from typing import Any, Dict, Optional
 # lib
 import opentracing
+from cloudcix.api import IAAS
 from jaeger_client import Span
 from netaddr import IPAddress
 from paramiko import AutoAddPolicy, RSAKey, SSHClient, SSHException
@@ -20,7 +21,7 @@ from paramiko import AutoAddPolicy, RSAKey, SSHClient, SSHException
 import settings
 import state
 from mixins import LinuxMixin, VMUpdateMixin
-from utils import JINJA_ENV, get_ceph_monitors, get_ceph_pool
+from utils import api_read, JINJA_ENV, get_ceph_pool
 
 
 __all__ = [
@@ -94,7 +95,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
         # Write necessary files into the network drive if required
         network_drive_path = settings.KVM_ROBOT_NETWORK_DRIVE_PATH
         path = f'{network_drive_path}/VMs/{vm_data["project"]["id"]}_{vm_id}'
-        if len(template_data['changes']['gpu']) > 0:
+        if template_data['changes']['gpu'] and len(template_data['changes']['gpu']) > 0:
             child_span = opentracing.tracer.start_span('write_gpu_file_to_network_drive', child_of=span)
             file_write_success = Linux._generate_network_drive_files(vm_data, template_data, path)
             child_span.finish()
@@ -218,7 +219,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
 
             # Ceph changes
             ceph_detach = True
-            if template_data['changes']['ceph']['detach'] and quiesce:
+            if template_data['changes']['ceph_detach'] and quiesce:
                 child_span = opentracing.tracer.start_span('generate_detach_command', child_of=span)
                 cmd = JINJA_ENV.get_template('vm/kvm/commands/update/ceph_detach.j2').render(**template_data)
                 child_span.finish()
@@ -235,7 +236,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
                     ceph_detach = False
 
             ceph_attach = True
-            if template_data['changes']['ceph']['attach'] and quiesce:
+            if template_data['changes']['ceph_attach'] and quiesce:
                 child_span = opentracing.tracer.start_span('generate_attach_command', child_of=span)
                 cmd = JINJA_ENV.get_template('vm/kvm/commands/update/ceph_attach.j2').render(**template_data)
                 child_span.finish()
@@ -249,7 +250,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
                     Linux.logger.debug(f'VM Ceph attach command for VM #{vm_id} generated stdout.\n{stdout}')
                 if stderr:
                     Linux.logger.error(f'VM Ceph attach command for VM #{vm_id} generated stderr.\n{stderr}')
-                    ceph_detach = False
+                    ceph_attach = False
 
             # Restart the VM if it was in Running state before.
             restart = True
@@ -279,7 +280,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
             client.close()
 
         # remove all the files created in network drive
-        if len(template_data['changes']['gpu']) > 0:
+        if template_data['changes']['gpu'] and len(template_data['changes']['gpu']) > 0:
             try:
                 shutil.rmtree(path)
             except OSError:
@@ -310,7 +311,8 @@ class Linux(LinuxMixin, VMUpdateMixin):
             'cpu': False,
             'gpu': False,
             'storages': False,
-            'ceph': False,
+            'ceph_attach': list(),
+            'ceph_detach': list(),
         }
         updates = vm_data['history'][0]
         try:
@@ -326,27 +328,26 @@ class Linux(LinuxMixin, VMUpdateMixin):
             pass
 
         linked_resources = updates.get('linked_resources', list())
-        attach = list()
-        detach = list()
-        for resource in linked_resources:
-            resource['identifier'] = f'{resource["project_id"]}_{resource["id"]}'
-            resource['pool_name'] = get_ceph_pool(resource['specs'][0]['sku'])
+        for r in linked_resources:
+            # Read the resource to get its specs
+            resource = api_read(IAAS.ceph, pk=r['id'])
+            if resource is None:
+                continue
 
             if resource['state'] is state.RUNNING:
-                attach.append(resource)
+                changes['ceph_attach'].append(resource)
             elif resource['state'] is state.QUIESCE:
-                detach.append(resource)
+                changes['ceph_detach'].append(resource)
             else:
                 Linux.logger.warning(
                     f'Found linked resource #{resource["id"]} in state {resource["state"]}. ',
                     f'Should be {state.RUNNING} or {state.QUIESCE})',
                 )
+                continue
 
-        if len(attach) > 0 or len(detach) > 0:
-            changes['ceph'] = {
-                'attach': attach,
-                'detach': detach,
-            }
+            resource['identifier'] = f'{resource["project_id"]}_{resource["id"]}'
+            resource['pool_name'] = get_ceph_pool(resource['specs'][0]['sku'])
+        vm_data['ceph_detach'] = changes['ceph_detach']
 
         # Fetch the device information for the update
         try:
@@ -458,9 +459,8 @@ class Linux(LinuxMixin, VMUpdateMixin):
                 return False
 
         # Render and write the Ceph XML snippets for attaching
-        monitor_ips = get_ceph_monitors()
-        if monitor_ips is None or len(monitor_ips) == 0:
-            Linux.logger.error('Could not get Ceph Monitor IPs when building ')
+        if len(template_data['changes']['ceph_attach']) > 0 and len(settings.CEPH_MONITORS) == 0:
+            Linux.logger.error('Could not get Ceph Monitor IPs')
             return False
 
         template_name = 'vm/kvm/device/ceph.xml.j2'
@@ -468,7 +468,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
         for ceph in template_data['changes']['ceph_attach']:
             ceph_xml = template.render(
                 device_name=ceph['identifier'],
-                monitor_ips=monitor_ips,
+                monitor_ips=settings.CEPH_MONITORS,
                 pool_name=ceph['pool_name'],
             )
             ceph_file_path = f'{path}/ceph_{ceph["identifier"]}.xml'

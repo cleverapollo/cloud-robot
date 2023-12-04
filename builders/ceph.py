@@ -15,10 +15,10 @@ import opentracing
 from jaeger_client import Span
 from paramiko import AutoAddPolicy, RSAKey, SSHClient, SSHException
 # local
+import settings
 from mixins import LinuxMixin
 from utils import (
     get_ceph_pool,
-    get_ceph_monitors,
     JINJA_ENV,
 )
 
@@ -40,6 +40,8 @@ class Ceph(LinuxMixin):
         'device_name',
         # The size of the Ceph drive in GB
         'device_size',
+        # Network Host password
+        'host_sudo_passwd',
         # The Ceph pool where the drive will be built
         'pool_name',
         # The message to display if the drive was created
@@ -55,6 +57,10 @@ class Ceph(LinuxMixin):
         :return: A flag stating if the build was successful
         """
         ceph_id = ceph_data['id']
+
+        if len(settings.CEPH_MONITORS) == 0:
+            Ceph.logger.error('Cannot build ceph drive, no CEPH_MONITORS set')
+            return False
 
         # Start by generating the proper dict of data needed by the template
         child_span = opentracing.tracer.start_span('generate_template_data', child_of=span)
@@ -83,20 +89,19 @@ class Ceph(LinuxMixin):
         build_bash_script = JINJA_ENV.get_template('ceph/commands/build.j2').render(**template_data)
         Ceph.logger.debug(f'Generated build bash script for ceph #{ceph_id}\n{build_bash_script}')
 
-        ceph_monitor_ips = get_ceph_monitors()
         client = SSHClient()
         client.set_missing_host_key_policy(AutoAddPolicy())
         key = RSAKey.from_private_key_file('/root/.ssh/id_rsa')
 
         built = False
-        for host_ip in ceph_monitor_ips:
+        for host_ip in settings.CEPH_MONITORS:
             span.set_tag('host', host_ip)
 
             sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
             try:
                 # No need for password as it should have keys
                 sock.connect((host_ip, 22))
-                client.connect(hostname=host_ip, username='robot', pkey=key, timeout=30, sock=sock)
+                client.connect(hostname=host_ip, username='administrator', pkey=key, timeout=30, sock=sock)
 
                 Ceph.logger.debug(f'Executing Ceph build commands for ceph #{ceph_id}')
                 child_span = opentracing.tracer.start_span('build_ceph', child_of=span)
@@ -139,7 +144,8 @@ class Ceph(LinuxMixin):
 
         project_id = ceph_data['project_id']
         data['device_name'] = f'{project_id}_{ceph_id}'
-        data['success_msg'] = f'CephDrive#{ceph_id}Created'
+        data['success_msg'] = f'CephDrive#{ceph_id}IsBuilt'
+        data['host_sudo_passwd'] = settings.NETWORK_PASSWORD
 
         for spec in ceph_data['specs']:
             if spec['sku'].startswith('CEPH_'):
