@@ -38,6 +38,8 @@ class Linux(LinuxMixin, VMUpdateMixin):
     logger = logging.getLogger('robot.updaters.vm.linux')
     # Keep track of the keys necessary for the template, so we can ensure that all keys are present before updating
     template_keys = {
+        # the id that Virsh assigned to the ceph secret,
+        'ceph_secret_id',
         # changes for updates
         'changes',
         # the ip address of the host that the VM is running on
@@ -107,7 +109,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
         # If everything is okay, commence updating the VM
         host_ip = template_data.pop('host_ip')
 
-        # Open a client and run the two necessary commands on the host
+        # Open a client and run the necessary commands on the host
         updated = False
         client = SSHClient()
         client.set_missing_host_key_policy(AutoAddPolicy())
@@ -220,37 +222,46 @@ class Linux(LinuxMixin, VMUpdateMixin):
             # Ceph changes
             ceph_detach = True
             if template_data['changes']['ceph_detach'] and quiesce:
-                child_span = opentracing.tracer.start_span('generate_detach_command', child_of=span)
-                cmd = JINJA_ENV.get_template('vm/kvm/commands/update/ceph_detach.j2').render(**template_data)
-                child_span.finish()
-                Linux.logger.debug(f'Generated VM Ceph detach command for VM #{vm_id}\n{cmd}')
+                for ceph in template_data['changes']['ceph_detach']:
+                    child_span = opentracing.tracer.start_span('generate_detach_command', child_of=span)
+                    cmd = JINJA_ENV.get_template('vm/kvm/commands/update/ceph_detach.j2').render(
+                        target_name=ceph['target_name'],
+                        **template_data,
+                    )
+                    child_span.finish()
+                    Linux.logger.debug(f'Generated VM Ceph detach command for VM #{vm_id}\n{cmd}')
 
-                child_span = opentracing.tracer.start_span('ceph_detach', child_of=span)
-                stdout, stderr = Linux.deploy(cmd, client, child_span)
-                child_span.finish()
+                    child_span = opentracing.tracer.start_span('ceph_detach', child_of=span)
+                    stdout, stderr = Linux.deploy(cmd, client, child_span)
+                    child_span.finish()
 
-                if stdout:
-                    Linux.logger.debug(f'VM Ceph Detach command for VM #{vm_id} generated stdout.\n{stdout}')
-                if stderr:
-                    Linux.logger.error(f'VM Ceph Detach command for VM #{vm_id} generated stderr.\n{stderr}')
-                    ceph_detach = False
+                    if stdout:
+                        Linux.logger.debug(f'VM Ceph Detach command for VM #{vm_id} generated stdout.\n{stdout}')
+                    if stderr:
+                        Linux.logger.error(f'VM Ceph Detach command for VM #{vm_id} generated stderr.\n{stderr}')
+                    ceph_detach = ceph_detach and stdout and ('CephDetachSuccess' in stdout)
 
             ceph_attach = True
             if template_data['changes']['ceph_attach'] and quiesce:
-                child_span = opentracing.tracer.start_span('generate_attach_command', child_of=span)
-                cmd = JINJA_ENV.get_template('vm/kvm/commands/update/ceph_attach.j2').render(**template_data)
-                child_span.finish()
-                Linux.logger.debug(f'Generated VM Ceph attach command for VM #{vm_id}\n{cmd}')
+                for ceph in template_data['changes']['ceph_attach']:
+                    template_data['ceph'] = ceph
+                    child_span = opentracing.tracer.start_span('generate_attach_command', child_of=span)
+                    cmd = JINJA_ENV.get_template('vm/kvm/commands/update/ceph_attach.j2').render(
+                        ceph=ceph,
+                        **template_data,
+                    )
+                    child_span.finish()
+                    Linux.logger.debug(f'Generated VM Ceph attach command for VM #{vm_id}\n{cmd}')
 
-                child_span = opentracing.tracer.start_span('ceph_attach', child_of=span)
-                stdout, stderr = Linux.deploy(cmd, client, child_span)
-                child_span.finish()
+                    child_span = opentracing.tracer.start_span('ceph_attach', child_of=span)
+                    stdout, stderr = Linux.deploy(cmd, client, child_span)
+                    child_span.finish()
 
-                if stdout:
-                    Linux.logger.debug(f'VM Ceph attach command for VM #{vm_id} generated stdout.\n{stdout}')
-                if stderr:
-                    Linux.logger.error(f'VM Ceph attach command for VM #{vm_id} generated stderr.\n{stderr}')
-                    ceph_attach = False
+                    if stdout:
+                        Linux.logger.debug(f'VM Ceph attach command for VM #{vm_id} generated stdout.\n{stdout}')
+                    if stderr:
+                        Linux.logger.error(f'VM Ceph attach command for VM #{vm_id} generated stderr.\n{stderr}')
+                    ceph_attach = ceph_attach and stdout and ('CephAttachSuccess' in stdout)
 
             # Restart the VM if it was in Running state before.
             restart = True
@@ -304,6 +315,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
 
         data['vm_identifier'] = f'{vm_data["project"]["id"]}_{vm_id}'
         data['management_ip'] = settings.MGMT_IP
+        data['host_sudo_passwd'] = settings.NETWORK_PASSWORD
 
         # changes
         changes: Dict[str, Any] = {
@@ -326,28 +338,6 @@ class Linux(LinuxMixin, VMUpdateMixin):
                 changes['cpu'] = vm_data['cpu']
         except KeyError:
             pass
-
-        linked_resources = updates.get('linked_resources', list())
-        for r in linked_resources:
-            # Read the resource to get its specs
-            resource = api_read(IAAS.ceph, pk=r['id'])
-            if resource is None:
-                continue
-
-            if resource['state'] is state.RUNNING:
-                changes['ceph_attach'].append(resource)
-            elif resource['state'] is state.QUIESCE:
-                changes['ceph_detach'].append(resource)
-            else:
-                Linux.logger.warning(
-                    f'Found linked resource #{resource["id"]} in state {resource["state"]}. ',
-                    f'Should be {state.RUNNING} or {state.QUIESCE})',
-                )
-                continue
-
-            resource['identifier'] = f'{resource["project_id"]}_{resource["id"]}'
-            resource['pool_name'] = get_ceph_pool(resource['specs'][0]['sku'])
-        vm_data['ceph_detach'] = changes['ceph_detach']
 
         # Fetch the device information for the update
         try:
@@ -407,13 +397,132 @@ class Linux(LinuxMixin, VMUpdateMixin):
             return None
         data['host_ip'] = host_ip
 
-        # Add the host information to the data
-        data['host_sudo_passwd'] = settings.NETWORK_PASSWORD
-
         # Determine restart
         data['restart'] = vm_data['restart']
 
+        linked_resources = updates.get('linked_resources', list())
+        for r in linked_resources:
+            # Read the resource to get its specs
+            resource = api_read(IAAS.ceph, pk=r['id'])
+            if resource is None:
+                continue
+
+            if resource['state'] is state.RUNNING:
+                changes['ceph_attach'].append(resource)
+            elif resource['state'] is state.QUIESCE:
+                changes['ceph_detach'].append(resource)
+            else:
+                Linux.logger.warning(
+                    f'Found linked resource #{resource["id"]} in state {resource["state"]}. ',
+                    f'Should be {state.RUNNING} or {state.QUIESCE})',
+                )
+                continue
+
+            resource['identifier'] = f'{resource["project_id"]}_{resource["id"]}'
+            resource['pool_name'] = get_ceph_pool(resource['specs'][0]['sku'])
+            resource['source_name'] = f'{resource["pool_name"]}/{resource["identifier"]}'
+
+        # Generate drive targets for any new ceph drives
+        drive_target_map = Linux._get_drive_map(
+            host_ip,
+            data['vm_identifier'],
+            settings.NETWORK_PASSWORD,
+            span,
+        )
+        if drive_target_map is None:
+            return data
+
+        target_prefix = 'hd'
+        for ceph in data['changes']['ceph_attach']:
+            # Generate a drive letter
+            for letter in range(ord('a'), ord('z') + 1):
+                target_name = target_prefix + chr(letter)
+                if target_name not in drive_target_map:
+                    break
+
+            if target_name in drive_target_map:
+                Linux.logger.info(f'Could not generate new drive name for Ceph #{ceph["id"]}')
+                return {}
+
+            # Assign the target to the ceph drive
+            ceph['target_name'] = target_name
+            drive_target_map[target_name] = ceph['source_name']
+
+        for ceph in data['changes']['ceph_detach']:
+            # Match up the existing names for the drives for detaching
+            for target_name, source_name in drive_target_map:
+                if ceph['source_name'] == source_name:
+                    ceph['target_name'] = target_name
+                    continue
+
+        # Get the Ceph secret id
+        data['ceph_secret_uuid'] = Linux._get_ceph_secret_uuid(host_ip, settings.NETWORK_PASSWORD, span)
         return data
+
+    @staticmethod
+    def _get_ceph_secret_uuid(host_ip, host_sudo_passwd, span):
+        client = Linux._get_client(host_ip)
+        if client is None:
+            return None
+
+        cmd = JINJA_ENV.get_template('vm/kvm/commands/get_ceph_secret.j2').render(
+            host_sudo_passwd=host_sudo_passwd,
+        )
+        Linux.logger.debug(f'Generated GetCephSecret command for host {host_ip}')
+
+        child_span = opentracing.tracer.start_span('get_ceph_secret_id', child_of=span)
+        try:
+            stdout, stderr = Linux.deploy(cmd, client, child_span)
+        except SSHException:
+            error = f'Exception occurred while running command on {host_ip}.'
+            Linux.logger.error(error, exc_info=True)
+            span.set_tag('failed_reason', 'ssh_error')
+        finally:
+            client.close()
+        child_span.finish()
+
+        if stdout:
+            Linux.logger.debug(f'GetCephSecret command for host {host_ip} generated stdout.\n{stdout}')
+        if stderr:
+            Linux.logger.error(f'GetCephSecret command for host {host_ip} generated  stderr.\n{stderr}')
+
+    @staticmethod
+    def _get_drive_map(host_ip, vm_id, host_sudo_passwd, span) -> Dict[str, str]:
+        client = Linux._get_client(host_ip)
+        if client is None:
+            return None
+
+        cmd = JINJA_ENV.get_template('vm/kvm/commands/list_drives.j2').render(
+            vm_identifier=vm_id,
+            host_sudo_passwd=host_sudo_passwd,
+        )
+        Linux.logger.debug(f'Generated DriveList command for VM #{vm_id}')
+
+        child_span = opentracing.tracer.start_span('list_drives', child_of=span)
+        try:
+            stdout, stderr = Linux.deploy(cmd, client, span)
+        except SSHException:
+            error = f'Exception occurred while executing command on {host_ip}.'
+            Linux.logger.error(error, exc_info=True)
+            span.set_tag('failed_reason', 'ssh_error')
+        finally:
+            client.close()
+        child_span.finish()
+
+        if stdout:
+            Linux.logger.debug(f'VM DriveList command for VM #{vm_id} generated stdout.\n{stdout}')
+        if stderr:
+            Linux.logger.error(f'VM DriveList command for VM #{vm_id} generated stderr.\n{stderr}')
+
+        drives = dict()
+        # Expect output as lines of `<target_name> <source_name>`. Put the data into a dictionary
+        for line in stdout.split('\n'):
+            target, source = line.split(' ')
+            drives[target] = source
+        # There should be at least one fs drive returned. If not, something went wrong
+        if not drives:
+            return None
+        return drives
 
     @staticmethod
     def _generate_network_drive_files(vm_data: Dict[str, Any], template_data: Dict[str, Any], path: str) -> bool:
@@ -458,31 +567,51 @@ class Linux(LinuxMixin, VMUpdateMixin):
                 vm_data['errors'].append(f'{error} Error: {err}')
                 return False
 
-        # Render and write the Ceph XML snippets for attaching
-        if len(template_data['changes']['ceph_attach']) > 0 and len(settings.CEPH_MONITORS) == 0:
-            Linux.logger.error('Could not get Ceph Monitor IPs')
-            return False
-
-        template_name = 'vm/kvm/device/ceph.xml.j2'
-        template = JINJA_ENV.get_template(template_name)
-        for ceph in template_data['changes']['ceph_attach']:
-            ceph_xml = template.render(
-                device_name=ceph['identifier'],
-                monitor_ips=settings.CEPH_MONITORS,
-                pool_name=ceph['pool_name'],
-            )
-            ceph_file_path = f'{path}/ceph_{ceph["identifier"]}.xml'
-
-            try:
-                # Attempt to write
-                with open(ceph_file_path, 'w') as f:
-                    f.write(ceph_xml)
-                Linux.logger.debug(f'Successfully wrote {ceph_file_path} for ceph #{ceph["id"]}')
-            except IOError as err:
-                error = f'Failed to write {ceph_file_path} for ceph #{ceph["id"]}'
-                Linux.logger.error(error, exc_info=True)
-                vm_data['errors'].append(f'{error} Error: {err}')
+        # Render and attempt to write the ceph.xml files
+        if template_data['changes']['ceph_attach']:
+            if len(settings.CEPH_MONITORS) == 0:
+                Linux.logger.debug('No CephMonitors set, cannot generate Ceph template')
                 return False
+
+            template_name = 'vm/kvm/device/ceph.j2'
+            for ceph in template_data['changes']['ceph_attach']:
+                ceph_data = JINJA_ENV.get_template(template_name).render(ceph=ceph, **template_data)
+                Linux.logger.debug(f'Generated ceph_{ceph["id"]}.xml file for VM #{vm_id}\n{pci_gpu_data}')
+                ceph_file_path = f'{path}/ceph_{ceph["id"]}.xml'
+                try:
+                    # Attempt to write
+                    with open(ceph_file_path, 'w') as f:
+                        f.write(ceph_data)
+                    Linux.logger.debug(
+                        f'Successfully wrote to {ceph_file_path} file for VM #{vm_id}',
+                    )
+                except IOError as err:
+                    error = f'Failed to write {ceph_file_path} file for VM #{vm_id}'
+                    Linux.logger.error(error, exc_info=True)
+                    vm_data['errors'].append(f'{error} Error: {err}')
+                    return False
 
         # Return True as all was successful
         return True
+
+    def _get_client(host_ip):
+        client = SSHClient()
+        client.set_missing_host_key_policy(AutoAddPolicy())
+        key = RSAKey.from_private_key_file('/root/.ssh/id_rsa')
+        sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        try:
+            # Try connecting to the host
+            sock.connect((host_ip, 22))
+            client.connect(
+                hostname=host_ip,
+                username='administrator',
+                pkey=key,
+                timeout=30,
+                sock=sock,
+            )
+        except SSHException:
+            error = f'Exception occurred while connecting to {host_ip}.'
+            Linux.logger.error(error, exc_info=True)
+            client.close()
+            return None
+        return client
