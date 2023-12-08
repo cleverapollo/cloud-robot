@@ -1,0 +1,13 @@
+
+<disk type="network" device="disk">
+  <driver name="qemu" type="raw"/>
+  <auth username="cix_vol_mgr">
+    <secret type="ceph" uuid="{{ ceph_secret_uuid }}"/>
+  </auth>
+  <source protocol="rbd" name="{{ ceph.source_name }}">
+    {% for ip in monitor_ips %}
+    <host name="{{ ip }}" port="6789"/>
+    {% endfor %}
+  </source>
+  <target dev="{{ ceph.target_name }}" bus="virtio"/>
+</disk>

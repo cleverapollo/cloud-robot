@@ -1,52 +1,12 @@
 {
-    {# Stop execution if something fails#}
-    set -e
+set -e
+{# Check if the drive is detached #}
+echo '{{ host_sudo_passwd }}' | sudo -S --prompt '' virsh domblklist --domain {{ vm_identifier }} | grep ' {{ ceph.source_name }} ' &> /dev/null
+if [ $? -eq 0 ];
+    echo 'CephAttachSuccess: Drive was already attached'
+    exit 0
+then
 
-    {% for ceph in changes.ceph_attach %}
-        {# Check if the drive is already attached #}
-        virsh domblklist --domain {{ vm_identifier }} | grep {{ ceph.identifier }} \
-            && echo 'CephAttach: Ceph {{ ceph.identifier }} already attached to VM {{ vm_identifier }}' \
-            && continue
-
-        {# Generate a new target for the drive #}
-        EXISTING_TARGETS=$(virsh domblklist --domain {{ vm_identifier }})
-        TARGET_PREFIX=hd
-        NEW_LETTER=""
-        for LETTER in {a..z};
-        do
-            if ! [[ "${EXISTING_TARGETS[@]}" =~ "${TARGET_PREFIX}${LETTER}" ]];
-            then
-                NEW_LETTER="${LETTER}""
-                break
-            fi
-        done
-
-        if [ -z $NEW_LETTER ];
-        then
-            echo 'CephAttach: Could not generate drive name for {{ ceph.identifier }}' 1>&2
-            exit 1
-        fi
-
-        {# Get the Ceph secret id #}
-        SECRET_UUID=$(virsh secret-list | awk '/ceph CIX_VOL_MANAGER/ { print $1 }' )
-
-        {# Generate the XML snippet #}
-        cat << EOF
-	  <disk type="network" device="disk">
-	    <driver name="qemu" type="raw"/>
-	    <auth username="cix_vol_mgr">
-	      <secret type="ceph" uuid="${CEPH_SECRET_UUID}"/>
-	    </auth>
-	    <source protocol="rbd" name="{{ ceph.pool_name }}/{{ ceph.device_name }}">
-	      {% for ip in monitor_ips %}
-	      <host name="{{ ip }}" port="6789"/>
-	      {% endfor %}
-	    </source>
-	    <target dev="hd${NEW_LETTER}" bus="virtio"/>
-	  </disk>
-        EOF >> ceph_{{ ceph.identifier }}.xml
-
-        virsh attach-device --domain {{ vm_identifier }} --file  ceph_{{ ceph.identifier }}.xml --config \
-            && echo "CephAttach: Ceph #{{ ceph.identifier }} attached to VM #{{ vm_identifier }}"
-    {% endfor %}
+echo '{{ host_sudo_passwd }}' | sudo -S virsh attach-device --domain {{ vm_identifier }} --file --file {{ network_drive_path }}/VMs/{{ vm_identifier }}/ceph_{{ ceph.identifier }}.xml --persistent --config
+echo "CephAttachSuccess"
 }
