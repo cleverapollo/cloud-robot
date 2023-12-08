@@ -239,7 +239,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
                         Linux.logger.debug(f'VM Ceph Detach command for VM #{vm_id} generated stdout.\n{stdout}')
                     if stderr:
                         Linux.logger.error(f'VM Ceph Detach command for VM #{vm_id} generated stderr.\n{stderr}')
-                    ceph_detach = ceph_detach and stdout and ('CephDetachSuccess' in stdout)
+                    ceph_detach = ceph_detach and bool(stdout) and ('CephDetachSuccess' in stdout)
 
             ceph_attach = True
             if template_data['changes']['ceph_attach'] and quiesce:
@@ -261,7 +261,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
                         Linux.logger.debug(f'VM Ceph attach command for VM #{vm_id} generated stdout.\n{stdout}')
                     if stderr:
                         Linux.logger.error(f'VM Ceph attach command for VM #{vm_id} generated stderr.\n{stderr}')
-                    ceph_attach = ceph_attach and stdout and ('CephAttachSuccess' in stdout)
+                    ceph_attach = ceph_attach and bool(stdout) and ('CephAttachSuccess' in stdout)
 
             # Restart the VM if it was in Running state before.
             restart = True
@@ -450,7 +450,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
 
         for ceph in data['changes']['ceph_detach']:
             # Match up the existing names for the drives for detaching
-            for target_name, source_name in drive_target_map:
+            for target_name, source_name in drive_target_map.items():
                 if ceph['source_name'] == source_name:
                     ceph['target_name'] = target_name
                     continue
@@ -487,7 +487,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
             Linux.logger.error(f'GetCephSecret command for host {host_ip} generated  stderr.\n{stderr}')
 
     @staticmethod
-    def _get_drive_map(host_ip, vm_id, host_sudo_passwd, span) -> Dict[str, str]:
+    def _get_drive_map(host_ip, vm_id, host_sudo_passwd, span) -> Optional[Dict[str, str]]:
         client = Linux._get_client(host_ip)
         if client is None:
             return None
@@ -594,6 +594,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
         # Return True as all was successful
         return True
 
+    @staticmethod
     def _get_client(host_ip):
         client = SSHClient()
         client.set_missing_host_key_policy(AutoAddPolicy())
