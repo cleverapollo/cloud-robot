@@ -1,15 +1,13 @@
-{% comment %}
-Given a VM, remove the Target block device
-{% endcomment %}
 {
 set -e
 {# Check if the drive is attached to the VM #}
-echo '{{ host_sudo_passwd }}' | sudo -S --prompt '' virsh domblklist --domain {{ vm_identifier }} | grep ' {{ target_name }} ' &> /dev/null
+echo '{{ host_sudo_passwd }}' | sudo -S --prompt '' virsh domblklist --domain {{ vm_identifier }} | grep '{{ target_name }}' 1> /dev/null
 if [ $? -eq 1 ];
+then
     echo 'CephDetachSuccess: Drive was not attached'
     exit 0
-then
+fi
 
-echo '{{ host_sudo_passwd }}' | sudo -S --prompt '' virsh detach-disk --domain {{ vm_identifier }} --target {{ target_name }} --config
+echo '{{ host_sudo_passwd }}' | sudo -S --prompt '' virsh detach-disk --domain {{ vm_identifier }} --target {{ target_name }} --persistent
 echo 'CephDetachSuccess'
 }
