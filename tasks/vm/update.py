@@ -147,8 +147,8 @@ def _update_vm(vm_id: int, span: Span):
         logger.error(f'Could not update VM #{vm_id}. Could not list linked resources')
         span.set_tag('return_reason', 'resources_not_listed')
         return
+    updates['linked_resources'] = linked_resources
     if len(linked_resources) > 0:
-        updates['linked_resources'] = linked_resources
         changes = True
 
     if changes:

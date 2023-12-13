@@ -1,14 +1,10 @@
-{% comment %}
-List all `file` blocks on the VM. Return a string containing the Target name ($3) and Source name ($4)
-
-$ virsh domblklist --domain 100_420 --details
-Type   Device  Target  Source
----------------------------------
-file   disk    vda     /var/lib/libvirt/images/100_420.img
-file   ceph    hdb     CLOUDCIX_VOLUMES/100_499
-file   ceph    hda     CLOUDCIX_VOLUMES/100_500
-{% endcomment %}
+{# List all blocks on the VM. Return a string containing the Target name ($3) and Source name ($4) #}
+{# $ virsh domblklist --domain 100_420 --details                      #}
+{# Type     Device    Target    Source                                #}
+{# ---------------------------------------                            #}
+{# file     disk      vda       /var/lib/libvirt/images/100_420.img   #}
+{# network  disk      hdb       CLOUDCIX_VOLUMES/100_499              #}
+{# network  disk      hda       CLOUDCIX_VOLUMES/100_500              #}
 {
-set -e
-echo '{{ host_sudo_passwd }}' | sudo -S --prompt '' virsh domblklist --domain {{ vm_identifier }} --details | awk '$1 ~ /^file$/ { print $3 " " $4 }'
+echo '{{ host_sudo_passwd }}' | sudo -S --prompt '' virsh domblklist --domain {{ vm_identifier }} --details | awk ' $1 ~ /^file|network$/ { print $3 " " $4 }'
 }
