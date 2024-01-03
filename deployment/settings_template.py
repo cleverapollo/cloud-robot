@@ -197,7 +197,7 @@ Ceph Settings
 """
 CEPH_POOLS = {
     'CEPH_001': 'CLOUDCIX-VOLUMES',
-    'CEPH_002': 'CLOUDCIX-IMAGES',
+    'CEPH_002': 'CLOUDCIX-VOLUMES-SSD',
 }
 
 CEPH_MONITORS = list()
