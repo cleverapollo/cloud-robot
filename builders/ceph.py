@@ -27,6 +27,8 @@ __all__ = [
     'Ceph',
 ]
 
+MB_PER_GB = 1024
+
 
 class Ceph(LinuxMixin):
     """
@@ -38,7 +40,7 @@ class Ceph(LinuxMixin):
     template_keys = {
         # The CIX name of the device, generated from its id
         'device_name',
-        # The size of the Ceph drive in GB
+        # The size of the Ceph drive in MB
         'device_size',
         # Network Host password
         'host_sudo_passwd',
@@ -149,7 +151,7 @@ class Ceph(LinuxMixin):
 
         for spec in ceph_data['specs']:
             if spec['sku'].startswith('CEPH_'):
-                data['device_size'] = spec['quantity']
+                data['device_size'] = int(spec['quantity']) * MB_PER_GB
                 data['pool_name'] = get_ceph_pool(spec['sku'])
                 break
 
