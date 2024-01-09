@@ -413,7 +413,8 @@ class Linux(LinuxMixin, VMUpdateMixin):
         data['ceph_monitor_ips'] = settings.CEPH_MONITORS
 
         linked_resources = updates.get('linked_resources', list())
-        if linked_resources:
+        if len(linked_resources) > 0:
+            Linux.logger.debug(f'Processing attached resources for VM #{vm_id}')
             # Get the list of existing drives on the VM
             drive_target_map = Linux._get_drive_map(
                 host_ip,
@@ -422,20 +423,23 @@ class Linux(LinuxMixin, VMUpdateMixin):
                 span,
             )
             if drive_target_map is None:
-                return data
+                Linux.logger.warning(f'Could not list drives on VM #{vm_id}. Exiting')
+                return None
         else:
+            Linux.logger.debug(f'No linked resources to process for VM #{vm_id}')
             drive_target_map = dict()
 
         for r in linked_resources:
+            Linux.logger.debug(f'Processing resource #{r["id"]} for VM #{vm_id}')
             # Read the resource to get its specs
             resource = api_read(IAAS.ceph, pk=r['id'])
             if resource is None:
                 Linux.logger.warning(f'Could not read Ceph drive #{r["id"]}')
                 continue
 
-            if resource['state'] is state.RUNNING:
+            if resource['state'] == state.RUNNING:
                 changes['ceph_attach'].append(resource)
-            elif resource['state'] is state.QUIESCED:
+            elif resource['state'] == state.QUIESCED:
                 changes['ceph_detach'].append(resource)
             else:
                 Linux.logger.warning(
@@ -457,7 +461,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
 
         for ceph in data['changes']['ceph_detach']:
             if ceph['target_name'] is None:
-                Linux.logger.error('Could not find target name of Ceph #{ceph["id"]}')
+                Linux.logger.error(f'Could not find target name of Ceph #{ceph["id"]}')
 
         # Generate drive letters for any new drives
         target_prefix = 'hd'
@@ -472,7 +476,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
 
             if target_name in drive_target_map:
                 Linux.logger.info(f'Could not generate new drive name for Ceph #{ceph["id"]}')
-                return data
+                return None
 
             # Assign the target to the ceph drive
             ceph['target_name'] = target_name
@@ -513,6 +517,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
     def _get_drive_map(host_ip, vm_id, host_sudo_passwd, span) -> Optional[Dict[str, str]]:
         client = Linux._get_client(host_ip)
         if client is None:
+            Linux.logger.error('Could not create ssh client')
             return None
 
         cmd = JINJA_ENV.get_template('vm/kvm/commands/list_drives.j2').render(
@@ -522,6 +527,7 @@ class Linux(LinuxMixin, VMUpdateMixin):
         Linux.logger.debug(f'Generated DriveList command for VM #{vm_id}')
 
         child_span = opentracing.tracer.start_span('list_drives', child_of=span)
+        stdout = stderr = ''
         try:
             stdout, stderr = Linux.deploy(cmd, client, span)
         except SSHException:
@@ -530,20 +536,19 @@ class Linux(LinuxMixin, VMUpdateMixin):
             span.set_tag('failed_reason', 'ssh_error')
         finally:
             client.close()
-            stdout = stderr = ''
         child_span.finish()
 
         if stdout:
             Linux.logger.debug(f'VM DriveList command for VM #{vm_id} generated stdout.\n{stdout}')
-        else:
-            return None
-
         if stderr:
             Linux.logger.error(f'VM DriveList command for VM #{vm_id} generated stderr.\n{stderr}')
 
         drives = dict()
         # Expect output as lines of `<target_name> <source_name>`. Put the data into a dictionary
         for line in stdout.strip().split('\n'):
+            if line.find(' ') == -1:
+                Linux.logger.warning(f'Got invalid line from DriveList command\nLine: {line}')
+                continue
             target, source = line.split(' ')
             drives[target] = source
         # There should be at least one fs drive returned. If not, something went wrong
@@ -663,3 +668,5 @@ class Linux(LinuxMixin, VMUpdateMixin):
             except json.JSONDecodeError:
                 pass
             Linux.logger.error(err)
+            return
+        Linux.logger.debug(f'Successfully requested to detach resource #{resource_id}')
