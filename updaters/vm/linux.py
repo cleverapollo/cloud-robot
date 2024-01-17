@@ -464,17 +464,23 @@ class Linux(LinuxMixin, VMUpdateMixin):
                 Linux.logger.error(f'Could not find target name of Ceph #{ceph["id"]}')
 
         # Generate drive letters for any new drives
-        target_prefix = 'hd'
+        prefix = 'vd'
         for ceph in data['changes']['ceph_attach']:
             if ceph['target_name'] is not None:
                 continue
+
             target_name = ''
             for letter in range(ord('a'), ord('z') + 1):
-                target_name = target_prefix + chr(letter)
-                if target_name not in drive_target_map:
-                    break
+                if prefix + chr(letter) in drive_target_map:
+                    continue
+                if 'hd' + chr(letter) in drive_target_map:
+                    continue
+                # Drive letter isn't taken
+                target_name = prefix + chr(letter)
+                break
 
-            if target_name in drive_target_map:
+            if not target_name:
+                # We exhausted the options in the for loop
                 Linux.logger.info(f'Could not generate new drive name for Ceph #{ceph["id"]}')
                 return None
 
