@@ -5,6 +5,7 @@
 {# file     disk      vda       /var/lib/libvirt/images/100_420.img   #}
 {# network  disk      hdb       CLOUDCIX_VOLUMES/100_499              #}
 {# network  disk      hda       CLOUDCIX_VOLUMES/100_500              #}
+{# file     cdrom     hda       -                                     #}
 {
 echo '{{ host_sudo_passwd }}' | sudo -S --prompt='' virsh domblklist --domain {{ vm_identifier }} --details | awk ' $1 ~ /^(file|network)$/ { print $3 " " $4 }'
 }
