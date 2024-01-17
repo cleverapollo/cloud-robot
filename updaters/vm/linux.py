@@ -664,15 +664,16 @@ class Linux(LinuxMixin, VMUpdateMixin):
             pk=None,
         )
         if 204 != response.status_code:
-            err = f'Failed to update Ceph #{resource_id} in API.Status Code: {response.status_code}\n'
+            err = f'Failed to update Ceph #{resource_id} in API. Status Code: {response.status_code}\n'
             try:
                 data = response.json()
-                if 'error_code' in data:
-                    err += f'{data["error_code"]}: '
-                if 'detail' in data:
-                    err += data['detail']
             except json.JSONDecodeError:
-                pass
+                data = dict()
+
+            if 'error_code' in data:
+                err += f'error_code: {data["error_code"]}\n'
+            if 'detail' in data:
+                err += f'detail: {data["detail"]}'
             Linux.logger.error(err)
             return
         Linux.logger.debug(f'Successfully requested to detach resource #{resource_id}')
